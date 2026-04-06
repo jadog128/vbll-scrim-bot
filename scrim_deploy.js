@@ -1,3 +1,4 @@
+require('dotenv').config();
 require('dotenv').config({ path: '.env.scrim' });
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 

@@ -1,6 +1,8 @@
 // ============================================================
 // VRDL Scrim Bot — Turso Edition
 // ============================================================
+// Try to load local env file if it exists, otherwise use standard env (for production)
+require('dotenv').config();
 require('dotenv').config({ path: '.env.scrim' });
 
 const {
