@@ -14,10 +14,13 @@ const links = [
 ];
 
 const mgmtLinks = [
+  { href: '/admin',             label: '📊 Dashboard' },
+  { href: '/admin/management',  label: '📣 Scrim Management' },
+  { href: '/admin/users',       label: '👥 User Manager' },
   { href: '/admin/claims',      label: '⭐ Claims' },
   { href: '/admin/redemptions', label: '📦 Redemptions' },
-  { href: '/admin/shop',        label: '🛍️ Shop' },
-  { href: '/admin/management',  label: '🛠️ Management' },
+  { href: '/admin/shop',        label: '🛍️ Shop Shop' },
+  { href: '/admin/settings',    label: '⚙️ Settings' },
 ];
 
 export function NavBar() {
