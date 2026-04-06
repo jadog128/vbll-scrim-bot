@@ -17,6 +17,18 @@ const turso = createClient({
   authToken: process.env.SCRIM_TURSO_TOKEN,
 });
 
+// Validate Env (for Render debugging)
+if (!process.env.SCRIM_TURSO_URL) console.error('⚠️ SCRIM_TURSO_URL is missing from environment variables!');
+if (!process.env.SCRIM_DISCORD_TOKEN) console.error('⚠️ SCRIM_DISCORD_TOKEN is missing from environment variables!');
+
+// Health check server for Render (satisfies port check)
+const http = require('http');
+const port = process.env.PORT || 10000;
+http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end('Bot is running!');
+}).listen(port, () => console.log(`🚀 Health check server listening on port ${port}`));
+
 async function run(sql, p = []) { return await turso.execute({ sql, args: p }); }
 async function get(sql, p = []) {
   const r = await turso.execute({ sql, args: p });
