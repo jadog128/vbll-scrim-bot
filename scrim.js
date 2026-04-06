@@ -2862,13 +2862,32 @@ process.on('uncaughtException', err => {
   console.error('Uncaught exception:', err?.message);
 });
 
-initDB().then(async () => {
-  console.log('🔌 Connecting to Discord...');
-  await client.login(process.env.SCRIM_DISCORD_TOKEN);
-  client.once('ready', () => {
-  console.log('✅ Scrim Bot online as ' + client.user.tag);
+async function connect() {
+  try {
+    await client.login(process.env.SCRIM_DISCORD_TOKEN);
+  } catch (err) {
+    console.error('DISCORD LOGIN FAILED:', err.message);
+    if (err.message.includes('TOKEN_INVALID')) {
+      console.error('TIP: Your Token in Render is invalid.');
+    } else {
+      setTimeout(connect, 10000);
+    }
+  }
+}
+
+client.once('ready', () => {
+  console.log('Bot is online as ' + client.user.tag);
   setInterval(async () => {
-    try { await run('INSERT OR REPLACE INTO scrim_settings (key,value) VALUES(?,?)', ['last_heartbeat', new Date().toISOString()]); } catch (_) {}
+    try { 
+      await run('INSERT OR REPLACE INTO scrim_settings (key,value) VALUES(?,?)', ['last_heartbeat', new Date().toISOString()]); 
+    } catch (_) {}
   }, 60000);
 });
-}).catch(err => { console.error('Startup failed:', err); process.exit(1); });
+
+initDB().then(() => {
+  console.log('Connecting to Discord...');
+  connect();
+}).catch(err => {
+  console.error('Critical Startup Error:', err);
+  process.exit(1);
+});
