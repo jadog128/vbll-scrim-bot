@@ -109,6 +109,9 @@ const commands = [
     .setDescription('Look up a redemption order by its 5-character ID [Scrim Management]')
     .addStringOption(o => o.setName('order_id').setDescription('The 5-character order ID').setRequired(true).setMinLength(5).setMaxLength(5)),
 
+  new SlashCommandBuilder()
+    .setName('setup-channels')
+    .setDescription('Automatically create and configure all 7 core staff channels [Admin Only]'),
 
   new SlashCommandBuilder()
     .setName('leaderboard')
@@ -229,12 +232,12 @@ const rest = new REST({ version: '10' }).setToken(process.env.SCRIM_DISCORD_TOKE
 
 (async () => {
   try {
-    console.log('🔄 Registering scrim bot commands…');
+    console.log('🔄 Registering scrim bot commands (GLOBAL)…');
     await rest.put(
-      Routes.applicationGuildCommands(process.env.SCRIM_CLIENT_ID, process.env.SCRIM_GUILD_ID),
+      Routes.applicationCommands(process.env.SCRIM_CLIENT_ID),
       { body: commands }
     );
-    console.log('✅ Registered ' + commands.length + ' scrim commands!');
+    console.log('✅ Registered ' + commands.length + ' scrim commands globally!');
   } catch (e) {
     console.error('❌', e);
   }

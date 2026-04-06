@@ -5,7 +5,8 @@
   "main": "scrim.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node scrim.js"
+    "start": "node scrim.js",
+    "deploy": "node scrim_deploy.js"
   },
   "keywords": [],
   "author": "",

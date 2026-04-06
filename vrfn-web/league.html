@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VRFN | League Portal</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="main.js"></script>
+  <script type="module">import { inject } from "https://esm.sh/@vercel/analytics"; inject();</script>
+</head>
+<body onload="loadPublicLeague()">
+
+  <div class="glow-wrapper">
+    <div class="glow-1"></div>
+    <div class="glow-2"></div>
+    <div class="glow-3"></div>
+  </div>
+
+  <nav class="reveal">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      VRFN
+    </div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="league.html" class="active">League</a>
+      <a href="market.html">Market</a>
+      <a href="schedule.html">Matches</a>
+      <a href="finance.html">Finance</a>
+      <a href="clips.html">Clips</a>
+    </div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <button class="theme-toggle" aria-label="Toggle Theme">🌓</button>
+      <div class="user-pill" id="nav-user-pill">
+        <!-- Populated by public.js -->
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    
+    <header class="reveal" style="margin-bottom: 4rem; text-align: center;">
+      <h1 style="font-size: 4rem; font-weight: 900; letter-spacing: -2px; line-height: 1;">League <span style="color: var(--accent-primary);">Portal.</span></h1>
+      <p style="color: var(--text-secondary); font-size: 1.2rem; margin-top: 1rem; max-width: 600px; margin-left: auto; margin-right: auto;">Live standings, top performers, and upcoming fixtures for the VRFN | Hylix Network.</p>
+    </header>
+
+    <!-- Tabs for Standings / Leaderboard / Fixtures -->
+    <div class="reveal" style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 3rem; align-items: center; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 0.8rem; background: rgba(255,255,255,0.03); padding: 0.4rem 1.2rem; border-radius: 30px; border: 1px solid var(--glass-border);">
+            <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-secondary); letter-spacing: 1px;">SEASON ARCHIVE</span>
+            <select id="season-selector" class="glass-input" style="width: auto; padding: 0.3rem 1.5rem; border-radius: 20px; border: none; font-weight: 700; color: var(--accent-primary); background: transparent;" onchange="loadPublicLeague(this.value)">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        <div style="width: 2px; height: 30px; background: var(--glass-border); margin: 0 0.5rem;"></div>
+        <button class="nav-item active" onclick="switchLeagueTab('standings')" id="tab-btn-standings">Standings</button>
+        <button class="nav-item" onclick="switchLeagueTab('leaderboard')" id="tab-btn-leaderboard">Leaderboards</button>
+        <button class="nav-item" onclick="switchLeagueTab('fixtures')" id="tab-btn-fixtures">Fixtures</button>
+    </div>
+
+    <div id="league-content">
+        <!-- Standings Table -->
+        <div id="standings-view" class="league-tab">
+            <div class="admin-table-wrapper reveal">
+                <table id="standings-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Team</th>
+                            <th>P</th>
+                            <th>W</th>
+                            <th>D</th>
+                            <th>L</th>
+                            <th>GD</th>
+                            <th>PTS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="standings-body">
+                        <!-- Loaded via public.js -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Leaderboards -->
+        <div id="leaderboard-view" class="league-tab" style="display: none;">
+            <div class="reveal">
+                <h2 style="text-align: center; font-size: 2.5rem; font-weight: 900; margin-bottom: 2rem;">🏆 Master Of Goals</h2>
+                <div id="goals-podium" class="podium-section"></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <div class="glass-card reveal">
+                    <h2 style="margin-bottom: 1.5rem; font-weight: 900;">⚽ Scoring Leaderboard</h2>
+                    <div id="goals-leaderboard" class="lb-list"></div>
+                </div>
+                <div class="glass-card reveal">
+                    <h2 style="margin-bottom: 1.5rem; font-weight: 900;">🎯 Assist Leaderboard</h2>
+                    <div id="assists-leaderboard" class="lb-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fixtures -->
+        <div id="fixtures-view" class="league-tab" style="display: none;">
+            <div id="fixtures-list" class="metric-grid">
+                <!-- Loaded via public.js -->
+            </div>
+        </div>
+    </div>
+
+  </div>
+
+  <footer class="reveal" style="margin-top: 8rem; border-top: 1px solid var(--glass-border); padding: 4rem 8%;">
+    <p style="text-align: center; color: var(--text-secondary); font-size: 0.85rem;">VRFN | Hylix &copy; 2026</p>
+  </footer>
+
+  <style>
+    .league-tab { animation: fadeIn 0.5s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .lb-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--glass-border);
+    }
+    .lb-item:last-child { border-bottom: none; }
+    
+    .lb-rank { font-weight: 900; color: var(--accent-primary); width: 30px; }
+    .lb-name { font-weight: 700; flex-grow: 1; }
+    .lb-value { font-weight: 900; font-family: monospace; font-size: 1.1rem; }
+  </style>
+
+  <script>
+    gsap.to(".reveal", {
+      opacity: 1,
+      y: 0,
+      duration: 1.2,
+      stagger: 0.1,
+      ease: "expo.out",
+      delay: 0.1
+    });
+  </script>
+
+</body>
+</html>

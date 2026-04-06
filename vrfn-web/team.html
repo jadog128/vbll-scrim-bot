@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VRFN | Team Roster</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="main.js"></script>
+</head>
+<body>
+
+  <div class="glow-wrapper">
+    <div class="glow-1"></div>
+    <div class="glow-2"></div>
+  </div>
+
+  <nav class="reveal">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      VRFN
+    </div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="league.html" class="active">League</a>
+      <a href="profile.html">Profile</a>
+      <a href="stats.html">Stats</a>
+      <a href="clips.html">Clips</a>
+    </div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <button class="theme-toggle" aria-label="Toggle Theme">🌓</button>
+      <div class="user-pill" id="nav-user-pill">
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    
+    <!-- Team Header -->
+    <header class="reveal glass-card" style="display: flex; flex-wrap: wrap; gap: 3rem; align-items: center; padding: 4rem 3rem; margin-bottom: 3rem; border-top: 1px solid var(--accent-primary);">
+        <div style="width: 150px; height: 150px; border-radius: var(--radius-lg); background: var(--bg-color); border: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 4rem;">🛡️</div>
+        
+        <div style="flex: 1;">
+            <p style="color: var(--accent-primary); font-size: 0.85rem; font-weight: 800; letter-spacing: 2px;">DIVISION 1 CONTENDER</p>
+            <h1 id="team-name" style="font-size: clamp(3rem, 5vw, 4.5rem); font-weight: 900; letter-spacing: -1px; margin: 0 0 1rem 0;">Loading Team...</h1>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <span class="btn-outline" style="padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 700; border-radius: var(--radius-sm);">EST. SEASON 2</span>
+                <span class="btn-outline" style="padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 700; border-radius: var(--radius-sm);">💰 Valuation: <span id="team-valuation">--</span></span>
+            </div>
+        </div>
+
+        <div style="text-align: center; min-width: 120px;">
+            <p style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.5rem;">LEAGUE POINTS</p>
+            <h2 id="team-pts" style="font-size: 4rem; font-weight: 900; margin: 0; color: var(--accent-primary);">--</h2>
+        </div>
+    </header>
+
+    <!-- Recent Form (Visual) -->
+    <div class="reveal glass-card" style="margin-bottom: 3rem; text-align: center; padding: 2rem;">
+        <h4 style="font-weight: 800; margin-bottom: 1rem; color: var(--text-secondary);">RECENT FORM</h4>
+        <div id="form-container" style="display: flex; gap: 0.5rem; justify-content: center; font-weight: 900; font-size: 1.2rem;">
+            <p style="font-size: 0.9rem; font-weight: 500; color: var(--text-secondary);">Loading form...</p>
+        </div>
+    </div>
+
+    <!-- Trophy Cabinet -->
+    <div class="reveal glass-card" id="trophy-section" style="margin-bottom: 3rem; padding: 2rem; display: none;">
+        <h4 style="font-weight: 800; margin-bottom: 1.5rem; color: var(--text-secondary);">🏆 TROPHY CABINET</h4>
+        <div id="trophy-shelf" style="display: flex; gap: 1.5rem; flex-wrap: wrap;"></div>
+    </div>
+
+    <!-- Match History -->
+    <div class="reveal" style="margin-bottom: 3rem;">
+        <h2 style="font-size: 2rem; font-weight: 900; margin-bottom: 2rem;">Recent Match Scores</h2>
+        <div id="matches-list" style="display: flex; flex-direction: column; gap: 1rem;">
+            <p style="color: var(--text-secondary);">Loading matches...</p>
+        </div>
+    </div>
+
+    <!-- Active Roster -->
+    <h2 class="reveal" style="font-size: 2rem; font-weight: 900; margin-bottom: 2rem;">Active Roster</h2>
+    <div id="roster-grid" class="metric-grid reveal" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+        <p style="color: var(--text-secondary);">Loading players...</p>
+    </div>
+
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        gsap.to(".reveal", { opacity: 1, y: 0, duration: 1, stagger: 0.1, ease: "power2.out" });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const teamId = urlParams.get('id');
+        if (!teamId) {
+            document.getElementById('team-name').innerText = "Team Not Found";
+            return;
+        }
+
+        try {
+            const resp = await fetch(`/api/features?action=team-details&id=${teamId}`);
+            const data = await resp.json();
+
+            if (data.team) {
+                const team = data.team;
+                document.getElementById('team-name').innerText = team.name;
+                document.getElementById('team-valuation').innerText = `$${(data.players.reduce((sum, p) => sum + (p.market_value || 0), 0)).toLocaleString()}`;
+                
+                // Calculate Form & Matches
+                const formContainer = document.getElementById('form-container');
+                const matchesList = document.getElementById('matches-list');
+                const teamPtsEl = document.getElementById('team-pts');
+                
+                if (data.matches && data.matches.length > 0) {
+                    let totalPts = 0;
+                    let formHtml = '';
+                    let matchHtml = '';
+
+                    // The data.matches is already ordered by gw DESC, so we want to reverse it for form logic if we want "most recent on right" or just show it.
+                    // Usually most recent is on left or right. I'll just show what I get.
+                    data.matches.forEach(m => {
+                        let result = 'D';
+                        let bgColor = 'var(--text-secondary)';
+                        
+                        const isHome = m.home_team === team.name;
+                        const scoreSelf = isHome ? m.home_score : m.away_score;
+                        const scoreOpp = isHome ? m.away_score : m.home_score;
+
+                        if (scoreSelf > scoreOpp) { result = 'W'; bgColor = 'var(--success)'; totalPts += 3; }
+                        else if (scoreSelf < scoreOpp) { result = 'L'; bgColor = 'var(--danger)'; }
+                        else { result = 'D'; totalPts += 1; }
+
+                        formHtml += `<div style="width: 35px; height: 35px; border-radius: 6px; background: ${bgColor}; color: white; display: flex; align-items: center; justify-content: center;">${result}</div>`;
+                        
+                        matchHtml += `
+                            <a href="match.html?id=${m.id}" class="glass-card" style="padding: 1.2rem 2rem; display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: inherit; border-left: 4px solid ${bgColor};">
+                                <div style="display: flex; align-items: center; gap: 2rem;">
+                                    <span style="font-weight: 800; opacity: 0.5;">GW ${m.gw}</span>
+                                    <div style="font-weight: 800; font-size: 1.1rem;">
+                                        ${m.home_team} <span style="color: var(--accent-primary); margin: 0 0.5rem;">${m.home_score} - ${m.away_score}</span> ${m.away_team}
+                                    </div>
+                                </div>
+                                <div style="font-weight: 800; color: ${bgColor}; font-size: 0.85rem;">${result === 'W' ? 'VICTORY' : (result === 'L' ? 'DEFEAT' : 'DRAW')}</div>
+                            </a>
+                        `;
+                    });
+
+                    formContainer.innerHTML = formHtml;
+                    matchesList.innerHTML = matchHtml;
+                    teamPtsEl.innerText = data.totalPts;
+                } else {
+                    formContainer.innerHTML = '<p style="color: var(--text-secondary);">No recent matches played.</p>';
+                    matchesList.innerHTML = '<p style="color: var(--text-secondary);">No match history found.</p>';
+                    teamPtsEl.innerText = '0';
+                }
+
+                const rosterGrid = document.getElementById('roster-grid');
+                if (data.players.length > 0) {
+                    rosterGrid.innerHTML = data.players.map(p => `
+                        <a href="profile.html?view=${p.discord_id}&name=${encodeURIComponent(p.username)}" class="glass-card" style="padding: 1.5rem; text-decoration: none; color: inherit; display: block; border-top: 1px solid var(--glass-highlight); transition: transform 0.3s ease;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <div style="font-weight: 800; font-size: 1.2rem;">👤 ${p.username} ${p.injured ? '<span style="font-size:0.7rem;background:rgba(255,69,58,0.15);color:#ff453a;padding:0.2rem 0.5rem;border-radius:4px;font-weight:800;margin-left:0.5rem;">🚑 INJURED</span>' : ''}</div>
+                                <div style="font-size: 0.75rem; background: var(--bg-color); padding: 0.3rem 0.6rem; border-radius: 6px; font-weight: 700;">${p.position || 'CM'}</div>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">Market Val: <span style="color: var(--accent-primary); font-weight: 800;">$${(p.market_value || 0).toLocaleString()}</span></p>
+                        </a>
+                    `).join('');
+                } else {
+                    rosterGrid.innerHTML = '<p style="color: var(--text-secondary);">No players assigned to this roster yet.</p>';
+                }
+
+                // Load trophies
+                const trophyResp = await fetch(`/api/public/trophies?team=${encodeURIComponent(team.name)}`);
+                const trophies = await trophyResp.json();
+                if (Array.isArray(trophies) && trophies.length > 0) {
+                    document.getElementById('trophy-section').style.display = 'block';
+                    document.getElementById('trophy-shelf').innerHTML = trophies.map(t => `
+                        <div style="text-align:center; padding: 1rem 1.5rem; background: rgba(255,215,0,0.05); border-radius: 16px; border: 1px solid rgba(255,215,0,0.2);">
+                            <div style="font-size: 2.5rem;">${t.icon}</div>
+                            <div style="font-weight: 800; font-size: 0.9rem; margin-top: 0.5rem;">${t.title}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">${t.season}</div>
+                        </div>
+                    `).join('');
+                }
+            }
+        } catch (e) {
+            console.error('Error fetching team:', e);
+        }
+    });
+
+    const user = JSON.parse(localStorage.getItem('vrfn_user'));
+    const userPill = document.getElementById('nav-user-pill');
+    if (userPill) {
+        if (user) {
+            userPill.innerHTML = `<span style="font-size: 0.85rem; font-weight: 600;">${user.username}</span>`;
+            userPill.onclick = () => window.location.href = 'profile.html';
+        } else {
+            userPill.innerHTML = `<a href="login.html" style="color: white; text-decoration: none; font-weight: 700; font-size: 0.8rem;">LOGIN</a>`;
+            userPill.style.background = 'var(--accent-primary)';
+        }
+    }
+  </script>
+</body>
+</html>

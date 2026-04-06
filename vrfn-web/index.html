@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VRFN | Virtual Football Network</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="main.js"></script>
+  <script type="module">import { inject } from "https://esm.sh/@vercel/analytics"; inject();</script>
+</head>
+<body>
+
+  <div class="glow-wrapper">
+    <div class="glow-1"></div>
+  </div>
+
+  <nav class="reveal">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      VRFN
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="active">Home</a>
+      <a href="league.html">League</a>
+      <a href="market.html">Market</a>
+      <a href="schedule.html">Matches</a>
+      <a href="finance.html">Finance</a>
+      <a href="clips.html">Clips</a>
+    </div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <button class="theme-toggle" id="theme-btn" aria-label="Toggle Theme">🌓</button>
+      <a href="login.html" class="user-pill btn-outline" style="text-decoration: none; font-weight: 800; font-size: 0.85rem; padding: 0.6rem 1.5rem;">LOGIN</a>
+    </div>
+  </nav>
+
+  <div class="container hero-section">
+    <div class="reveal" style="width: 100%;">
+      <h1 class="hero-title">
+        Virtual <div class="liquid-pill"></div> Football<br>is VRFN
+      </h1>
+      
+      <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 3rem;">
+         <a href="https://discord.gg/AmCMHWe8Cv" target="_blank" class="btn-login" style="margin-top: 0;">JOIN THE LEAGUE</a>
+         <a href="league.html" class="btn-login btn-outline" style="margin-top: 0;">VIEW STATS ↗</a>
+      </div>
+    </div>
+  </div>
+
+
+
+    <!-- Feature Preview -->
+    <div class="metric-grid" style="margin-top: 8rem;">
+       <div class="glass-card reveal">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">📊</div>
+          <h3 style="font-weight: 800; margin-bottom: 0.5rem;">Professional Stats</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">Automated tracking for every goal, assist, and clean sheet.</p>
+       </div>
+       <div class="glass-card reveal">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">🏆</div>
+          <h3 style="font-weight: 800; margin-bottom: 0.5rem;">Live Leaderboards</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">Compete for the Golden Boot and the prestigious Balon d'Or.</p>
+       </div>
+       <div class="glass-card reveal">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">🎬</div>
+          <h3 style="font-weight: 800; margin-bottom: 0.5rem;">Clip Gallery</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">Upload and share your match highlights with the community.</p>
+       </div>
+    </div>
+
+  </div>
+
+  <footer class="reveal" style="margin-top: 8rem; border-top: 1px solid var(--glass-border); padding: 4rem 8%;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+       <div>
+          <div class="logo" style="margin-bottom: 1rem;">VRFN</div>
+          <p style="color: var(--text-secondary); font-size: 0.85rem;">Virtual Football Network | Hylix League &copy; 2026</p>
+       </div>
+       <div class="nav-links">
+          <a href="rules.html">Rules</a>
+          <a href="#">Support</a>
+          <a href="#">Discord</a>
+       </div>
+    </div>
+  </footer>
+
+  <script>
+    gsap.to(".reveal", {
+      opacity: 1,
+      y: 0,
+      duration: 1.6,
+      stagger: 0.2,
+      ease: "expo.out",
+      delay: 0.1
+    });
+
+  </script>
+</body>
+</html>

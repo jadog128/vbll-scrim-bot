@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VRFN | Finance</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="main.js"></script>
+</head>
+<body onload="loadPublicLeague()">
+
+  <div class="glow-wrapper">
+    <div class="glow-1"></div>
+    <div class="glow-3"></div>
+  </div>
+
+  <nav class="reveal">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      VRFN
+    </div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="league.html">League</a>
+      <a href="market.html">Market</a>
+      <a href="schedule.html">Matches</a>
+      <a href="finance.html" class="active">Finance</a>
+      <a href="clips.html">Clips</a>
+    </div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <button class="theme-toggle" aria-label="Toggle Theme">🌓</button>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width: 1000px;">
+    <header class="reveal" style="margin-bottom: 4rem; text-align: center;">
+      <h1 style="font-size: 4rem; font-weight: 900; letter-spacing: -2px; line-height: 1;">League <span style="color: var(--gold);">Finance.</span></h1>
+      <p style="color: var(--text-secondary); font-size: 1.2rem; margin-top: 1rem;">Ranking the league's most valuable squads and team balances.</p>
+    </header>
+
+    <div class="admin-table-wrapper reveal">
+        <table style="width: 100%;">
+            <thead>
+                <tr>
+                    <th style="width: 60px;">#</th>
+                    <th>Team</th>
+                    <th>Squad Size</th>
+                    <th>Balance</th>
+                    <th>Team Net Worth</th>
+                </tr>
+            </thead>
+            <tbody id="finance-body">
+                <!-- Loaded via main.js -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="glass-card reveal" style="margin-top: 2rem; padding: 2rem; background: rgba(224, 205, 139, 0.05); border: 1px solid rgba(224, 205, 139, 0.2);">
+        <h3 style="color: var(--gold); font-weight: 800; margin-bottom: 1rem;">💰 Net Worth Calculation</h3>
+        <p style="font-size: 0.9rem; line-height: 1.6; color: var(--text-secondary);">Team Net Worth is calculated as the sum of all player market values in the current squad + the team's liquid cash balance. This represents the total financial power of the organization.</p>
+    </div>
+  </div>
+
+  <footer class="reveal" style="margin-top: 8rem; border-top: 1px solid var(--glass-border); padding: 4rem 8%;">
+    <p style="text-align: center; color: var(--text-secondary); font-size: 0.85rem;">VRFN | Hylix &copy; 2026</p>
+  </footer>
+
+  <script>
+    gsap.to(".reveal", { opacity: 1, y: 0, duration: 1.2, stagger: 0.1, ease: "expo.out" });
+  </script>
+</body>
+</html>

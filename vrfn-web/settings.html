@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VRFN | Settings</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="main.js"></script>
+  <script type="module">import { inject } from "https://esm.sh/@vercel/analytics"; inject();</script>
+</head>
+<body>
+
+  <div class="glow-wrapper">
+    <div class="glow-1"></div>
+  </div>
+
+  <nav class="reveal">
+    <div class="logo">VRFN</div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="profile.html">Profile</a>
+      <a href="stats.html">Stats</a>
+      <a href="admin.html">Admin</a>
+      <a href="settings.html" class="active">Settings</a>
+    </div>
+    <div class="user-pill">
+      <div class="rank-badge" style="background: var(--gold);">BRONZE</div>
+      <div class="user-avatar"></div>
+      <span style="font-size: 0.85rem; font-weight: 600;">_theonlymillo_</span>
+    </div>
+  </nav>
+
+  <div class="container">
+    
+    <header class="reveal" style="margin-bottom: 3rem;">
+      <h1 style="font-size: 3rem; font-weight: 900; letter-spacing: -1.5px;">Preferences</h1>
+      <p style="color: var(--text-secondary); font-size: 1.1rem; margin-top: 0.5rem;">Manage your VRFN account and website experience.</p>
+    </header>
+
+    <div class="glass-card reveal" style="max-width: 800px; margin: 0 auto;">
+       
+       <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 2rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+             <h3 style="font-size: 1.2rem; margin-bottom: 0.5rem;">Discord Integration</h3>
+             <p id="user-name-settings" style="color: var(--text-secondary); font-size: 0.9rem;">Linked as <b>_theonlymillo_</b></p>
+          </div>
+          <button class="btn-action decline" style="padding: 0.6rem 1.2rem; font-size: 0.8rem;">Disconnect</button>
+       </div>
+
+       <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 2rem; margin-bottom: 2rem;">
+          <h3 style="font-size: 1.2rem; margin-bottom: 1.5rem;">Player Profile</h3>
+          <div style="margin-bottom: 1rem;">
+             <label style="display: block; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">On-Pitch Position</label>
+             <select id="user-position" style="width: 100%; padding: 0.8rem; background: var(--bg-color); border: 1px solid var(--border-color); color: white; border-radius: var(--radius-sm); font-family: inherit; outline: none;">
+                <option value="ST">Striker (ST) / Forward</option>
+                <option value="CAM">Attacking Mid (CAM)</option>
+                <option value="CM">Center Mid (CM)</option>
+                <option value="CDM">Defensive Mid (CDM)</option>
+                <option value="CB">Center Back (CB) / Defender</option>
+                <option value="GK">Goalkeeper (GK)</option>
+             </select>
+          </div>
+          <div>
+             <label style="display: block; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">Bio</label>
+             <textarea id="user-bio" rows="3" placeholder="Tell the league about your playstyle..." style="width: 100%; padding: 0.8rem; background: var(--bg-color); border: 1px solid var(--border-color); color: white; border-radius: var(--radius-sm); font-family: inherit; resize: none; outline: none;"></textarea>
+          </div>
+          <div style="margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
+             <h4 style="font-size: 0.9rem; font-weight: 800; margin-bottom: 1.5rem; color: var(--accent-primary); letter-spacing: 1px;">PROFILE WIDGETS</h4>
+             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                 <label style="display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; cursor: pointer;">
+                     <input type="checkbox" id="w-radar" checked> Performance Map
+                 </label>
+                 <label style="display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; cursor: pointer;">
+                     <input type="checkbox" id="w-trophies" checked> Trophy Room
+                 </label>
+                 <label style="display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; cursor: pointer;">
+                     <input type="checkbox" id="w-matches" checked> Recent Games
+                 </label>
+                 <label style="display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; cursor: pointer;">
+                     <input type="checkbox" id="w-news"> Personal Feed (Beta)
+                 </label>
+             </div>
+          </div>
+          <button onclick="saveProfileSettings()" class="btn-login" style="margin-top: 0.5rem; padding: 1rem 2.5rem; width: auto; font-size: 0.85rem; font-weight: 900; background: var(--accent-primary); color: black;">SAVE SETTINGS</button>
+       </div>
+
+       <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 2rem; margin-bottom: 2rem;">
+          <h3 style="font-size: 1.2rem; margin-bottom: 1.5rem;">Notifications</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;">
+             <p style="font-size: 1rem;">DM on Stat Approval</p>
+             <div style="width: 40px; height: 20px; background: var(--success); border-radius: 10px; position: relative; cursor: pointer;">
+                <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; right: 2px; top: 2px;"></div>
+             </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+             <p style="font-size: 1rem;">League Transfer Alerts</p>
+             <div style="width: 40px; height: 20px; background: rgba(255,255,255,0.1); border-radius: 10px; position: relative; cursor: pointer;">
+                <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; left: 2px; top: 2px;"></div>
+             </div>
+          </div>
+       </div>
+
+       <div style="padding-bottom: 1rem;">
+          <h3 style="font-size: 1.2rem; margin-bottom: 1rem; color: var(--danger);">Danger Zone</h3>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">Signing out will remove your session from this browser. You'll need to re-authenticate with Discord to access your profile.</p>
+          <button onclick="logout()" class="btn-action decline" style="display: inline-block; text-decoration: none; text-align: center; border-radius: 8px;">Logout of VRFN</button>
+       </div>
+
+    </div>
+
+  </div>
+
+  <style>
+    .btn-action {
+      padding: 0.8rem 1.5rem;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+    .decline {
+      background: rgba(255, 69, 58, 0.1);
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+    .decline:hover { background: var(--danger); color: #fff; }
+  </style>
+
+  <script>
+    gsap.to(".reveal", {
+      opacity: 1,
+      y: 0,
+      duration: 1.4,
+      stagger: 0.1,
+      ease: "expo.out",
+      delay: 0.1
+    });
+
+    // Populate with existing user context
+    document.addEventListener('DOMContentLoaded', () => {
+        const user = JSON.parse(localStorage.getItem('vrfn_user'));
+        if (user) {
+            if (user.position) document.getElementById('user-position').value = user.position;
+            if (user.bio) document.getElementById('user-bio').value = user.bio;
+            if (user.widgets) {
+                if (user.widgets.radar !== undefined) document.getElementById('w-radar').checked = user.widgets.radar;
+                if (user.widgets.trophies !== undefined) document.getElementById('w-trophies').checked = user.widgets.trophies;
+                if (user.widgets.matches !== undefined) document.getElementById('w-matches').checked = user.widgets.matches;
+                if (user.widgets.news !== undefined) document.getElementById('w-news').checked = user.widgets.news;
+            }
+        }
+    });
+
+    async function saveProfileSettings() {
+        const user = JSON.parse(localStorage.getItem('vrfn_user'));
+        if (!user) return alert("You must be logged in.");
+        
+        const position = document.getElementById('user-position').value;
+        const bio = document.getElementById('user-bio').value;
+        const widgets = {
+            radar: document.getElementById('w-radar')?.checked,
+            trophies: document.getElementById('w-trophies')?.checked,
+            matches: document.getElementById('w-matches')?.checked,
+            news: document.getElementById('w-news')?.checked
+        };
+        
+        try {
+            const res = await fetch('/api/features?action=update-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.discord_id || user.id, position, bio, widgets })
+            });
+            const data = await res.json();
+            if (data.success) {
+                user.position = position;
+                user.bio = bio;
+                user.widgets = widgets;
+                localStorage.setItem('vrfn_user', JSON.stringify(user));
+                alert("Settings successfully saved!");
+            } else {
+                alert("Failed to update settings: " + (data.error || "Unknown"));
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error updating settings.");
+        }
+    }
+  </script>
+
+</body>
+</html>

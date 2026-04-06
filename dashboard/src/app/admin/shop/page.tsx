@@ -34,7 +34,15 @@ export default function AdminShopPage() {
     setLoading(true);
     fetch('/api/shop')
       .then(r => r.json())
-      .then(data => { setItems(Array.isArray(data) ? data : []); setLoading(false); });
+      .then(data => {
+        setItems(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('[SHOP FETCH ERROR]', err);
+        setLoading(false);
+        showToast('Failed to load shop items.', 'error');
+      });
   }, []);
 
   useEffect(() => {

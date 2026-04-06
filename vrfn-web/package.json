@@ -1,0 +1,10 @@
+{
+  "name": "vrfn-web",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@libsql/client": "latest",
+    "@vercel/analytics": "^2.0.1",
+    "node-fetch": "^2.6.7"
+  }
+}

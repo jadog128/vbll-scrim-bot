@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VRFN | Official League Rules</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+</head>
+<body onload="loadRules()">
+
+  <div class="glow-wrapper">
+    <div class="glow-1"></div>
+    <div class="glow-2"></div>
+  </div>
+
+  <nav class="reveal">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      VRFN
+    </div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="league.html">League</a>
+      <a href="market.html">Market</a>
+      <a href="schedule.html">Matches</a>
+      <a href="rules.html" class="active">Rules</a>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width: 900px;">
+    
+    <header class="reveal" style="margin-bottom: 4rem; text-align: center;">
+      <h1 style="font-size: 4rem; font-weight: 900; letter-spacing: -2px;">League <span style="color: var(--accent-primary);">Rules.</span></h1>
+      <p style="color: var(--text-secondary); font-size: 1.2rem; margin-top: 1rem;">Official regulations for the Virtual Football Network and VFA standard play.</p>
+    </header>
+
+    <div id="rules-gif-container" class="reveal" style="margin-bottom: 3rem; border-radius: 20px; overflow: hidden; border: 1px solid var(--glass-border);">
+        <img id="rules-gif" src="" alt="Rule Overview" style="width: 100%; display: block; filter: brightness(0.8);">
+    </div>
+
+    <div id="rules-list" class="reveal" style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- Loaded via JS -->
+    </div>
+
+    <div class="reveal" style="margin-top: 5rem; padding: 3rem; background: rgba(var(--accent-primary-rgb), 0.05); border-radius: 24px; border: 1px solid var(--glass-border); text-align: center;">
+        <h3 style="font-weight: 800; margin-bottom: 1rem;">Fair Play Promise</h3>
+        <p style="color: var(--text-secondary); line-height: 1.6;">By participating in VRFN matches, every player and manager agrees to uphold these rules to ensure a competitive and respectful environment for all. Violations may result in league sanctions or point deductions.</p>
+    </div>
+
+  </div>
+
+  <footer class="reveal" style="margin-top: 8rem; border-top: 1px solid var(--glass-border); padding: 4rem 8%;">
+    <p style="text-align: center; color: var(--text-secondary); font-size: 0.85rem;">VRFN | Hylix &copy; 2026</p>
+  </footer>
+
+  <script>
+    async function loadRules() {
+        try {
+            const resp = await fetch('/api/public/rules');
+            const data = await resp.json();
+            
+            if (data.gif) {
+                document.getElementById('rules-gif').src = data.gif;
+            } else {
+                document.getElementById('rules-gif-container').style.display = 'none';
+            }
+
+            const list = document.getElementById('rules-list');
+            list.innerHTML = data.rules.map((r, i) => `
+                <div class="glass-card" style="padding: 2rem; border-left: 4px solid var(--accent-primary);">
+                    <div style="display: flex; gap: 1rem; align-items: baseline; margin-bottom: 0.8rem;">
+                        <span style="font-size: 0.8rem; font-weight: 900; color: var(--accent-primary); opacity: 0.5;">0${i+1}</span>
+                        <h2 style="font-weight: 800; font-size: 1.4rem;">${r.title}</h2>
+                    </div>
+                    <p style="color: var(--text-secondary); line-height: 1.6; font-size: 1rem;">${r.description}</p>
+                </div>
+            `).join('');
+
+            gsap.to(".reveal", {
+                opacity: 1,
+                y: 0,
+                duration: 1.2,
+                stagger: 0.1,
+                ease: "expo.out"
+            });
+        } catch (e) {
+            console.error("Rules load error:", e);
+        }
+    }
+  </script>
+
+  <style>
+    .glass-card:hover { transform: translateX(10px); background: rgba(255,255,255,0.06); }
+    .glass-card { transition: all 0.3s ease; }
+  </style>
+
+</body>
+</html>

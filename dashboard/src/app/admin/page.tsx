@@ -18,8 +18,13 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status === 'unauthenticated' || (session && !session.user.isManagement)) {
-      router.push('/');
+    if (status === 'unauthenticated') {
+      router.push('/login');
+      return;
+    }
+    
+    if (status === 'authenticated' && !session?.user?.isManagement) {
+      setLoading(false);
       return;
     }
     
@@ -27,21 +32,56 @@ export default function AdminDashboard() {
       fetch('/api/admin/stats')
         .then(res => res.json())
         .then(data => {
-          setStats(data);
+          if (data && !data.error) {
+            setStats({
+              totalUsers: data.totalUsers ?? 0,
+              pendingClaims: data.pendingClaims ?? 0,
+              activeScrims: data.activeScrims ?? 0,
+              totalPoints: data.totalPoints ?? 0
+            });
+          } else {
+            console.error('[STATS ERROR]', data?.error);
+          }
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('[FETCH ERROR]', err);
           setLoading(false);
         });
     }
   }, [session, status, router]);
 
-  if (loading) return <div className="page"><p>Loading Admin Dashboard...</p></div>;
+  if (loading) return <main className="page"><div className="loading-container"><p>Loading Admin Dashboard...</p></div></main>;
+
+  if (status === 'authenticated' && !session?.user?.isManagement) {
+    return (
+      <main className="page" style={{ textAlign: 'center', padding: '80px 0' }}>
+        <div className="card" style={{ maxWidth: 500, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ fontSize: 60 }}>🚫</div>
+          <h1 className="page-title">Access Denied</h1>
+          <p style={{ color: 'var(--muted)', lineHeight: '1.6' }}>
+            You are logged in as <strong>{session.user.name}</strong>, but you do not have the <strong>Scrim Hoster</strong> role in the VBLL Discord server.
+          </p>
+          <div style={{ background: 'var(--bg3)', padding: 16, borderRadius: 12, textAlign: 'left', fontSize: 13 }}>
+            <p><strong>Common Fixes:</strong></p>
+            <ul style={{ marginLeft: 20, marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <li>Ensure you have the role ID <code>1437082293725429842</code>.</li>
+              <li>Wait 1-2 minutes after getting the role if you just received it.</li>
+              <li>Try signing out and signing back in to refresh your role list.</li>
+            </ul>
+          </div>
+          <Link href="/" className="btn btn-accent">Return Home</Link>
+        </div>
+      </main>
+    );
+  }
 
   const adminCards = [
     { title: '⭐ Review Claims', desc: `${stats.pendingClaims} claims waiting`, link: '/admin/claims', icon: '📋', color: 'var(--yellow)' },
     { title: '🛍️ Shop Management', desc: 'Add or restock items', link: '/admin/shop', icon: '⚙️', color: 'var(--accent)' },
     { title: '🛠️ Management Hub', desc: 'Mass DM & Scrim Posts', link: '/admin/management', icon: '📣', color: 'var(--green)' },
-    // New pages I'll create
     { title: '👤 User Manager', desc: 'Edit player points', link: '/admin/users', icon: '👥', color: 'var(--accent2)' },
-    { title: '📦 Redemptions', desc: 'Process shop orders', link: '/admin/redemptions', icon: '📥', color: 'var(--muted)' },
+    { title: '📥 Redemptions', desc: 'Process shop orders', link: '/admin/redemptions', icon: '📤', color: 'var(--muted)' },
   ];
 
   return (

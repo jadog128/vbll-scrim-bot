@@ -1842,6 +1842,57 @@ client.on('interactionCreate', async interaction => {
   try {
 
     // /claim-points ─────────────────────────────────────────────────────────
+    
+    // /setup-channels ─────────────────────────────────────────────────────
+    if (cmd === 'setup-channels') {
+      if (!interaction.member.permissions.has('Administrator')) {
+        await interaction.reply({ content: '❌ Only administrators can run the initial setup.', ephemeral: true });
+        return;
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+      const categoryId = '1490778742929494176';
+      const guild = interaction.guild;
+
+      const channelDefinitions = [
+        { name: '📥┃review-requests', setting: 'review_channel', desc: 'Point claim requests and proof' },
+        { name: '🛍️┃shop-redemptions', setting: 'redemption_channel', desc: 'Shop purchase alerts' },
+        { name: '📜┃point-logs', setting: 'log_channel', desc: 'General point history and logs' },
+        { name: '📦┃fulfilment-hub', setting: 'fulfilment_channel', desc: 'Working channel for approved items' },
+        { name: '📋┃audit-logs', setting: 'audit_log_channel', desc: 'Command usage security logs' },
+        { name: '🚀┃shop-alerts', setting: 'shop_alert_channel', desc: 'Low stock and restock announcements' },
+        { name: '🖇️┃batch-processing', setting: 'batch_request_channel', desc: 'Bulk request handling' }
+      ];
+
+      const results = [];
+      for (const def of channelDefinitions) {
+        try {
+          const channel = await guild.channels.create({
+            name: def.name,
+            type: 0, // GuildText
+            parent: categoryId,
+            topic: def.desc
+          });
+          
+          await setSetting(def.setting, channel.id);
+          results.push(`✅ **${def.name}** — Created and linked`);
+        } catch (err) {
+          console.error(`[setup-channels] Failed for ${def.name}:`, err.message);
+          results.push(`❌ **${def.name}** — Failed: ${err.message}`);
+        }
+      }
+
+      await interaction.editReply({
+        embeds: [new EmbedBuilder()
+          .setTitle('🏁 Bot Setup Complete!')
+          .setColor(0x00f5a0)
+          .setDescription(`I've created and configured the following channels in the requested category:\n\n${results.join('\n')}\n\n**The Hub and Bot are now fully synced!**`)
+          .setFooter({ text: 'VRDL Scrim Bot' })
+          .setTimestamp()]
+      });
+      return;
+    }
+
     if (cmd === 'claim-points') {
       if (!(await defer(interaction, true))) return;
 

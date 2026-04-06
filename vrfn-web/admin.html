@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VRFN | Admin Panel</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="main.js"></script>
+  <script type="module">import { inject } from "https://esm.sh/@vercel/analytics"; inject();</script>
+</head>
+<body>
+
+  <div class="glow-wrapper">
+    <div class="glow-1"></div>
+  </div>
+
+  <nav class="reveal">
+    <div class="logo">VRFN</div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="profile.html">Profile</a>
+      <a href="stats.html">Stats</a>
+      <a href="admin.html" class="active">Admin</a>
+      <a href="settings.html">Settings</a>
+    </div>
+    <div class="user-pill">
+      <div class="rank-badge" style="background: var(--accent-primary);">ADMIN</div>
+      <div class="user-avatar"></div>
+      <span style="font-size: 0.85rem; font-weight: 600;">_theonlymillo_</span>
+    </div>
+  </nav>
+
+  <div class="admin-layout reveal">
+    <aside class="admin-sidebar">
+      <div class="sidebar-header">
+        <h2 style="font-size: 1.5rem; font-weight: 900;">Admin Hub</h2>
+        <p style="font-size: 0.75rem; color: var(--text-secondary);">VRFN | Management</p>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" onclick="switchTab('dashboard')">
+          <span class="icon">🏠</span> Dashboard
+        </button>
+        <button id="nav-manager" class="nav-item" onclick="switchTab('manager')" style="display: none; border: 1px solid var(--accent-primary); border-radius: 8px;">
+          <span class="icon">📋</span> Teams Manager
+        </button>
+        <button class="nav-item" onclick="switchTab('requests')">
+          <span class="icon">📥</span> Stat Requests
+        </button>
+        <button class="nav-item" onclick="switchTab('stats')">
+          <span class="icon">📊</span> Stats Manager
+        </button>
+        <button class="nav-item" onclick="switchTab('players')">
+          <span class="icon">👤</span> Players
+        </button>
+        <button class="nav-item" onclick="switchTab('analytics')">
+          <span class="icon">📈</span> Analytics
+        </button>
+        <button class="nav-item" onclick="switchTab('transfers')">
+          <span class="icon">⚖️</span> Transfers
+        </button>
+        <button class="nav-item" onclick="switchTab('teams')">
+          <span class="icon">🏟️</span> Teams
+        </button>
+        <button class="nav-item" onclick="switchTab('matches')">
+          <span class="icon">⚽</span> Matches
+        </button>
+        <button class="nav-item" onclick="switchTab('competitions')">
+          <span class="icon">🏆</span> Competitions
+        </button>
+        <button class="nav-item" onclick="switchTab('baldor')">
+          <span class="icon">🏅</span> Ballon d'Or
+        </button>
+        <button class="nav-item" onclick="switchTab('trophies')">
+          <span class="icon">🏆</span> Trophies
+        </button>
+        <button class="nav-item" onclick="switchTab('logs')">
+          <span class="icon">📜</span> Audit Logs
+        </button>
+        <button class="nav-item" onclick="switchTab('settings')">
+          <span class="icon">⚙️</span> Settings
+        </button>
+      </nav>
+    </aside>
+
+    <main class="admin-main">
+      <header class="tab-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h1 id="tab-title">Stat Requests</h1>
+          <p id="tab-desc">Review and process player stat submissions.</p>
+        </div>
+        <div id="tab-actions">
+           <!-- Buttons added dynamically by main.js -->
+        </div>
+      </header>
+
+      <div id="tab-content">
+         <!-- All content dynamic via load... functions in main.js -->
+         <div style="text-align:center; padding: 4rem;"><p>Loading Admin Hub...</p></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="add-stat-modal" class="modal" style="display: none;">
+    <div class="modal-content glass-card" style="max-width: 500px;">
+      <h2 style="font-weight: 800; margin-bottom: 1.5rem;">Add Manual Player Stat</h2>
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+         <div style="position: relative;">
+           <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">SEARCH PLAYER</label>
+           <input type="text" id="add-stat-player-search" class="glass-input" placeholder="Start typing name..." oninput="searchStatPlayers()" style="width: 100%;">
+           <div id="stat-player-results" class="results-dropdown"></div>
+           <input type="hidden" id="add-stat-player-id">
+         </div>
+         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+           <div>
+             <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">STAT TYPE</label>
+             <select id="add-stat-type" class="glass-input" style="width: 100%;">
+               <option value="goals">Goals</option>
+               <option value="assists">Assists</option>
+               <option value="defender_cs">Defender CS</option>
+               <option value="gk_cs">GK Clean Sheet</option>
+             </select>
+           </div>
+           <div>
+             <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">ADD VALUE</label>
+             <input type="number" id="add-stat-value" class="glass-input" value="1" style="width: 100%;">
+           </div>
+         </div>
+         <p style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4;">This will increment the player's seasonal total. To decrease stats, Use the 'Edit' button on the specific player row instead.</p>
+         <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+           <button class="btn-action approve" onclick="submitManualStat()" style="flex: 1;">Add Stat</button>
+           <button class="btn-action decline" onclick="closeAddStatModal()" style="flex: 1;">Cancel</button>
+         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Direct DM Modal -->
+  <div id="dm-modal" class="modal" style="display: none;">
+    <div class="modal-content glass-card" style="max-width: 500px;">
+      <h2 style="font-weight: 800; margin-bottom: 0.5rem;">Send Direct DM</h2>
+      <p id="dm-target-name" style="color: var(--accent-primary); font-weight: 700; margin-bottom: 1.5rem; font-size: 0.9rem;">To: Username</p>
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+         <input type="hidden" id="dm-target-id">
+         <div>
+           <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">EMBED TITLE (Optional)</label>
+           <input type="text" id="dm-title" class="glass-input" placeholder="e.g. Activity Check" style="width: 100%;">
+         </div>
+         <div>
+           <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);">MESSAGE</label>
+           <textarea id="dm-message" class="glass-input" placeholder="Type your message here..." style="width: 100%; min-height: 120px; resize: vertical;"></textarea>
+         </div>
+         <p style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4;">The bot will send this message as an embed to the user's Discord DMs within 30 seconds.</p>
+         <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+           <button class="btn-action approve" onclick="submitDirectDM()" style="flex: 1;">🚀 Send DM</button>
+           <button class="btn-action decline" onclick="closeDMModal()" style="flex: 1;">Cancel</button>
+         </div>
+      </div>
+    </div>
+  </div>
+
+
+  <style>
+    .results-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: rgba(15, 15, 15, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        z-index: 1000;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .result-item {
+        padding: 0.8rem 1rem;
+        cursor: pointer;
+        transition: background 0.2s;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .result-item:hover {
+        background: rgba(255,255,255,0.05);
+    }
+    .result-item:last-child {
+        border-bottom: none;
+    }
+    .btn-action {
+      padding: 0.8rem 1.5rem;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+    .approve {
+      background: var(--success);
+      color: #000;
+      box-shadow: 0 5px 15px rgba(50, 215, 75, 0.2);
+    }
+    .approve:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(50, 215, 75, 0.3); }
+    
+    .decline {
+      background: rgba(255, 69, 58, 0.1);
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+    .decline:hover { background: var(--danger); color: #fff; }
+  </style>
+
+  <script>
+    gsap.to(".reveal", {
+      opacity: 1,
+      y: 0,
+      duration: 1.4,
+      stagger: 0.1,
+      ease: "expo.out",
+      delay: 0.1
+    });
+
+    // Note: loadAdminRequests() is now called globally in main.js for the 'admin' page
+
+    async function handleAction(id, action) {
+       // This legacy function now points to the real one in main.js
+       processRequest(id, action);
+    }
+  </script>
+
+    <!-- Edit Stats Modal -->
+    <div id="edit-stats-modal" class="modal">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <h3>Edit Player Stats</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <form id="edit-stats-form">
+                <input type="hidden" id="edit-stat-player-id">
+                <div class="form-group">
+                    <label>Player: <span id="edit-stat-player-name" style="color: var(--primary);"></span></label>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Goals</label>
+                        <input type="number" id="edit-goals" required min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Assists</label>
+                        <input type="number" id="edit-assists" required min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Defender CS</label>
+                        <input type="number" id="edit-defender_cs" required min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>GK CS</label>
+                        <input type="number" id="edit-gk_cs" required min="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Analytics Template -->
+    <div id="analytics-tab" style="display: none;">
+        <div style="display: flex; gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="glass-card" style="flex: 1; text-align: center; padding: 2rem;">
+                <p class="metric-label">Total Stats Recorded</p>
+                <h2 class="metric-value" id="ana-total-stats">-</h2>
+            </div>
+            <div class="glass-card" style="flex: 1; text-align: center; padding: 2rem;">
+                <p class="metric-label">Active Players (7d)</p>
+                <h2 class="metric-value" id="ana-active-players">-</h2>
+            </div>
+            <div class="glass-card" style="flex: 1; text-align: center; padding: 2rem;">
+                <p class="metric-label">Total Market Value</p>
+                <h2 class="metric-value" id="ana-total-value">-</h2>
+            </div>
+        </div>
+        
+        <div class="glass-card" style="margin-bottom: 2rem; padding: 2rem;">
+            <h3 style="margin-bottom: 1.5rem;">League Activity Insights</h3>
+            <div id="analytics-insights-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                <!-- Loaded dynamically -->
+            </div>
+        </div>
+
+        <div class="glass-card" style="text-align: center; padding: 3rem; border: 1px solid var(--accent-primary); background: rgba(77, 166, 255, 0.05);">
+            <h3 style="margin-bottom: 1rem;">Official Vercel Web Analytics</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto;">
+                View detailed real-time traffic, visitor locations, and top referral sources on your Vercel Dashboard.
+            </p>
+            <a href="https://vercel.com/jadog128s-projects/vrfn-web/analytics?environment=all" target="_blank" class="btn-action approve" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+                🚀 Open Vercel Analytics Dashboard <i class="fas fa-external-link-alt"></i>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

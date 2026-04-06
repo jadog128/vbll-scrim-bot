@@ -4,46 +4,81 @@ import Link from 'next/link';
 
 export default function Home() {
   return (
-    <main className="page" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 20 }}>
-        <div style={{ 
-          fontSize: 80, 
-          filter: 'drop-shadow(0 0 20px var(--accent))',
-          animation: 'pulse 2s infinite ease-in-out'
-        }}>⚽</div>
-        <h1 className="page-title" style={{ fontSize: 60, letterSpacing: '-1.5px', background: 'linear-gradient(to right, #fff, var(--muted))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          VBLL Scrim Bot
+    <main className="page" style={{ textAlign: 'center' }}>
+      <div className="mesh-container">
+        <h1 className="page-title" style={{ fontSize: 'min(11vw, 7.5rem)', color: 'var(--text)' }}>
+          Virtual <span className="liquid-pill"></span> Football<br/>is VBLL
         </h1>
-        <p className="page-subtitle" style={{ maxWidth: 600, fontSize: 18, color: 'var(--muted)', lineHeight: '1.6' }}>
-          Automated scrim management, point tracking, and rewards system for the official VB League.
+        
+        <p className="page-subtitle" style={{ maxWidth: 800, margin: '2rem auto', fontSize: '1.2rem' }}>
+          The professional infrastructure for the Virtual Football League. 
+          Real-time points tracking, automated rewards, and premium scrim management.
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, width: '100%', maxWidth: 900, marginTop: 40 }}>
-          {[
-            { href: '/leaderboard',  icon: '🏆', title: 'Leaderboard',      desc: 'Top 25 players by points' },
-            { href: '/shop',         icon: '🛍️', title: 'Reward Shop',      desc: 'Redeem points for items' },
-            { href: '/search',       icon: '🔍', title: 'Player Search',    desc: 'Lookup player statistics' },
-            { href: '/upcoming',     icon: '📅', title: 'Event Calendar',   desc: 'Upcoming league scrims' },
-          ].map(card => (
-            <Link key={card.href} href={card.href}>
-              <div className="card" style={{ textAlign: 'left', cursor: 'pointer', height: '100%' }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>{card.icon}</div>
-                <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6, color: '#fff' }}>{card.title}</div>
-                <div style={{ color: 'var(--muted)', fontSize: 14 }}>{card.desc}</div>
-              </div>
-            </Link>
-          ))}
+        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: '3rem', flexWrap: 'wrap' }}>
+          <Link href="/leaderboard" className="btn btn-accent">View Leaderboard</Link>
+          <Link href="/shop" className="btn btn-ghost">Visit Reward Shop</Link>
         </div>
 
-        <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 13, marginTop: 60, fontWeight: 500 }}>
-          VBLL Scrim Infrastructure • v2.0 Platform
-        </p>
+        <div className="metric-grid" style={{ marginTop: '10rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24, textAlign: 'left' }}>
+          <div className="card">
+            <div style={{ fontSize: '2.5rem', marginBottom: 16 }}>📊</div>
+            <h3 style={{ fontWeight: 900, fontSize: '1.4rem', marginBottom: 10 }}>Elite Scrims</h3>
+            <p style={{ color: 'var(--muted)', fontSize: '0.95rem', lineHeight: 1.6 }}>
+              Join high-stakes scrims and automatically track your performance for league rankings.
+            </p>
+          </div>
+          <div className="card">
+            <div style={{ fontSize: '2.5rem', marginBottom: 16 }}>⭐</div>
+            <h3 style={{ fontWeight: 900, fontSize: '1.4rem', marginBottom: 10 }}>Global Rewards</h3>
+            <p style={{ color: 'var(--muted)', fontSize: '0.95rem', lineHeight: 1.6 }}>
+              Earn points for your skills and redeem them for exclusive Discord roles, status, and items.
+            </p>
+          </div>
+          <div className="card">
+            <div style={{ fontSize: '2.5rem', marginBottom: 16 }}>🛡️</div>
+            <h3 style={{ fontWeight: 900, fontSize: '1.4rem', marginBottom: 10 }}>Staff Hub</h3>
+            <p style={{ color: 'var(--muted)', fontSize: '0.95rem', lineHeight: 1.6 }}>
+              Powerful management tools for league hosts to coordinate mass DMs and scrim announcements.
+            </p>
+          </div>
+        </div>
       </div>
 
       <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px var(--accent)); }
-          50% { transform: scale(1.05); filter: drop-shadow(0 0 25px var(--accent)); }
+        .liquid-pill {
+          display: inline-block;
+          vertical-align: middle;
+          width: min(22vw, 220px);
+          height: min(9vw, 90px);
+          border-radius: var(--radius-full);
+          background: linear-gradient(135deg, rgba(77, 166, 255, 0.15), rgba(0, 212, 255, 0.3));
+          position: relative;
+          overflow: hidden;
+          box-shadow: inset 0 4px 15px rgba(255,255,255,0.4), 0 10px 30px rgba(0,0,0,0.05);
+          margin: 0 1rem;
+          border: 1px solid rgba(255,255,255,0.5);
+          animation: liquid-morph 8s ease-in-out infinite;
+        }
+
+        @keyframes liquid-morph {
+          0%, 100% { border-radius: 100px; }
+          50% { border-radius: 80px 120px 90px 110px / 110px 90px 120px 80px; }
+        }
+
+        .liquid-pill::before {
+          content: '';
+          position: absolute;
+          top: -50%; left: -50%; width: 200%; height: 200%;
+          background: radial-gradient(circle at center, var(--accent) 0%, transparent 50%);
+          opacity: 0.6;
+          filter: blur(20px);
+          animation: rotating 15s linear infinite;
+        }
+
+        @keyframes rotating {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </main>
