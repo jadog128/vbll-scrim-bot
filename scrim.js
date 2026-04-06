@@ -58,12 +58,12 @@ async function loadSettings() {
 async function initDB() {
   const tables = [
     'CREATE TABLE IF NOT EXISTS scrim_points (discord_id TEXT PRIMARY KEY, username TEXT, points INTEGER DEFAULT 0)',
-    'CREATE TABLE IF NOT EXISTS scrim_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, discord_id TEXT, username TEXT, amount INTEGER, description TEXT, proof_url TEXT, status TEXT DEFAULT "pending", reviewer_id TEXT, created_at TEXT DEFAULT (datetime("now")))',
+    'CREATE TABLE IF NOT EXISTS scrim_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, discord_id TEXT, username TEXT, amount INTEGER, description TEXT, proof_url TEXT, status TEXT DEFAULT "pending", reviewer_id TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)',
     'CREATE TABLE IF NOT EXISTS scrim_shop (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, cost INTEGER, stock INTEGER DEFAULT -1, active INTEGER DEFAULT 1)',
-    'CREATE TABLE IF NOT EXISTS scrim_redemptions (id INTEGER PRIMARY KEY AUTOINCREMENT, discord_id TEXT, username TEXT, item_id INTEGER, item_name TEXT, cost INTEGER, status TEXT DEFAULT "pending", reviewer_id TEXT, public_id TEXT, player_game_id TEXT, created_at TEXT DEFAULT (datetime("now")))',
+    'CREATE TABLE IF NOT EXISTS scrim_redemptions (id INTEGER PRIMARY KEY AUTOINCREMENT, discord_id TEXT, username TEXT, item_id INTEGER, item_name TEXT, cost INTEGER, status TEXT DEFAULT "pending", reviewer_id TEXT, public_id TEXT, player_game_id TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)',
     'CREATE TABLE IF NOT EXISTS scrim_settings (key TEXT PRIMARY KEY, value TEXT)',
     'CREATE TABLE IF NOT EXISTS scrim_penalty_stats (discord_id TEXT PRIMARY KEY, username TEXT, total_goals INTEGER DEFAULT 0, total_shots INTEGER DEFAULT 0, current_level INTEGER DEFAULT 1, best_level INTEGER DEFAULT 1, penalty_points INTEGER DEFAULT 0)',
-    'CREATE TABLE IF NOT EXISTS scrim_upcoming (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, time TEXT, reward INTEGER, active INTEGER DEFAULT 1, created_at TEXT DEFAULT (datetime("now")))',
+    'CREATE TABLE IF NOT EXISTS scrim_upcoming (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, time TEXT, reward INTEGER, active INTEGER DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)',
     'CREATE TABLE IF NOT EXISTS scrim_participants (scrim_id INTEGER, discord_id TEXT, username TEXT, PRIMARY KEY(scrim_id, discord_id))'
   ];
 
