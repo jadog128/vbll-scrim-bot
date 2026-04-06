@@ -1514,7 +1514,7 @@ client.on('interactionCreate', async interaction => {
       }
       str += '```';
 
-      if (interaction.user.id === '1145402830786678884') {
+      if (interaction.user.id === '1288222067178868798') {
         const aimRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId(`bs_aimbot_${gameId}`).setLabel('🤖 Aimbot (Admin Only)').setStyle(ButtonStyle.Success)
         );
@@ -1526,8 +1526,8 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.customId.startsWith('bs_aimbot_')) {
-      const HANGMAN_ADMIN_ID = '1145402830786678884';
-      if (interaction.user.id !== HANGMAN_ADMIN_ID) {
+      
+      if (!hasAdmin(interaction.member)) {
         await interaction.reply({ content: '🚫 You do not have permission to use this.', ephemeral: true });
         return;
       }
@@ -1845,8 +1845,7 @@ client.on('interactionCreate', async interaction => {
     
     // /setup-channels ─────────────────────────────────────────────────────
     if (cmd === 'setup-channels') {
-      const ADMIN_ROLE_ID = '1288222067178868798';
-      if (!interaction.member.permissions.has('Administrator') && !interaction.member.roles.cache.has(ADMIN_ROLE_ID)) {
+      if (!hasAdmin(interaction.member)) {
         await interaction.reply({ content: '❌ Only administrators can run the initial setup.', ephemeral: true });
         return;
       }
@@ -2103,8 +2102,8 @@ client.on('interactionCreate', async interaction => {
 
     // /hangman-setword ────────────────────────────────────────────────────────
     if (cmd === 'hangman-setword') {
-      const HANGMAN_ADMIN_ID = '1145402830786678884';
-      if (interaction.user.id !== HANGMAN_ADMIN_ID) {
+      
+      if (!hasAdmin(interaction.member)) {
         await interaction.reply({ content: '🚫 You do not have permission to use this command.', ephemeral: true });
         return;
       }
@@ -2948,3 +2947,12 @@ initDB().then(() => {
   console.error('Critical Startup Error:', err);
   process.exit(1);
 });
+
+
+/**
+ * hasManagement
+ * Checks for Admin Role ID
+ */
+function hasManagement(member) {
+  return hasAdmin(member);
+}
