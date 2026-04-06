@@ -94,7 +94,8 @@ async function initDB() {
     await loadSettings();
     console.log('✅ Database and Settings ready.');
   } catch (e) {
-    console.error('❌ Failed to load settings from DB:', e);
+    console.error('⚠️ Failed to load settings from DB:', e.message || e);
+    console.warn('💡 Tip: Your database might be down or credentials incorrect. Bot will try to continue to Discord...');
   }
 }
 
