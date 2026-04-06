@@ -2876,7 +2876,12 @@ async function connect() {
 }
 
 client.once('ready', () => {
-  console.log('Bot is online as ' + client.user.tag);
+  console.log(`✅ DISCORD STATUS: Bot is now ONLINE as ${client.user.tag}`);
+  console.log(`✅ SERVER COUNT: Serving ${client.guilds.cache.size} servers.`);
+  
+  // Set bot activity
+  client.user.setActivity('VBLL Scrims', { type: 3 }); // Watching
+
   setInterval(async () => {
     try { 
       await run('INSERT OR REPLACE INTO scrim_settings (key,value) VALUES(?,?)', ['last_heartbeat', new Date().toISOString()]); 
