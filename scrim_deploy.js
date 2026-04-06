@@ -114,6 +114,10 @@ const commands = [
     .setDescription('Automatically create and configure all 7 core staff channels [Admin Only]'),
 
   new SlashCommandBuilder()
+    .setName('sync-hub')
+    .setDescription('Automatically detect and link existing staff channels to bot settings [Admin Only]'),
+
+  new SlashCommandBuilder()
     .setName('leaderboard')
     .setDescription('View the top 15 scrim points leaderboard'),
 
@@ -136,7 +140,7 @@ const commands = [
   new SlashCommandBuilder()
     .setName('set-shop-alert-channel')
     .setDescription('Set the channel for low stock and restock alerts [Scrim Management]')
-    .addChannelOption(o => o.setName('channel').setDescription('Select the channel for public shop alerts').setRequired(true)),
+    .addChannelOption(o => o.setName('channel').setDescription('Select the channel (leave blank for current channel)')),
 
   new SlashCommandBuilder()
     .setName('restock')

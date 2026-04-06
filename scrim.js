@@ -1893,6 +1893,56 @@ client.on('interactionCreate', async interaction => {
       return;
     }
 
+    // /sync-hub ───────────────────────────────────────────────────────────
+    if (cmd === 'sync-hub') {
+      if (!hasAdmin(interaction.member)) {
+        await interaction.reply({ content: '❌ Only administrators can run the hub synchronization.', ephemeral: true });
+        return;
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+      const guild = interaction.guild;
+      const channels = await guild.channels.fetch();
+
+      const channelDefinitions = [
+        { name: 'review-requests', setting: 'review_channel', emoji: '📥' },
+        { name: 'shop-redemptions', setting: 'redemption_channel', emoji: '🛍️' },
+        { name: 'point-logs', setting: 'log_channel', emoji: '📜' },
+        { name: 'fulfilment-hub', setting: 'fulfilment_channel', emoji: '📦' },
+        { name: 'audit-logs', setting: 'audit_log_channel', emoji: '📋' },
+        { name: 'shop-alerts', setting: 'shop_alert_channel', emoji: '🚀' },
+        { name: 'batch-processing', setting: 'batch_request_channel', emoji: '🖇️' }
+      ];
+
+      const results = [];
+      for (const def of channelDefinitions) {
+        // Look for channels that contain the keywords
+        const channel = channels.find(c => 
+          c.type === 0 && (
+            c.name.includes(def.name) || 
+            c.name.includes(def.name.replace('-', ' '))
+          )
+        );
+
+        if (channel) {
+          await setSetting(def.setting, channel.id);
+          results.push(`✅ **${def.emoji} ${channel.name}** — Linked to \`${def.setting}\``);
+        } else {
+          results.push(`❌ **${def.name}** — No matching channel found`);
+        }
+      }
+
+      await interaction.editReply({
+        embeds: [new EmbedBuilder()
+          .setTitle('🔄 Hub Sync Complete!')
+          .setColor(0x00f5a0)
+          .setDescription(`I've scanned the server and linked the following channels:\n\n${results.join('\n')}`)
+          .setFooter({ text: 'VRDL Scrim Bot' })
+          .setTimestamp()]
+      });
+      return;
+    }
+
     if (cmd === 'claim-points') {
       if (!(await defer(interaction, true))) return;
 
@@ -2795,7 +2845,7 @@ client.on('interactionCreate', async interaction => {
     // /set-shop-alert-channel ──────────────────────────────────────────────
     if (cmd === 'set-shop-alert-channel') {
       if (!hasManagement(interaction.member)) { await interaction.reply({ content: '❌ You need the **VRDL | Scrim Management** role.', flags: 64 }); return; }
-      const ch = interaction.options.getChannel('channel');
+      const ch = interaction.options.getChannel('channel') || interaction.channel;
       await setSetting('shop_alert_channel', ch.id);
       await interaction.reply({ content: `✅ Shop alerts (low stock/restock) will now be posted in <#${ch.id}>!\nPlayers will be told to buy quick!`, ephemeral: true });
       return;
