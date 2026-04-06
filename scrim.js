@@ -35,8 +35,12 @@ async function setSetting(k, v) {
   await run('INSERT OR REPLACE INTO scrim_settings (key,value) VALUES(?,?)', [k, v]);
 }
 async function loadSettings() {
-  const rows = await all('SELECT key,value FROM scrim_settings');
-  for (const r of rows) _settings[r.key] = r.value;
+  try {
+    const rows = await all('SELECT "key", "value" FROM scrim_settings');
+    for (const r of rows) _settings[r.key] = r.value;
+  } catch (e) {
+    console.error('[loadSettings] Database error:', e.message);
+  }
 }
 
 async function initDB() {
@@ -61,8 +65,13 @@ async function initDB() {
   for (const [k, v] of [['review_channel', ''], ['redemption_channel', ''], ['log_channel', ''], ['fulfilment_channel', ''], ['batch_request_channel', ''], ['audit_log_channel', ''], ['audit_log_verbose', 'false'], ['shop_alert_channel', '']]) {
     try { await run(`INSERT OR IGNORE INTO scrim_settings (key,value) VALUES(?,?)`, [k, v]); } catch (_) { }
   }
-  await loadSettings();
-  console.log('✅ Database ready.');
+
+  try {
+    await loadSettings();
+    console.log('✅ Database and Settings ready.');
+  } catch (e) {
+    console.error('❌ Failed to load settings from DB:', e);
+  }
 }
 
 const MOD_ROLE_ID = '1437082293725429842';
