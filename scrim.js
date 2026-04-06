@@ -1845,7 +1845,8 @@ client.on('interactionCreate', async interaction => {
     
     // /setup-channels ─────────────────────────────────────────────────────
     if (cmd === 'setup-channels') {
-      if (!interaction.member.permissions.has('Administrator')) {
+      const ADMIN_ROLE_ID = '1288222067178868798';
+      if (!interaction.member.permissions.has('Administrator') && !interaction.member.roles.cache.has(ADMIN_ROLE_ID)) {
         await interaction.reply({ content: '❌ Only administrators can run the initial setup.', ephemeral: true });
         return;
       }
