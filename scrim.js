@@ -102,13 +102,15 @@ const MOD_ROLE_ID = '1437082293725429842';
 const ADMIN_ROLE_ID = '1288222067178868798';
 
 function hasMod(member) {
-  if (member.permissions.has('Administrator')) return true;
-  return member.roles.cache.has(MOD_ROLE_ID) || member.roles.cache.has(ADMIN_ROLE_ID);
+  if (!member) return false;
+  if (member.permissions && member.permissions.has('Administrator')) return true;
+  return member.roles && member.roles.cache && (member.roles.cache.has(MOD_ROLE_ID) || member.roles.cache.has(ADMIN_ROLE_ID));
 }
 
 function hasAdmin(member) {
-  if (member.permissions.has('Administrator')) return true;
-  return member.roles.cache.has(ADMIN_ROLE_ID);
+  if (!member) return false;
+  if (member.permissions && member.permissions.has('Administrator')) return true;
+  return member.roles && member.roles.cache && member.roles.cache.has(ADMIN_ROLE_ID);
 }
 
 async function ensurePlayer(id, username) {
