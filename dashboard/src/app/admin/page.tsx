@@ -12,6 +12,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({
     totalUsers: 0,
     pendingClaims: 0,
+    pendingBatch: 0,
     activeScrims: 0,
     totalPoints: 0
   });
@@ -36,6 +37,7 @@ export default function AdminDashboard() {
             setStats({
               totalUsers: data.totalUsers ?? 0,
               pendingClaims: data.pendingClaims ?? 0,
+              pendingBatch: data.pendingBatch ?? 0,
               activeScrims: data.activeScrims ?? 0,
               totalPoints: data.totalPoints ?? 0
             });
@@ -77,11 +79,12 @@ export default function AdminDashboard() {
   }
 
   const adminCards = [
-    { title: '⭐ Review Claims', desc: `${stats.pendingClaims} claims waiting`, link: '/admin/claims', icon: '📋', color: 'var(--yellow)' },
-    { title: '🛍️ Shop Management', desc: 'Add or restock items', link: '/admin/shop', icon: '⚙️', color: 'var(--accent)' },
-    { title: '🛠️ Management Hub', desc: 'Mass DM & Scrim Posts', link: '/admin/management', icon: '📣', color: 'var(--green)' },
-    { title: '👤 User Manager', desc: 'Edit player points', link: '/admin/users', icon: '👥', color: 'var(--accent2)' },
-    { title: '📥 Redemptions', desc: 'Process shop orders', link: '/admin/redemptions', icon: '📤', color: 'var(--muted)' },
+    { title: '⭐ Review Points', desc: `${stats.pendingClaims} claims`, link: '/admin/claims', icon: '📋', color: 'var(--yellow)' },
+    { title: '👕 Custom Orders', desc: `${stats.pendingBatch} requests`, link: '/admin/batch/requests', icon: '🧵', color: 'var(--accent2)' },
+    { title: '🛍️ Shop Manager', desc: 'Add/restock items', link: '/admin/shop', icon: '⚙️', color: 'var(--accent)' },
+    { title: '📣 Scrim Hub', desc: 'Manage Events', link: '/admin/management', icon: '📣', color: 'var(--green)' },
+    { title: '📦 Redemptions', desc: 'Process orders', link: '/admin/redemptions', icon: '📤', color: 'var(--muted)' },
+    { title: '👥 User Manager', desc: 'Edit player data', link: '/admin/users', icon: '👥', color: 'var(--accent2)' },
   ];
 
   return (
@@ -99,12 +102,12 @@ export default function AdminDashboard() {
           <div className="stat-val" style={{ color: stats.pendingClaims > 0 ? 'var(--yellow)' : 'inherit' }}>{stats.pendingClaims}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Total Points in Circulation</div>
-          <div className="stat-val" style={{ fontSize: 22 }}>⭐ {stats.totalPoints.toLocaleString()}</div>
+          <div className="stat-label">Pending Customs</div>
+          <div className="stat-val" style={{ color: stats.pendingBatch > 0 ? 'var(--accent2)' : 'inherit' }}>{stats.pendingBatch}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Active Scrims</div>
-          <div className="stat-val">{stats.activeScrims}</div>
+          <div className="stat-label">Points Circular</div>
+          <div className="stat-val" style={{ fontSize: 20 }}>⭐ {stats.totalPoints.toLocaleString()}</div>
         </div>
       </div>
 

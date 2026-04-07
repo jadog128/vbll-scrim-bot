@@ -326,3 +326,50 @@ label {
   .page { padding: 2rem 1.2rem; }
   .page-title { font-size: 2rem; }
 }
+
+/* ── Central Hub Portals ────────────────────────────── */
+.portal-card {
+  background: var(--bg2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.portal-card:hover {
+  transform: translateY(-8px);
+  background: var(--bg3);
+  border-color: var(--accent-glow);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.2), 0 0 20px var(--accent-glow);
+}
+
+.portal-icon {
+  font-size: 3rem;
+  margin-bottom: 8px;
+}
+
+.portal-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: 1.8rem;
+  color: #fff;
+}
+
+.portal-desc {
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 1rem;
+  margin-bottom: 16px;
+}
+
+.portal-card .btn {
+  pointer-events: none;
+}

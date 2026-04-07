@@ -17,11 +17,12 @@ const links = [
 
 const mgmtLinks = [
   { href: '/admin',             label: '📊 Dashboard' },
-  { href: '/admin/management',  label: '📣 Scrim Management' },
-  { href: '/admin/users',       label: '👥 User Manager' },
-  { href: '/admin/claims',      label: '⭐ Claims' },
-  { href: '/admin/redemptions', label: '📦 Redemptions' },
+  { href: '/admin/management',  label: '📣 Scrims' },
+  { href: '/admin/claims',      label: '⭐ Points' },
+  { href: '/admin/batch/requests', label: '👕 Customs' },
+  { href: '/admin/redemptions', label: '📦 Orders' },
   { href: '/admin/shop',        label: '🛍️ Shop Shop' },
+  { href: '/admin/users',       label: '👥 Users' },
   { href: '/admin/settings',    label: '⚙️ Settings' },
 ];
 
@@ -41,7 +42,7 @@ export function NavBar() {
   return (
     <nav className="nav">
       <Link href="/" className="nav-logo">
-        VBLL│<span style={{ color: 'var(--accent)' }}>SCRIM</span>
+        VBLL│<span style={{ color: 'var(--accent)' }}>HUB</span>
       </Link>
 
       <div className="nav-links">

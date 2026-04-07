@@ -7,23 +7,43 @@ export default function Home() {
     <main className="page" style={{ textAlign: 'center' }}>
       <div className="mesh-container">
         <h1 className="page-title" style={{ fontSize: 'min(11vw, 7.5rem)', color: 'var(--text)' }}>
-          Virtual <span className="liquid-pill"></span> Football<br/>is VBLL
+          VBLL│<span className="liquid-pill"></span> HUB
         </h1>
         
         <p className="page-subtitle" style={{ maxWidth: 800, margin: '2rem auto', fontSize: '1.2rem' }}>
-          The professional infrastructure for the Virtual Football League. 
-          Real-time points tracking, automated rewards, and premium scrim management.
+          The unified infrastructure for VBLL. Manage your scrim performance, 
+          track point rankings, and request premium customs from one central location.
         </p>
 
-        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: '3rem', flexWrap: 'wrap' }}>
-          <Link href="/leaderboard" className="btn btn-accent">View Leaderboard</Link>
-          <Link href="/shop" className="btn btn-ghost">Visit Reward Shop</Link>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
+          gap: 32, 
+          maxWidth: 1000, 
+          margin: '4rem auto',
+          padding: '0 20px'
+        }}>
+          {/* Scrim Hub Portal */}
+          <Link href="/leaderboard" className="portal-card">
+            <div className="portal-icon">🏆</div>
+            <h2 className="portal-title">Scrim Hub</h2>
+            <p className="portal-desc">View global rankings, track your points history, and browse the reward shop.</p>
+            <div className="btn btn-accent" style={{ width: '100%', marginTop: 'auto' }}>Enter Scrim Hub</div>
+          </Link>
+
+          {/* Customs Hub Portal */}
+          <div className="portal-card" style={{ border: '1px solid var(--accent2-glow)' }}>
+            <div className="portal-icon">👕</div>
+            <h2 className="portal-title">Customs Hub</h2>
+            <p className="portal-desc">Request custom jerseys, shoes, and gear. Track your batch order status live.</p>
+            <Link href="/shop" className="btn btn-ghost" style={{ width: '100%', marginTop: 'auto', color: 'var(--accent2)' }}>Request Customs</Link>
+          </div>
         </div>
 
-        <div className="metric-grid" style={{ marginTop: '10rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24, textAlign: 'left' }}>
+        <div className="metric-grid" style={{ marginTop: '5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24, textAlign: 'left' }}>
           <div className="card">
             <div style={{ fontSize: '2.5rem', marginBottom: 16 }}>📊</div>
-            <h3 style={{ fontWeight: 900, fontSize: '1.4rem', marginBottom: 10 }}>Elite Scrims</h3>
+            <h3 style={{ fontWeight: 900, fontSize: '1.4rem', marginBottom: 10 }}>Elite Stats</h3>
             <p style={{ color: 'var(--muted)', fontSize: '0.95rem', lineHeight: 1.6 }}>
               Join high-stakes scrims and automatically track your performance for league rankings.
             </p>
@@ -37,9 +57,9 @@ export default function Home() {
           </div>
           <div className="card">
             <div style={{ fontSize: '2.5rem', marginBottom: 16 }}>🛡️</div>
-            <h3 style={{ fontWeight: 900, fontSize: '1.4rem', marginBottom: 10 }}>Staff Hub</h3>
+            <h3 style={{ fontWeight: 900, fontSize: '1.4rem', marginBottom: 10 }}>Unified Staff</h3>
             <p style={{ color: 'var(--muted)', fontSize: '0.95rem', lineHeight: 1.6 }}>
-              Powerful management tools for league hosts to coordinate mass DMs and scrim announcements.
+              Management tools to coordinate both scrim rewards and complex custom item batching.
             </p>
           </div>
         </div>
