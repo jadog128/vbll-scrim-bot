@@ -1,12 +1,12 @@
 {
-  "name": "vrdl-scrim-bot",
+  "name": "vbll-batch-bot",
   "version": "1.0.0",
-  "description": "",
-  "main": "scrim.js",
+  "description": "VBLL Batch Request Bot",
+  "main": "batch.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node scrim.js",
-    "deploy": "node scrim_deploy.js"
+    "start": "node batch.js",
+    "deploy": "node batch_deploy.js"
   },
   "keywords": [],
   "author": "",

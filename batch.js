@@ -9,6 +9,14 @@ const {
   ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle 
 } = require('discord.js');
 const { createClient } = require('@libsql/client');
+const http = require('http');
+
+// --- Virtual Port Binding (for Render) ---
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Batch Bot Online\n');
+}).listen(PORT, () => console.log(`🌍 Health check server listening on port ${PORT}`));
 
 // --- Database Configuration ---
 const db = createClient({
@@ -198,7 +206,10 @@ async function createRequest(userId, username, type, details, interaction) {
   const req = await get('SELECT id FROM batch_requests WHERE discord_id = ? ORDER BY id DESC LIMIT 1', [userId]);
   const id = req.id;
 
+  // Refresh settings to get the latest review channel from the hub
+  await loadSettings();
   const reviewChannelId = getSetting('review_channel');
+  
   if (reviewChannelId) {
     const ch = await client.channels.fetch(reviewChannelId).catch(() => null);
     if (ch) {

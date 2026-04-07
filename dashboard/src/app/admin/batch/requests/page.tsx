@@ -26,15 +26,19 @@ export default function AdminBatchRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [processing, setProcessing] = useState<number | null>(null);
+  
+  const [activeTab, setActiveTab] = useState<'queue' | 'history' | 'settings'>('queue');
+  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const showToast = (msg: string, type: 'success' | 'error') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const fetchRequests = useCallback(() => {
+  const fetchRequests = useCallback((filter: 'pending' | 'all' = 'pending') => {
     setLoading(true);
-    fetch('/api/admin/batch/requests')
+    fetch(`/api/admin/batch/requests?filter=${filter}`)
       .then(r => r.json())
       .then(data => { 
         setRequests(Array.isArray(data) ? data : []); 
@@ -42,11 +46,20 @@ export default function AdminBatchRequestsPage() {
       });
   }, []);
 
+  const fetchSettings = useCallback(() => {
+    fetch('/api/admin/batch/requests?type=settings')
+      .then(r => r.json())
+      .then(data => setSettings(data));
+  }, []);
+
   useEffect(() => {
     if (status === 'unauthenticated') { router.push('/login'); return; }
     if (status === 'authenticated' && !session?.user?.isManagement) { router.push('/'); return; }
-    if (status === 'authenticated') fetchRequests();
-  }, [status, session, fetchRequests, router]);
+    if (status === 'authenticated') {
+      if (activeTab === 'settings') fetchSettings();
+      else fetchRequests(activeTab === 'queue' ? 'pending' : 'all');
+    }
+  }, [status, session, fetchRequests, fetchSettings, router, activeTab]);
 
   const processRequest = async (requestId: number, action: 'approve' | 'complete' | 'reject') => {
     setProcessing(requestId);
@@ -58,7 +71,8 @@ export default function AdminBatchRequestsPage() {
       });
       if (res.ok) {
         showToast(`✅ Request ${action === 'complete' ? 'Fulfilled' : action}!`, 'success');
-        setRequests(prev => prev.filter(r => r.id !== requestId));
+        if (activeTab === 'queue') setRequests(prev => prev.filter(r => r.id !== requestId));
+        else fetchRequests('all');
       } else {
         const data = await res.json();
         showToast(`Error: ${data.error}`, 'error');
@@ -69,7 +83,28 @@ export default function AdminBatchRequestsPage() {
     setProcessing(null);
   };
 
-  if (status === 'loading' || (status === 'authenticated' && loading)) {
+  const saveSetting = async (key: string, value: string) => {
+    setSavingSettings(true);
+    try {
+      const res = await fetch('/api/admin/batch/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'settings', key, value }),
+      });
+      if (res.ok) {
+        showToast(`✅ Setting updated!`, 'success');
+        fetchSettings();
+      } else {
+        const data = await res.json();
+        showToast(`Error: ${data.error}`, 'error');
+      }
+    } catch {
+      showToast('Network error.', 'error');
+    }
+    setSavingSettings(false);
+  };
+
+  if (status === 'loading' || (status === 'authenticated' && loading && activeTab !== 'settings')) {
     return (
       <main className="page">
         <h1 className="page-title">👕 Custom Orders</h1>
@@ -84,32 +119,62 @@ export default function AdminBatchRequestsPage() {
 
   return (
     <main className="page">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <h1 className="page-title">👕 Custom Orders</h1>
-        <button className="btn btn-ghost" onClick={fetchRequests}>🔄 Refresh</button>
-      </div>
-      <p className="page-subtitle">Manage batch requests for jerseys, shoes, and other custom gear.</p>
-
-      <div className="stats" style={{ marginBottom: 24 }}>
-        <div className="stat-card">
-          <div className="stat-label">Pending Customs</div>
-          <div className="stat-val" style={{ color: 'var(--accent2)' }}>{requests.length}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Total in Queue</div>
-          <div className="stat-val">{requests.length}</div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <h1 className="page-title">👕 Customs Hub</h1>
+        <button className="btn btn-ghost" onClick={() => activeTab === 'settings' ? fetchSettings() : fetchRequests(activeTab === 'queue' ? 'pending' : 'all')}>🔄 Refresh</button>
       </div>
 
-      {requests.length === 0 ? (
+      <div style={{ display: 'flex', gap: 10, marginBottom: 30, borderBottom: '1px solid var(--glass-border)', paddingBottom: 10 }}>
+        <button 
+          className={`nav-link ${activeTab === 'queue' ? 'active' : ''}`} 
+          onClick={() => setActiveTab('queue')}
+          style={{ background: activeTab === 'queue' ? 'rgba(255,255,255,0.05)' : 'transparent', border: 'none', cursor: 'pointer' }}
+        >
+          Active Queue
+        </button>
+        <button 
+          className={`nav-link ${activeTab === 'history' ? 'active' : ''}`} 
+          onClick={() => setActiveTab('history')}
+          style={{ background: activeTab === 'history' ? 'rgba(255,255,255,0.05)' : 'transparent', border: 'none', cursor: 'pointer' }}
+        >
+          History
+        </button>
+        <button 
+          className={`nav-link ${activeTab === 'settings' ? 'active' : ''}`} 
+          onClick={() => setActiveTab('settings')}
+          style={{ background: activeTab === 'settings' ? 'rgba(255,255,255,0.05)' : 'transparent', border: 'none', cursor: 'pointer' }}
+        >
+          Settings
+        </button>
+      </div>
+
+      {activeTab === 'settings' ? (
+        <div className="card" style={{ maxWidth: 600 }}>
+          <h2 style={{ fontSize: '1.2rem', marginBottom: 20 }}>Batch Hub Settings</h2>
+          <div className="form-group">
+            <label>Review Channel ID</label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <input 
+                placeholder="Discord Channel ID" 
+                defaultValue={settings.review_channel || ''}
+                onBlur={(e) => saveSetting('review_channel', e.target.value)}
+              />
+            </div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 8 }}>
+              This is where the bot will post new requests for staff to review.
+            </p>
+          </div>
+          {savingSettings && <p style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>⌛ Saving...</p>}
+        </div>
+      ) : requests.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '60px 0' }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-          <p style={{ color: 'var(--muted)', fontSize: 16 }}>No custom requests waiting.</p>
+          <p style={{ color: 'var(--muted)', fontSize: 16 }}>No custom requests found.</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100%, 1fr))', gap: 16 }}>
           {requests.map(req => (
-            <div key={req.id} className="card" style={{ borderLeft: `4px solid ${req.status === 'pending' ? 'var(--accent2)' : 'var(--accent)'}` }}>
+            <div key={req.id} className="card" style={{ borderLeft: `4px solid ${req.status === 'pending' ? 'var(--accent2)' : req.status === 'completed' ? 'var(--green)' : 'var(--accent)'}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
