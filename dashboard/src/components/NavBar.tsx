@@ -21,6 +21,7 @@ const mgmtLinks = [
   { href: '/admin/claims',      label: '⭐ Points' },
   { href: '/admin/batch/requests', label: '👕 Customs' },
   { href: '/admin/redemptions', label: '📦 Orders' },
+  { href: '/admin/sentinal',    label: '🛡️ Sentinal' },
   { href: '/admin/shop',        label: '🛍️ Shop Shop' },
   { href: '/admin/users',       label: '👥 Users' },
   { href: '/admin/settings',    label: '⚙️ Settings' },

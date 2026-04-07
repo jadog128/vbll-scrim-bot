@@ -14,7 +14,9 @@ export default function AdminDashboard() {
     pendingClaims: 0,
     pendingBatch: 0,
     activeScrims: 0,
-    totalPoints: 0
+    totalPoints: 0,
+    totalModActions: 0,
+    globalBans: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +41,9 @@ export default function AdminDashboard() {
               pendingClaims: data.pendingClaims ?? 0,
               pendingBatch: data.pendingBatch ?? 0,
               activeScrims: data.activeScrims ?? 0,
-              totalPoints: data.totalPoints ?? 0
+              totalPoints: data.totalPoints ?? 0,
+              totalModActions: data.totalModActions ?? 0,
+              globalBans: data.globalBans ?? 0
             });
           } else {
             console.error('[STATS ERROR]', data?.error);
@@ -79,6 +83,7 @@ export default function AdminDashboard() {
   }
 
   const adminCards = [
+    { title: '🛡️ Sentinal Pulse', desc: `${stats.totalModActions} actions logged`, link: '/admin/sentinal', icon: '🛡️', color: 'var(--accent)' },
     { title: '⭐ Review Points', desc: `${stats.pendingClaims} claims`, link: '/admin/claims', icon: '📋', color: 'var(--yellow)' },
     { title: '👕 Custom Orders', desc: `${stats.pendingBatch} requests`, link: '/admin/batch/requests', icon: '🧵', color: 'var(--accent2)' },
     { title: '🛍️ Shop Manager', desc: 'Add/restock items', link: '/admin/shop', icon: '⚙️', color: 'var(--accent)' },
@@ -98,12 +103,12 @@ export default function AdminDashboard() {
           <div className="stat-val">{stats.totalUsers}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Pending Claims</div>
-          <div className="stat-val" style={{ color: stats.pendingClaims > 0 ? 'var(--yellow)' : 'inherit' }}>{stats.pendingClaims}</div>
+          <div className="stat-label" style={{ color: 'var(--accent)' }}>Sentinal Logs</div>
+          <div className="stat-val">{stats.totalModActions}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Pending Customs</div>
-          <div className="stat-val" style={{ color: stats.pendingBatch > 0 ? 'var(--accent2)' : 'inherit' }}>{stats.pendingBatch}</div>
+          <div className="stat-label" style={{ color: 'var(--red)' }}>Global Bans</div>
+          <div className="stat-val">{stats.globalBans}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Points Circular</div>

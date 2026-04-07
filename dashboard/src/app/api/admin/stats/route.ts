@@ -12,12 +12,14 @@ export async function GET() {
   if (!session?.user?.isManagement) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const [playersRes, claimsRes, pointsRes, scrimsRes, batchRes] = await Promise.all([
+    const [playersRes, claimsRes, pointsRes, scrimsRes, batchRes, modRes, globalRes] = await Promise.all([
       turso.execute('SELECT COUNT(*) as count FROM scrim_stats'),
       turso.execute("SELECT COUNT(*) as count FROM scrim_requests WHERE status='pending'"),
       turso.execute('SELECT SUM(points) as total FROM scrim_stats'),
       turso.execute('SELECT COUNT(*) as count FROM scrim_upcoming WHERE active=1'),
-      turso.execute("SELECT COUNT(*) as count FROM batch_requests WHERE status='pending'")
+      turso.execute("SELECT COUNT(*) as count FROM batch_requests WHERE status='pending'"),
+      turso.execute('SELECT COUNT(*) as count FROM mod_logs'),
+      turso.execute('SELECT COUNT(*) as count FROM mod_global_blacklist')
     ]);
 
     return NextResponse.json({
@@ -25,7 +27,9 @@ export async function GET() {
       pendingClaims: Number(claimsRes.rows[0].count),
       totalPoints: Number(pointsRes.rows[0].total) || 0,
       activeScrims: Number(scrimsRes.rows[0].count),
-      pendingBatch: Number(batchRes.rows[0].count)
+      pendingBatch: Number(batchRes.rows[0].count),
+      totalModActions: Number(modRes.rows[0].count),
+      globalBans: Number(globalRes.rows[0].count)
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
