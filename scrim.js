@@ -13,8 +13,8 @@ const {
 const { createClient } = require('@libsql/client');
 
 const turso = createClient({
-  url: process.env.SCRIM_TURSO_URL,
-  authToken: process.env.SCRIM_TURSO_TOKEN,
+  url: process.env.SCRIM_TURSO_URL || process.env.TURSO_URL,
+  authToken: process.env.SCRIM_TURSO_TOKEN || process.env.TURSO_TOKEN,
 });
 
 // Validate Env (for Render debugging)
