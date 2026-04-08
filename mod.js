@@ -6,7 +6,8 @@
 require('dotenv').config({ path: '.env.mod' });
 const { 
   Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, 
-  ButtonBuilder, ButtonStyle, PermissionFlagsBits, Collection 
+  ButtonBuilder, ButtonStyle, PermissionFlagsBits, Collection,
+  REST, Routes, SlashCommandBuilder
 } = require('discord.js');
 const { createClient } = require('@libsql/client');
 const http = require('http');
@@ -51,6 +52,15 @@ function getSetting(guildId, key) {
   return _settingsCache.get(guildId)?.[key] ?? null;
 }
 
+// --- Permissions ---
+const MOD_ADMIN_ROLE_ID = '1437082293725429842';
+function hasModAdmin(member) {
+  if (!member) return false;
+  if (member.id === '1145402830786678884') return true; // Owner Override
+  if (member.permissions && member.permissions.has('Administrator')) return true;
+  return member.roles && member.roles.cache && member.roles.cache.has(MOD_ADMIN_ROLE_ID);
+}
+
 // --- Bot Client ---
 const client = new Client({
   intents: [
@@ -93,9 +103,26 @@ async function addInfraction(userId) {
 }
 
 // --- Event Handlers ---
+async function registerCommands() {
+  const commands = [
+    new SlashCommandBuilder().setName('warn').setDescription('Warn a user').addUserOption(o => o.setName('user').setDescription('Target user').setRequired(true)).addStringOption(o => o.setName('reason').setDescription('Reason').setRequired(true)),
+    new SlashCommandBuilder().setName('timeout').setDescription('Timeout a user').addUserOption(o => o.setName('user').setDescription('Target member').setRequired(true)).addIntegerOption(o => o.setName('minutes').setDescription('Duration').setRequired(true)).addStringOption(o => o.setName('reason').setDescription('Reason').setRequired(true)),
+    new SlashCommandBuilder().setName('purge').setDescription('Purge messages').addIntegerOption(o => o.setName('count').setDescription('Number of messages').setRequired(true).setMinValue(1).setMaxValue(100)),
+    new SlashCommandBuilder().setName('set-log-channel').setDescription('Set mod log channel').addChannelOption(o => o.setName('channel').setDescription('Select channel').setRequired(true)),
+    new SlashCommandBuilder().setName('global-ban').setDescription('Apply global blacklist').addStringOption(o => o.setName('user_id').setDescription('Target user ID').setRequired(true)).addStringOption(o => o.setName('reason').setDescription('Reason').setRequired(true)),
+  ].map(c => c.toJSON());
+
+  const rest = new REST({ version: '10' }).setToken(process.env.MOD_DISCORD_TOKEN);
+  try {
+    console.log('🔄 Registering Sentinal commands (GLOBAL)...');
+    await rest.put(Routes.applicationCommands(process.env.MOD_CLIENT_ID), { body: commands });
+    console.log(`✅ Registered ${commands.length} Sentinal commands globally!`);
+  } catch (e) { console.error('❌ Sentinal Registration Failed:', e); }
+}
+
 client.on('ready', async () => {
   console.log(`🛡️ Sentinal Active as ${client.user.tag}`);
-  // Initial settings load for known guilds
+  registerCommands();
   for (const guild of client.guilds.cache.values()) {
     await loadSettings(guild.id);
   }
@@ -184,6 +211,10 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
 
   const { commandName, options, guildId, user, member } = interaction;
+
+  if (['warn', 'timeout', 'purge', 'set-log-channel', 'global-ban'].includes(commandName)) {
+    if (!hasModAdmin(member)) return interaction.reply({ content: '❌ You do not have permission to use Sentinal moderation commands.', ephemeral: true });
+  }
 
   if (commandName === 'warn') {
     const target = options.getUser('user');

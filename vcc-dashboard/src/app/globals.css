@@ -1,0 +1,100 @@
+:root {
+  --bg: #050505;
+  --surface: rgba(20, 20, 25, 0.6);
+  --border: rgba(255, 255, 255, 0.1);
+  --text: #ffffff;
+  --muted: #a0a0ab;
+  --accent: #0084ff;
+  --accent-glow: rgba(0, 132, 255, 0.4);
+  --success: #00ffa3;
+  --danger: #ff3b3b;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glowPulse {
+  0% { box-shadow: 0 0 10px var(--accent-glow); }
+  50% { box-shadow: 0 0 25px var(--accent-glow); }
+  100% { box-shadow: 0 0 10px var(--accent-glow); }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Outfit', 'Inter', sans-serif;
+  min-height: 100vh;
+  background-image: 
+    radial-gradient(circle at 0% 0%, rgba(0, 132, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.05) 0%, transparent 50%);
+}
+
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 20px;
+  animation: fadeIn 0.8s ease-out;
+}
+
+.glass-card {
+  background: var(--surface);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 30px;
+  margin-bottom: 24px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(30, 30, 35, 0.8);
+}
+
+.btn {
+  padding: 14px 28px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-primary { 
+  background: linear-gradient(135deg, #0084ff, #00c2ff);
+  color: white;
+  animation: glowPulse 3s infinite;
+}
+
+.btn-primary:hover {
+  transform: scale(1.05);
+  filter: brightness(1.2);
+}
+
+.status-badge {
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+h1 {
+  font-size: 42px;
+  font-weight: 900;
+  background: linear-gradient(to right, #fff, #888);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

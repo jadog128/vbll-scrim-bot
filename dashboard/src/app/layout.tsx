@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { NavBar } from '@/components/NavBar';
 import { Providers } from '@/components/Providers';
+import { Analytics } from '@vercel/analytics/react';
 
 export const metadata: Metadata = {
   title: 'VRDL Scrim Hub',
@@ -38,6 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </Suspense>
           </main>
         </Providers>
+        <Analytics />
       </body>
     </html>
   );

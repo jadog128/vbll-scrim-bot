@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { getAuth } from '@/lib/auth';
-import { createClient } from '@libsql/client';
-
-const turso = createClient({
-  url: process.env.SCRIM_TURSO_URL || 'libsql://vbllscrim-bot-mikefeufh.aws-eu-west-1.turso.io',
-  authToken: process.env.SCRIM_TURSO_TOKEN || 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzU1MDMwODYsImlkIjoiMDE5ZDYyZGYtMmYwMS03YmNlLTg5Y2BeLTg5Y2ItNDhiYTI3NmZlM2JlIiwicmlkIjoiNjAzZmZjOGYtYWI2ZS00MjU3LTkzOTAtZDA2ODlhMzE0YzIyIn0.jaNgxQ9gf8fp5pdhC_dSptGq4OvHL-Am-GO1WDaGQRJ8YHFWLIbUjY4s5facimAHts3B9-4UJN6R3yI24RwDBw',
-});
+import { run, all } from '@/lib/db';
 
 // GET: Fetch batch requests (with status filtering) or settings
 export async function GET(req: Request) {
@@ -18,17 +14,16 @@ export async function GET(req: Request) {
 
   try {
     if (type === 'settings') {
-      const res = await turso.execute("SELECT key, value FROM batch_settings");
-      const settings = Object.fromEntries(res.rows.map(row => [row[0], row[1]]));
+      const rows = await all("SELECT key, value FROM batch_settings");
+      const settings = Object.fromEntries(rows.map((row: any) => [row.key, row.value]));
       return NextResponse.json(settings);
     }
 
     const sql = filter === 'pending' 
-      ? "SELECT * FROM batch_requests WHERE status IN ('pending', 'approved') ORDER BY id ASC"
+      ? "SELECT * FROM batch_requests WHERE status IN ('pre_review', 'pending', 'approved') ORDER BY id ASC"
       : "SELECT * FROM batch_requests ORDER BY id DESC LIMIT 100";
     
-    const res = await turso.execute(sql);
-    const requests = res.rows.map(row => Object.fromEntries(res.columns.map((c, i) => [c, row[i]])));
+    const requests = await all(sql);
     return NextResponse.json(requests);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -45,20 +40,34 @@ export async function POST(req: Request) {
     
     if (body.type === 'settings') {
       const { key, value } = body;
-      await turso.execute({
-        sql: 'INSERT OR REPLACE INTO batch_settings (key, value) VALUES (?, ?)',
-        args: [key, value]
-      });
+      await run('INSERT OR REPLACE INTO batch_settings (key, value) VALUES (?, ?)', [key, value]);
       return NextResponse.json({ success: true });
     }
 
     const { requestId, action } = body;
-    const status = action === 'approve' ? 'approved' : action === 'complete' ? 'completed' : 'rejected';
+    let status = 'pending';
+    if (action === 'approve') status = 'approved';
+    else if (action === 'complete') status = 'completed';
+    else if (action === 'reject') status = 'rejected';
+    else if (action === 'verify') status = 'pending';
     
-    await turso.execute({
-      sql: 'UPDATE batch_requests SET status = ?, staff_id = ? WHERE id = ?',
-      args: [status, session.user.id, requestId]
-    });
+    await run('UPDATE batch_requests SET status = ?, staff_id = ? WHERE id = ?', [status, session.user.id, requestId]);
+
+    // Send DM Notification via Bot's HTTP endpoint
+    try {
+      const rows = await all('SELECT discord_id, type FROM batch_requests WHERE id = ?', [requestId]);
+      if (rows.length > 0) {
+        const { discord_id: userId, type } = rows[0] as any;
+        const botUrl = process.env.BATCH_BOT_URL || 'https://vbll-batcheron.onrender.com';
+        await fetch(`${botUrl}/notify-dm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, status, type, id: requestId })
+        }).catch(() => {});
+      }
+    } catch (e) {
+      console.error('Failed to notify bot for DM:', e);
+    }
 
     return NextResponse.json({ success: true, newStatus: status });
   } catch (err: any) {

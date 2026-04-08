@@ -28,11 +28,19 @@ export default function SentinalHub() {
 
     try {
       const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
-      if (activeTab === 'pulse') setLogs(data);
-      else if (activeTab === 'global') setGlobalBans(data);
-      else if (activeTab === 'infractions') setInfractions(data);
-    } catch (e) { console.error('Fetch error', e); }
+      
+      if (Array.isArray(data)) {
+        if (activeTab === 'pulse') setLogs(data);
+        else if (activeTab === 'global') setGlobalBans(data);
+        else if (activeTab === 'infractions') setInfractions(data);
+      } else {
+        console.error('API did not return an array:', data);
+      }
+    } catch (e) { 
+      console.error('Fetch error', e); 
+    }
     setLoading(false);
   }, [activeTab]);
 
@@ -102,8 +110,14 @@ export default function SentinalHub() {
             <tbody>
               {logs.map(log => (
                 <tr key={log.id}>
-                  <td style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>{new Date(log.created_at).toLocaleTimeString()}</td>
-                  <td><span className={`badge ${log.action.includes('BAN') ? 'badge-red' : log.action.includes('WARN') ? 'badge-yellow' : 'badge-staff'}`}>{log.action}</span></td>
+                  <td style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>
+                    {log.created_at ? new Date(log.created_at).toLocaleTimeString() : 'N/A'}
+                  </td>
+                  <td>
+                    <span className={`badge ${log.action?.includes('BAN') ? 'badge-red' : log.action?.includes('WARN') ? 'badge-yellow' : 'badge-staff'}`}>
+                      {log.action || 'ACTION'}
+                    </span>
+                  </td>
                   <td><code>{log.target_id}</code></td>
                   <td style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.reason}>{log.reason}</td>
                   <td><code>{log.moderator_id === 'Sentinal' ? '🤖' : log.moderator_id}</code></td>
@@ -142,9 +156,11 @@ export default function SentinalHub() {
                 {globalBans.map(ban => (
                   <tr key={ban.discord_id}>
                     <td><code>{ban.discord_id}</code></td>
-                    <td>{ban.reason}</td>
-                    <td><code>{ban.staff_id}</code></td>
-                    <td style={{ fontSize: '0.8rem' }}>{new Date(ban.created_at).toLocaleDateString()}</td>
+                    <td>{ban.reason || 'No reason'}</td>
+                    <td><code>{ban.staff_id || 'Unknown'}</code></td>
+                    <td style={{ fontSize: '0.8rem' }}>
+                      {ban.created_at ? new Date(ban.created_at).toLocaleDateString() : 'N/A'}
+                    </td>
                     <td><button className="btn btn-ghost" style={{ color: 'var(--red)' }} onClick={() => removeGlobalBan(ban.discord_id)}>Remove</button></td>
                   </tr>
                 ))}
@@ -169,8 +185,10 @@ export default function SentinalHub() {
               {infractions.map(inf => (
                 <tr key={inf.discord_id}>
                   <td><code>{inf.discord_id}</code></td>
-                  <td style={{ color: inf.count > 5 ? 'var(--red)' : 'var(--yellow)', fontWeight: 900 }}>{inf.count}</td>
-                  <td style={{ fontSize: '0.8rem' }}>{new Date(inf.last_infraction).toLocaleString()}</td>
+                  <td style={{ color: inf.count > 5 ? 'var(--red)' : 'var(--yellow)', fontWeight: 900 }}>{inf.count || 0}</td>
+                  <td style={{ fontSize: '0.8rem' }}>
+                    {inf.last_infraction ? new Date(inf.last_infraction).toLocaleString() : 'N/A'}
+                  </td>
                   <td>{inf.count > 10 ? '🔴 Critical' : inf.count > 5 ? '🟠 High Risk' : '🟡 Warned'}</td>
                 </tr>
               ))}

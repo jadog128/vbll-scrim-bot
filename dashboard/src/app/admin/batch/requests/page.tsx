@@ -9,8 +9,10 @@ interface BatchRequest {
   id: number;
   discord_id: string;
   username: string;
+  vrfs_id: string;
   type: string;
   details: string;
+  proof_url?: string;
   status: string;
   created_at: string;
 }
@@ -38,7 +40,7 @@ export default function AdminBatchRequestsPage() {
 
   const fetchRequests = useCallback((filter: 'pending' | 'all' = 'pending') => {
     setLoading(true);
-    fetch(`/api/admin/batch/requests?filter=${filter}`)
+    fetch(`/api/admin/batch/requests?filter=${filter}`, { cache: 'no-store' })
       .then(r => r.json())
       .then(data => { 
         setRequests(Array.isArray(data) ? data : []); 
@@ -61,7 +63,7 @@ export default function AdminBatchRequestsPage() {
     }
   }, [status, session, fetchRequests, fetchSettings, router, activeTab]);
 
-  const processRequest = async (requestId: number, action: 'approve' | 'complete' | 'reject') => {
+  const processRequest = async (requestId: number, action: 'approve' | 'complete' | 'reject' | 'verify') => {
     setProcessing(requestId);
     try {
       const res = await fetch('/api/admin/batch/requests', {
@@ -152,7 +154,7 @@ export default function AdminBatchRequestsPage() {
         <div className="card" style={{ maxWidth: 600 }}>
           <h2 style={{ fontSize: '1.2rem', marginBottom: 20 }}>Batch Hub Settings</h2>
           <div className="form-group">
-            <label>Review Channel ID</label>
+            <label>Batch Queue Channel ID</label>
             <div style={{ display: 'flex', gap: 10 }}>
               <input 
                 placeholder="Discord Channel ID" 
@@ -161,7 +163,21 @@ export default function AdminBatchRequestsPage() {
               />
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 8 }}>
-              This is where the bot will post new requests for staff to review.
+              The official queue channel where verified requests are posted for fulfilment.
+            </p>
+          </div>
+
+          <div className="form-group" style={{ marginTop: 24 }}>
+            <label>Pre-Review Channel ID</label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <input 
+                placeholder="Discord Channel ID" 
+                defaultValue={settings.pre_review_channel || ''}
+                onBlur={(e) => saveSetting('pre_review_channel', e.target.value)}
+              />
+            </div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 8 }}>
+              Where raw user requests land first for proof verification.
             </p>
           </div>
           {savingSettings && <p style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>⌛ Saving...</p>}
@@ -179,10 +195,18 @@ export default function AdminBatchRequestsPage() {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontWeight: 900, fontSize: '1.2rem', color: '#fff' }}>#{req.id} {req.type.toUpperCase()}</span>
-                    <span className={`badge badge-${req.status === 'pending' ? 'pending' : 'approved'}`}>{req.status}</span>
+                    <span className={`badge`} style={{ 
+                      backgroundColor: req.status === 'pre_review' ? '#FFA500' : req.status === 'pending' ? 'var(--accent2)' : 'var(--green)',
+                      color: '#fff', padding: '2px 8px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase'
+                    }}>
+                      {req.status === 'pre_review' ? 'Verification' : req.status}
+                    </span>
                   </div>
                   <div style={{ marginTop: 4, color: 'var(--muted)', fontSize: '0.9rem' }}>
-                    By <strong>{req.username}</strong> (<Link href={`/admin/users?q=${req.discord_id}`} style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{req.discord_id}</Link>)
+                    By <strong>{req.username}</strong> | VRFS ID: <strong style={{ color: 'var(--accent)' }}>{req.vrfs_id}</strong>
+                  </div>
+                  <div style={{ marginTop: 2, color: 'var(--muted)', fontSize: '0.8rem' }}>
+                    Discord ID: <Link href={`/admin/users?q=${req.discord_id}`} style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{req.discord_id}</Link>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--muted)' }}>
@@ -190,36 +214,52 @@ export default function AdminBatchRequestsPage() {
                 </div>
               </div>
 
-              <div style={{ margin: '16px 0', background: 'var(--bg3)', padding: 12, borderRadius: 8, border: '1px solid var(--glass-border)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 4, fontWeight: 700 }}>Custom Details</div>
-                <div style={{ color: '#fff', lineHeight: 1.5 }}>{req.details}</div>
-              </div>
+              {req.details && req.details !== 'Pending Pre-Review' && req.details !== 'Manual Admin Add' && (
+                <div style={{ margin: '16px 0', background: 'var(--bg3)', padding: 12, borderRadius: 8, border: '1px solid var(--glass-border)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 4, fontWeight: 700 }}>Custom Details</div>
+                  <div style={{ color: '#fff', lineHeight: 1.5 }}>{req.details}</div>
+                </div>
+              )}
 
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                {req.status === 'pending' && (
+              {req.proof_url && (
+                <div style={{ marginBottom: 15 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 4, fontWeight: 700 }}>Proof of Purchase</div>
+                  <a href={req.proof_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontSize: '0.85rem', textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    🖼️ View Proof Image
+                  </a>
+                </div>
+              )}
+
+              {(req.status === 'pending' || req.status === 'approved' || req.status === 'pre_review') && (
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {req.status === 'pre_review' && (
+                    <button 
+                      className="btn btn-accent" 
+                      disabled={processing === req.id}
+                      onClick={() => processRequest(req.id, 'verify')}
+                      style={{ backgroundColor: '#FFA500' }}
+                    >
+                      {processing === req.id ? '...' : '🛡️ Verify (Add to Queue)'}
+                    </button>
+                  )}
+                  {(req.status === 'pending' || req.status === 'approved') && (
+                    <button 
+                      className="btn btn-green" 
+                      disabled={processing === req.id}
+                      onClick={() => processRequest(req.id, 'complete')}
+                    >
+                      {processing === req.id ? '...' : '📦 Fulfil'}
+                    </button>
+                  )}
                   <button 
-                    className="btn btn-accent" 
+                    className="btn btn-red" 
                     disabled={processing === req.id}
-                    onClick={() => processRequest(req.id, 'approve')}
+                    onClick={() => processRequest(req.id, 'reject')}
                   >
-                    {processing === req.id ? '...' : '✅ Approve'}
+                    {processing === req.id ? '...' : '❌ Reject'}
                   </button>
-                )}
-                <button 
-                  className="btn btn-green" 
-                  disabled={processing === req.id}
-                  onClick={() => processRequest(req.id, 'complete')}
-                >
-                  {processing === req.id ? '...' : '📦 Fulfil'}
-                </button>
-                <button 
-                  className="btn btn-red" 
-                  disabled={processing === req.id}
-                  onClick={() => processRequest(req.id, 'reject')}
-                >
-                  {processing === req.id ? '...' : '❌ Reject'}
-                </button>
-              </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

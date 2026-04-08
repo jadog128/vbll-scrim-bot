@@ -3,7 +3,7 @@
  * Phase 8: Pre-Review & DM Refinement
  */
 
-require('dotenv').config({ path: '.env.batch' });
+require('dotenv').config({ path: '.env' });
 const { 
   Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, 
   ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle,
@@ -13,9 +13,12 @@ const { createClient } = require('@libsql/client');
 const http = require('http');
 
 // --- 🔌 Database Setup ---
+const dbUrl = (process.env.VCC_TURSO_URL || process.env.TURSO_URL || process.env.SCRIM_TURSO_URL || '').trim().replace(/\/$/, "");
+const dbToken = process.env.VCC_TURSO_TOKEN || process.env.TURSO_TOKEN || process.env.SCRIM_TURSO_TOKEN;
+
 const db = createClient({ 
-  url: process.env.TURSO_URL || process.env.SCRIM_TURSO_URL, 
-  authToken: process.env.TURSO_TOKEN || process.env.SCRIM_TURSO_TOKEN 
+  url: dbUrl, 
+  authToken: dbToken 
 });
 async function run(sql, params = []) { return await db.execute({ sql, args: params }); }
 async function get(sql, params = []) { const r = await db.execute({ sql, args: params }); return r.rows[0]; }
@@ -86,10 +89,10 @@ const client = new Client({
 });
 
 // Permissions Check
-const ADMIN_ROLE_ID = '1145402830786678884'; // Example Owner/Admin Role
+const ADMIN_ROLE_ID = '1369059054793785467'; // VCC Staff Role
 function hasBatchAdmin(member) {
-  if (member.id === '1145402830786678884') return true;
-  return member.permissions && member.permissions.has('Administrator');
+  if (member.id === '1145402830786678884') return true; // Keep Jamie as owner
+  return member.roles.cache.has(ADMIN_ROLE_ID) || member.permissions.has('Administrator');
 }
 
 client.on('interactionCreate', async interaction => {
@@ -157,17 +160,58 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply({ content: '✅ Cleared all pending requests.', ephemeral: true });
     }
 
-    if (commandName === 'post-admin-batch-add') {
+    if (commandName === 'setup_vcc') {
+      await interaction.deferReply({ ephemeral: true });
+      const guild = interaction.guild;
+
+      // 1. Create Channels with exact emojis/names from image
+      const preReview = await guild.channels.create({
+        name: '🔍┃batch-pre-review',
+        type: 0, // GuildText
+        permissionOverwrites: [{ id: guild.id, deny: ['ViewChannel'] }] // Private by default
+      });
+
+      const queue = await guild.channels.create({
+        name: '📋┃batch-queue',
+        type: 0,
+        permissionOverwrites: [{ id: guild.id, deny: ['ViewChannel'] }]
+      });
+
+      const manualAdd = await guild.channels.create({
+        name: '🔍┃manual-add',
+        type: 0,
+        permissionOverwrites: [{ id: guild.id, deny: ['ViewChannel'] }]
+      });
+
+      // 2. Save Settings
+      await setSetting('pre_review_channel', preReview.id);
+      await setSetting('review_channel', queue.id);
+
+      // 3. Post Interactive Messages
       const items = await all('SELECT name FROM scrim_shop WHERE active = 1 AND stock != 0 LIMIT 25');
-      if (!items.length) return interaction.reply({ content: '❌ Shop is empty.', ephemeral: true });
-      const embed = new EmbedBuilder().setTitle('🛡️ Admin: Manual Add').setDescription('Staff only: Click a button to manually add an item for a player.').setColor(0xffa500);
-      const rows = [];
-      for (let i = 0; i < items.length; i += 5) {
+      const shopChoices = items.length > 0 ? items.map(i => i.name) : ['Other'];
+
+      // Public Request Message (current channel)
+      const reqEmbed = new EmbedBuilder().setTitle('👕 Request Custom Item').setDescription('Select an item below to start your request.').setColor(0x5865f2);
+      const reqRows = [];
+      for (let i = 0; i < shopChoices.length; i += 5) {
         const row = new ActionRowBuilder();
-        items.slice(i, i + 5).forEach(item => row.addComponents(new ButtonBuilder().setCustomId(`batch_admin_add_${item.name}`).setLabel(item.name).setStyle(ButtonStyle.Secondary)));
-        rows.push(row);
+        shopChoices.slice(i, i + 5).forEach(name => row.addComponents(new ButtonBuilder().setCustomId(`batch_start_${name}`).setLabel(name).setStyle(ButtonStyle.Primary)));
+        reqRows.push(row);
       }
-      return interaction.reply({ embeds: [embed] });
+      await interaction.channel.send({ embeds: [reqEmbed], components: reqRows });
+
+      // Admin Manual Add Message (manual-add channel)
+      const adminEmbed = new EmbedBuilder().setTitle('🛡️ Admin: Manual Add').setDescription('Staff only: Click a button to manually add an item for a player.').setColor(0xffa500);
+      const adminRows = [];
+      for (let i = 0; i < shopChoices.length; i += 5) {
+        const row = new ActionRowBuilder();
+        shopChoices.slice(i, i + 5).forEach(name => row.addComponents(new ButtonBuilder().setCustomId(`batch_admin_add_${name}`).setLabel(name).setStyle(ButtonStyle.Secondary)));
+        adminRows.push(row);
+      }
+      await manualAdd.send({ embeds: [adminEmbed], components: adminRows });
+
+      return interaction.editReply({ content: `✅ VCC Setup Complete!\n\n- Created <#${preReview.id}>\n- Created <#${queue.id}>\n- Created <#${manualAdd.id}>\n- Posted Portals.` });
     }
   }
 
@@ -204,8 +248,8 @@ client.on('interactionCreate', async interaction => {
             const embed = new EmbedBuilder().setTitle(`📥 Queue: ${req.type} (#${id})`).setDescription(`**Player:** <@${req.discord_id}>\n**VRFS ID:** ${req.vrfs_id}`).setColor(0x5865f2).setTimestamp();
             if (req.proof_url) embed.setImage(req.proof_url);
             const buttons = new ActionRowBuilder().addComponents(
-              new ButtonBuilder().setCustomId(`batch_done_${id}`).setLabel('Fulfil').setStyle(ButtonStyle.Success),
-              new ButtonBuilder().setCustomId(`batch_deny_${id}`).setLabel('Reject').setStyle(ButtonStyle.Danger)
+              new ButtonBuilder().setCustomId(`batch_q_done_${id}`).setLabel('Fulfil').setStyle(ButtonStyle.Success),
+              new ButtonBuilder().setCustomId(`batch_q_deny_${id}`).setLabel('Reject').setStyle(ButtonStyle.Danger)
             );
             await ch.send({ embeds: [embed], components: [buttons] });
           }
@@ -222,8 +266,8 @@ client.on('interactionCreate', async interaction => {
       }
     }
 
-    // Queue Buttons
-    if (customId.startsWith('batch_done_') || customId.startsWith('batch_deny_')) {
+    // Queue Buttons (e.g., batch_q_done_13)
+    if (customId.startsWith('batch_q_')) {
       if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
       const [,, action, id] = customId.split('_');
       const status = action === 'done' ? 'completed' : 'rejected';
@@ -296,6 +340,10 @@ async function createRequest(userId, username, vrfsId, type, details, proofUrl) 
   }
 }
 
+// --- 🤖 Bot Config ---
+const DISCORD_TOKEN = (process.env.VCC_DISCORD_TOKEN || process.env.BATCH_DISCORD_TOKEN || '').trim();
+const CLIENT_ID = (process.env.VCC_CLIENT_ID || process.env.BATCH_CLIENT_ID || '').trim();
+
 async function registerCommands() {
   let shopItems = [];
   try {
@@ -317,11 +365,12 @@ async function registerCommands() {
     new SlashCommandBuilder().setName('batch_remove').setDescription('Remove by ID [Staff]').addIntegerOption(o => o.setName('id').setDescription('ID').setRequired(true)),
     new SlashCommandBuilder().setName('batch_clear').setDescription('Clear pending queue [Staff]'),
     new SlashCommandBuilder().setName('post-admin-batch-add').setDescription('Post interactive manual add buttons [Staff]'),
+    new SlashCommandBuilder().setName('setup_vcc').setDescription('Automated setup of VCC admin channels [Staff]'),
   ].map(c => c.toJSON());
 
-  const rest = new REST({ version: '10' }).setToken(process.env.BATCH_DISCORD_TOKEN);
+  const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
   try {
-    await rest.put(Routes.applicationCommands(process.env.BATCH_CLIENT_ID), { body: commands });
+    await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
     console.log('✅ Commands Registered.');
   } catch (e) { console.error(e); }
 }
@@ -331,4 +380,18 @@ client.once('ready', () => {
   registerCommands();
 });
 
-initDB().then(() => client.login(process.env.BATCH_DISCORD_TOKEN));
+initDB().then(() => {
+  const envSource = process.env.VCC_DISCORD_TOKEN ? 'VCC_DISCORD_TOKEN' : (process.env.BATCH_DISCORD_TOKEN ? 'BATCH_DISCORD_TOKEN' : 'NONE');
+  console.log(`📡 Attempting login using environment variable: ${envSource}`);
+  
+  if (!DISCORD_TOKEN) {
+    console.error('❌ CRITICAL: No Discord Token provided. Please set VCC_DISCORD_TOKEN or BATCH_DISCORD_TOKEN.');
+    process.exit(1);
+  }
+  
+  client.login(DISCORD_TOKEN).catch(err => {
+    console.error('❌ DISCORD LOGIN FAILED:', err.message);
+    console.error('💡 TIP: You might be using the "Client Secret" instead of the "Bot Token". Go to the Bot tab in Discord Portal to get the Token.');
+    process.exit(1);
+  });
+});

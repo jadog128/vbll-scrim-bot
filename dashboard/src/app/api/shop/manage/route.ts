@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   if (action === 'add-item') {
     const { name, description, cost, stock = -1 } = body;
     if (!name || !description || !cost) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
-    await run('INSERT INTO scrim_shop (name, description, cost, stock) VALUES (?,?,?,?)', [name, description, cost, stock]);
+    await run('INSERT INTO scrim_shop (name, description, cost, stock, active) VALUES (?,?,?,?,1)', [name, description, cost, stock]);
     return NextResponse.json({ ok: true });
   }
 
