@@ -225,7 +225,7 @@ client.on('interactionCreate', async interaction => {
     // Queue Buttons
     if (customId.startsWith('batch_done_') || customId.startsWith('batch_deny_')) {
       if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
-      const [,, action, id] = customId.split('_');
+      const [, action, id] = customId.split('_');
       const status = action === 'done' ? 'completed' : 'rejected';
       await run('UPDATE batch_requests SET status = ?, staff_id = ? WHERE id = ?', [status, interaction.user.id, id]);
       const req = await get('SELECT * FROM batch_requests WHERE id = ?', [id]);
