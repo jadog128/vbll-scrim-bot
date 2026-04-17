@@ -14,16 +14,24 @@ const { createClient } = require('@libsql/client');
 const http = require('http');
 
 // --- 🔌 Database Setup ---
-const db = createClient({ 
-  url: process.env.TURSO_URL || process.env.SCRIM_TURSO_URL || "", 
-  authToken: process.env.TURSO_TOKEN || process.env.SCRIM_TURSO_TOKEN || "" 
-});
-if (!process.env.TURSO_URL && !process.env.SCRIM_TURSO_URL) {
-  console.warn("⚠️ Database credentials missing. If you're on Render, set them in the Environment tab!");
+let db;
+function getDB() {
+  if (db) return db;
+  const url = process.env.TURSO_URL || process.env.SCRIM_TURSO_URL;
+  const token = process.env.TURSO_TOKEN || process.env.SCRIM_TURSO_TOKEN;
+
+  if (!url) {
+    console.error("❌ CRITICAL ERROR: TURSO_URL is missing! Please set it in Railway Variables.");
+    return { execute: async () => ({ rows: [] }) }; // Return dummy to prevent immediate crash
+  }
+
+  db = createClient({ url, authToken: token || "" });
+  return db;
 }
-async function run(sql, params = []) { return await db.execute({ sql, args: params }); }
-async function get(sql, params = []) { const r = await db.execute({ sql, args: params }); return r.rows[0]; }
-async function all(sql, params = []) { const r = await db.execute({ sql, args: params }); return r.rows; }
+
+async function run(sql, params = []) { return await getDB().execute({ sql, args: params }); }
+async function get(sql, params = []) { const r = await getDB().execute({ sql, args: params }); return r.rows[0]; }
+async function all(sql, params = []) { const r = await getDB().execute({ sql, args: params }); return r.rows; }
 
 async function initDB() {
   await run(`CREATE TABLE IF NOT EXISTS batch_settings (key TEXT PRIMARY KEY, value TEXT)`);
