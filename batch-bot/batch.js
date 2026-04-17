@@ -7,7 +7,7 @@ require('dotenv').config({ path: '.env.batch' });
 const { 
   Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, 
   ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle,
-  REST, Routes, SlashCommandBuilder, Partials 
+  REST, Routes, SlashCommandBuilder, Partials, PermissionFlagsBits
 } = require('discord.js');
 const { createClient } = require('@libsql/client');
 const http = require('http');
@@ -35,6 +35,12 @@ async function initDB() {
     staff_id TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
+  await run(`CREATE TABLE IF NOT EXISTS batches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    status TEXT DEFAULT 'open',
+    released_at TIMESTAMP
+  )`);
+  try { await run(`ALTER TABLE batch_requests ADD COLUMN batch_id INTEGER`); } catch(_) {}
   console.log('✅ Batch Database Ready.');
 }
 
@@ -88,13 +94,19 @@ const client = new Client({
 // Permissions Check
 const ADMIN_ROLE_ID = '1145402830786678884'; // Example Owner/Admin Role
 function hasBatchAdmin(member) {
+  if (!member) return false;
   if (member.id === '1145402830786678884') return true;
-  return member.permissions && member.permissions.has('Administrator');
+  try {
+    return member.permissions && typeof member.permissions.has === 'function' && member.permissions.has(PermissionFlagsBits.Administrator);
+  } catch (e) {
+    return false;
+  }
 }
 
 client.on('interactionCreate', async interaction => {
-  if (interaction.isChatInputCommand()) {
-    const { commandName } = interaction;
+  try {
+    if (interaction.isChatInputCommand()) {
+      const { commandName } = interaction;
 
     // Security Gate
     if (['post-batch-request', 'batch_check', 'batch_add', 'batch_remove', 'batch_clear', 'set-batch-review-channel', 'set-batch-pre-review-channel', 'post-admin-batch-add'].includes(commandName)) {
@@ -111,6 +123,12 @@ client.on('interactionCreate', async interaction => {
       const ch = interaction.options.getChannel('channel');
       await setSetting('review_channel', ch.id); 
       return interaction.reply({ content: `✅ Batch Queue channel set to <#${ch.id}>`, ephemeral: true });
+    }
+
+    if (commandName === 'set-batch-release-channel') {
+      const ch = interaction.options.getChannel('channel');
+      await setSetting('release_channel', ch.id); 
+      return interaction.reply({ content: `✅ Batch Release channel set to <#${ch.id}>`, ephemeral: true });
     }
 
     if (commandName === 'post-batch-request') {
@@ -169,7 +187,20 @@ client.on('interactionCreate', async interaction => {
       }
       return interaction.reply({ embeds: [embed] });
     }
-  }
+
+    if (commandName === 'view-batches') {
+      const rows = await all("SELECT * FROM batches ORDER BY id DESC LIMIT 10");
+      if (!rows.length) return interaction.reply({ content: '📭 No batches created yet.', ephemeral: true });
+      
+      const embed = new EmbedBuilder().setTitle('📦 Recent Batches').setColor(0x5865f2);
+      for (const b of rows) {
+        const reqs = await all("SELECT username, vrfs_id FROM batch_requests WHERE batch_id = ?", [b.id]);
+        const list = reqs.map(r => `• **${r.username}** (${r.vrfs_id})`).join('\n') || '*Empty*';
+        embed.addFields({ name: `Batch #${b.id} [${b.status.toUpperCase()}]`, value: list });
+      }
+      return interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+    }
 
   if (interaction.isButton()) {
     const { customId } = interaction;
@@ -201,8 +232,9 @@ client.on('interactionCreate', async interaction => {
         if (qId) {
           const ch = await client.channels.fetch(qId).catch(() => null);
           if (ch) {
-            const embed = new EmbedBuilder().setTitle(`📥 Queue: ${req.type} (#${id})`).setDescription(`**Player:** <@${req.discord_id}>\n**VRFS ID:** ${req.vrfs_id}`).setColor(0x5865f2).setTimestamp();
-            if (req.proof_url) embed.setImage(req.proof_url);
+            const embed = new EmbedBuilder().setTitle(`📥 Queue: ${req.type} (#${id})`)
+              .setDescription(`**Player:** <@${req.discord_id}>\n**VRFS ID:** ${req.vrfs_id}\n**Proof:** [Message Link](${req.proof_url})`)
+              .setColor(0x5865f2).setTimestamp();
             const buttons = new ActionRowBuilder().addComponents(
               new ButtonBuilder().setCustomId(`batch_done_${id}`).setLabel('Fulfil').setStyle(ButtonStyle.Success),
               new ButtonBuilder().setCustomId(`batch_deny_${id}`).setLabel('Reject').setStyle(ButtonStyle.Danger)
@@ -228,6 +260,42 @@ client.on('interactionCreate', async interaction => {
       const [, action, id] = customId.split('_');
       const status = action === 'done' ? 'completed' : 'rejected';
       await run('UPDATE batch_requests SET status = ?, staff_id = ? WHERE id = ?', [status, interaction.user.id, id]);
+      
+      if (action === 'done') {
+        // --- 📦 Batch Logic ---
+        let batch = await get("SELECT * FROM batches WHERE status = 'open' LIMIT 1");
+        if (!batch) {
+          await run("INSERT INTO batches (status) VALUES ('open')");
+          batch = await get("SELECT * FROM batches WHERE status = 'open' LIMIT 1");
+        }
+        
+        await run("UPDATE batch_requests SET batch_id = ? WHERE id = ?", [batch.id, id]);
+        
+        // Check if full
+        const countRes = await run("SELECT COUNT(*) as cnt FROM batch_requests WHERE batch_id = ?", [batch.id]);
+        const count = countRes.rows[0][0];
+
+        if (count >= 8) {
+          await run("UPDATE batches SET status = 'released', released_at = CURRENT_TIMESTAMP WHERE id = ?", [batch.id]);
+          
+          await loadSettings();
+          const relId = getSetting('release_channel');
+          if (relId) {
+            const relCh = await client.channels.fetch(relId).catch(() => null);
+            if (relCh) {
+              const reqs = await all("SELECT username, vrfs_id, type FROM batch_requests WHERE batch_id = ?", [batch.id]);
+              const list = reqs.map((r, i) => `**${i+1}.** ${r.username} — ID: \`${r.vrfs_id}\` (${r.type})`).join('\n');
+              const embed = new EmbedBuilder()
+                .setTitle(`🚀 Batch #${batch.id} FULL & RELEASED`)
+                .setDescription(`The following 8 requests are ready for processing:\n\n${list}`)
+                .setColor(0x00f5a0)
+                .setTimestamp();
+              await relCh.send({ embeds: [embed] });
+            }
+          }
+        }
+      }
+
       const req = await get('SELECT * FROM batch_requests WHERE id = ?', [id]);
       if (req) {
         try {
@@ -238,6 +306,12 @@ client.on('interactionCreate', async interaction => {
       const embed = EmbedBuilder.from(interaction.message.embeds[0]).setTitle(`${status.toUpperCase()} | ${interaction.message.embeds[0].title}`).setColor(status === 'completed' ? 0x00f5a0 : 0xff4d4d);
       return interaction.update({ embeds: [embed], components: [] });
     }
+  }
+} catch (err) {
+    console.error('[Interaction Error]', err.message);
+    try {
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ An internal error occurred.', ephemeral: true });
+    } catch (_) {}
   }
 });
 
@@ -257,10 +331,10 @@ async function handleNewRequest(interaction, type) {
     const vrfsId = vrfsCollected.first().content.trim();
 
     // 2. Proof
-    await dm.send(`✅ **VRFS ID Saved: ${vrfsId}**\n\n**Step 2/2**: Please upload **Proof you won/earned these customs** (Screenshot/Image/Link):`);
-    const proofCollected = await dm.awaitMessages({ ...options, filter: m => m.author.id === user.id && (m.attachments.size > 0 || m.content.startsWith('http')) });
+    await dm.send(`✅ **VRFS ID Saved: ${vrfsId}**\n\n**Step 2/2**: Please provide a **Discord Message Link** as proof you won/earned these customs:`);
+    const proofCollected = await dm.awaitMessages({ ...options, filter: m => m.author.id === user.id && m.content.includes('discord.com/channels/') });
     const proofMsg = proofCollected.first();
-    const proofUrl = proofMsg.attachments.first()?.url || proofMsg.content.trim();
+    const proofUrl = proofMsg.content.trim();
 
     await dm.send('⏳ **Sent for Verification.** Staff will review your proof shortly.');
     await createRequest(user.id, user.username, vrfsId, type, 'Pending Pre-Review', proofUrl);
@@ -284,9 +358,8 @@ async function createRequest(userId, username, vrfsId, type, details, proofUrl) 
     if (ch) {
       const embed = new EmbedBuilder()
         .setTitle(`🔍 Pre-Review: ${type.toUpperCase()} (#${id})`)
-        .setDescription(`**Player:** <@${userId}> \n**VRFS ID:** ${vrfsId} \n\n**Action Required**: Verify proof image below.`)
+        .setDescription(`**Player:** <@${userId}> \n**VRFS ID:** ${vrfsId} \n\n**Proof Link:** ${proofUrl || 'No link provided'}`)
         .setColor(0xFFA500);
-      if (proofUrl) embed.setImage(proofUrl);
       const btns = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`batch_pr_approve_${id}`).setLabel('Send to Batches').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`batch_pr_reject_${id}`).setLabel('Decline').setStyle(ButtonStyle.Danger)
@@ -309,7 +382,9 @@ async function registerCommands() {
     new SlashCommandBuilder().setName('post-batch-request').setDescription('Post request message [Staff]'),
     new SlashCommandBuilder().setName('set-batch-review-channel').setDescription('Set queue channel [Staff]').addChannelOption(o => o.setName('channel').setDescription('Channel').setRequired(true)),
     new SlashCommandBuilder().setName('set-batch-pre-review-channel').setDescription('Set verification channel [Staff]').addChannelOption(o => o.setName('channel').setDescription('Channel').setRequired(true)),
+    new SlashCommandBuilder().setName('set-batch-release-channel').setDescription('Set channel where full batches are posted [Staff]').addChannelOption(o => o.setName('channel').setDescription('Channel').setRequired(true)),
     new SlashCommandBuilder().setName('batch_check').setDescription('View queue [Staff]'),
+    new SlashCommandBuilder().setName('view-batches').setDescription('View recent batches and their contents [Staff]'),
     new SlashCommandBuilder().setName('batch_add').setDescription('Manual add [Staff]')
       .addUserOption(o => o.setName('player').setDescription('Player').setRequired(true))
       .addStringOption(o => o.setName('vrfs_id').setDescription('VRFS ID').setRequired(true))
@@ -329,6 +404,20 @@ async function registerCommands() {
 client.once('ready', () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
   registerCommands();
+  
+  // Heartbeat to keep Turso connection alive
+  setInterval(async () => {
+    try { await run('INSERT OR REPLACE INTO batch_settings (key,value) VALUES(?,?)', ['last_heartbeat', new Date().toISOString()]); } catch (_) {}
+  }, 60000);
+});
+
+process.on('unhandledRejection', err => {
+  if (err?.code === 10062 || err?.message?.includes('Unknown interaction')) return;
+  console.error('Unhandled rejection:', err?.message);
+});
+
+process.on('uncaughtException', err => {
+  console.error('Uncaught exception:', err?.message);
 });
 
 initDB().then(() => client.login(process.env.BATCH_DISCORD_TOKEN));
