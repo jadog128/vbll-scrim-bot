@@ -52,6 +52,9 @@ async function initDB() {
     status TEXT DEFAULT 'open',
     released_at TIMESTAMP
   )`);
+  await run(`CREATE TABLE IF NOT EXISTS batch_options (
+    name TEXT PRIMARY KEY
+  )`);
   try { await run(`ALTER TABLE batch_requests ADD COLUMN batch_id INTEGER`); } catch(_) {}
   console.log('✅ Batch Database Ready.');
 }
@@ -143,9 +146,29 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply({ content: `✅ Batch Release channel set to <#${ch.id}>`, ephemeral: true });
     }
 
+    if (commandName === 'batch_option') {
+      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+      const sub = interaction.options.getSubcommand();
+      const name = interaction.options.getString('name');
+
+      if (sub === 'add') {
+        await run("INSERT OR IGNORE INTO batch_options (name) VALUES (?)", [name]);
+        await registerCommands(); 
+        return interaction.reply({ content: `✅ Added **${name}** to batch options. Commands will update shortly.`, ephemeral: true });
+      } else if (sub === 'remove') {
+        await run("DELETE FROM batch_options WHERE name = ?", [name]);
+        await registerCommands();
+        return interaction.reply({ content: `✅ Removed **${name}** from batch options.`, ephemeral: true });
+      } else if (sub === 'list') {
+        const rows = await all("SELECT name FROM batch_options");
+        const list = rows.map(r => `• ${r.name}`).join('\n') || 'None.';
+        return interaction.reply({ content: `📋 **Current Batch Options:**\n${list}`, ephemeral: true });
+      }
+    }
+
     if (commandName === 'post-batch-request') {
-      const items = await all('SELECT name FROM scrim_shop WHERE active = 1 AND stock != 0 LIMIT 25');
-      if (!items.length) return interaction.reply({ content: '❌ Shop is empty.', ephemeral: true });
+      const items = await all('SELECT name FROM batch_options LIMIT 25');
+      if (!items.length) return interaction.reply({ content: '❌ No batch options configured. Use `/batch_option add` first.', ephemeral: true });
       const embed = new EmbedBuilder().setTitle('👕 Request Custom Item').setDescription('Select an item below to start your request.').setColor(0x5865f2);
       const rows = [];
       for (let i = 0; i < items.length; i += 5) {
@@ -188,8 +211,8 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (commandName === 'post-admin-batch-add') {
-      const items = await all('SELECT name FROM scrim_shop WHERE active = 1 AND stock != 0 LIMIT 25');
-      if (!items.length) return interaction.reply({ content: '❌ Shop is empty.', ephemeral: true });
+      const items = await all('SELECT name FROM batch_options LIMIT 25');
+      if (!items.length) return interaction.reply({ content: '❌ No options configured.', ephemeral: true });
       const embed = new EmbedBuilder().setTitle('🛡️ Admin: Manual Add').setDescription('Staff only: Click a button to manually add an item for a player.').setColor(0xffa500);
       const rows = [];
       for (let i = 0; i < items.length; i += 5) {
@@ -382,19 +405,23 @@ async function createRequest(userId, username, vrfsId, type, details, proofUrl) 
 }
 
 async function registerCommands() {
-  let shopItems = [];
+  let batchItems = [];
   try {
-    const rows = await all('SELECT name FROM scrim_shop WHERE active = 1 AND stock != 0');
-    shopItems = rows.map(r => ({ name: r.name, value: r.name }));
+    const rows = await all('SELECT name FROM batch_options');
+    batchItems = rows.map(r => ({ name: r.name, value: r.name }));
   } catch (e) {}
 
-  const choices = shopItems.length > 0 ? shopItems.slice(0, 25) : [{ name: 'Other', value: 'other' }];
+  const choices = batchItems.length > 0 ? batchItems.slice(0, 25) : [{ name: 'Other', value: 'other' }];
   const commands = [
     new SlashCommandBuilder().setName('batch_request').setDescription('Submit a request for a custom item').addStringOption(o => o.setName('type').setDescription('Type').setRequired(true).addChoices(...choices)),
     new SlashCommandBuilder().setName('post-batch-request').setDescription('Post request message [Staff]'),
     new SlashCommandBuilder().setName('set-batch-review-channel').setDescription('Set queue channel [Staff]').addChannelOption(o => o.setName('channel').setDescription('Channel').setRequired(true)),
     new SlashCommandBuilder().setName('set-batch-pre-review-channel').setDescription('Set verification channel [Staff]').addChannelOption(o => o.setName('channel').setDescription('Channel').setRequired(true)),
     new SlashCommandBuilder().setName('set-batch-release-channel').setDescription('Set channel where full batches are posted [Staff]').addChannelOption(o => o.setName('channel').setDescription('Channel').setRequired(true)),
+    new SlashCommandBuilder().setName('batch_option').setDescription('Manage requestable items [Staff]')
+      .addSubcommand(s => s.setName('add').setDescription('Add an item').addStringOption(o => o.setName('name').setDescription('Item Name').setRequired(true)))
+      .addSubcommand(s => s.setName('remove').setDescription('Remove an item').addStringOption(o => o.setName('name').setDescription('Item Name').setRequired(true)))
+      .addSubcommand(s => s.setName('list').setDescription('List all items')),
     new SlashCommandBuilder().setName('batch_check').setDescription('View queue [Staff]'),
     new SlashCommandBuilder().setName('view-batches').setDescription('View recent batches and their contents [Staff]'),
     new SlashCommandBuilder().setName('batch_add').setDescription('Manual add [Staff]')
