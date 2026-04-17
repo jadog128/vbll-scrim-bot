@@ -298,6 +298,7 @@ client.on('interactionCreate', async interaction => {
       if (!reqCheck || reqCheck.status !== 'pending') return interaction.reply({ content: '⚠️ Already processed.', ephemeral: true });
 
       const status = action === 'done' ? 'completed' : 'rejected';
+      await run('UPDATE batch_requests SET status = ?, staff_id = ? WHERE id = ?', [status, interaction.user.id, id]);
       
       if (action === 'done') {
         // --- 📦 Batch Logic ---
@@ -310,8 +311,8 @@ client.on('interactionCreate', async interaction => {
         await run("UPDATE batch_requests SET batch_id = ? WHERE id = ?", [batch.id, id]);
         
         // Check if full
-        const countRes = await run("SELECT COUNT(*) as cnt FROM batch_requests WHERE batch_id = ?", [batch.id]);
-        const count = countRes.rows[0][0];
+        const countData = await get("SELECT COUNT(*) as cnt FROM batch_requests WHERE batch_id = ?", [batch.id]);
+        const count = countData.cnt;
 
         if (count >= 8) {
           await run("UPDATE batches SET status = 'released', released_at = CURRENT_TIMESTAMP WHERE id = ?", [batch.id]);
