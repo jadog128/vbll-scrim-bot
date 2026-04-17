@@ -300,6 +300,17 @@ client.on('interactionCreate', async interaction => {
         return interaction.reply({ content: '❌ Failed to send DM. Make sure your DMs are open!', ephemeral: true });
       }
     }
+
+    if (commandName === 'batch_halt') {
+      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+      const active = interaction.options.getBoolean('active');
+      const reason = interaction.options.getString('reason') || 'No reason provided.';
+      
+      await setSetting('halted', active ? 'true' : 'false');
+      await setSetting('halt_reason', reason);
+      
+      return interaction.reply({ content: `✅ Batch requests are now **${active ? 'HALTED' : 'OPEN'}**.\nReason: *${reason}*`, ephemeral: true });
+    }
     }
 
   if (interaction.isButton()) {
@@ -421,6 +432,12 @@ client.on('interactionCreate', async interaction => {
 
 async function handleNewRequest(interaction, type) {
   try {
+    await loadSettings();
+    if (getSetting('halted') === 'true') {
+      const reason = getSetting('halt_reason') || 'System is currently paused.';
+      return interaction.reply({ embeds: [new EmbedBuilder().setTitle('⏸️ Requests Halted').setDescription(`Custom requests are currently paused.\n\n**Reason:** ${reason}`).setColor(0xffa500)], ephemeral: true });
+    }
+
     const user = interaction.user;
     const dm = await user.createDM().catch(() => null);
     if (!dm) return interaction.reply({ content: '❌ Enable DMs first.', ephemeral: true });
@@ -501,6 +518,9 @@ async function registerCommands() {
     new SlashCommandBuilder().setName('batch_clear').setDescription('Clear pending queue [Staff]'),
     new SlashCommandBuilder().setName('release_batch').setDescription('Manually post the current batch to the release channel [Staff]'),
     new SlashCommandBuilder().setName('export_batches').setDescription('Export all batches to a text file [Restricted]'),
+    new SlashCommandBuilder().setName('batch_halt').setDescription('Pause or resume all batch requests [Staff]')
+      .addBooleanOption(o => o.setName('active').setDescription('Set to true to HAULT requests, false to open').setRequired(true))
+      .addStringOption(o => o.setName('reason').setDescription('The reason shown to users').setRequired(false)),
     new SlashCommandBuilder().setName('post-admin-batch-add').setDescription('Post interactive manual add buttons [Staff]'),
   ].map(c => c.toJSON());
 
