@@ -8,7 +8,7 @@ require('dotenv').config({ path: '.env.batch' }); // Load local override
 const { 
   Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, 
   ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle,
-  REST, Routes, SlashCommandBuilder, Partials, PermissionFlagsBits
+  REST, Routes, SlashCommandBuilder, Partials, PermissionFlagsBits, AttachmentBuilder
 } = require('discord.js');
 const { createClient } = require('@libsql/client');
 const http = require('http');
@@ -263,6 +263,43 @@ client.on('interactionCreate', async interaction => {
       await relCh.send({ embeds: [embed] });
       return interaction.reply({ content: `✅ Batch #${batch.id} released to <#${relId}>`, ephemeral: true });
     }
+
+    if (commandName === 'export_batches') {
+      const owners = ['1139955783384187031', '1145402830786678884'];
+      if (!owners.includes(interaction.user.id)) return interaction.reply({ content: '❌ Access Denied.', ephemeral: true });
+
+      const allBatches = await all("SELECT * FROM batches ORDER BY id ASC");
+      if (!allBatches.length) return interaction.reply({ content: '📭 No batches to export.', ephemeral: true });
+
+      let output = `VBLL BATCH EXPORT - ${new Date().toLocaleString()}\n`;
+      output += "=".repeat(40) + "\n\n";
+
+      for (const b of allBatches) {
+        const reqs = await all("SELECT * FROM batch_requests WHERE batch_id = ?", [b.id]);
+        output += `[BATCH #${b.id}] — Status: ${b.status.toUpperCase()}\n`;
+        output += `Released At: ${b.released_at || 'Not Released'}\n`;
+        output += "-".repeat(20) + "\n";
+        
+        if (reqs.length) {
+          reqs.forEach(r => {
+            output += `• User: ${r.username} (${r.discord_id}) | VRFS ID: ${r.vrfs_id} | Item: ${r.type}\n`;
+          });
+        } else {
+          output += "* No requests in this batch.\n";
+        }
+        output += "\n";
+      }
+
+      const buffer = Buffer.from(output, 'utf-8');
+      const attachment = new AttachmentBuilder(buffer, { name: 'vbll_batches_export.txt' });
+
+      try {
+        await interaction.user.send({ content: '📦 Here is the full export of all batches:', files: [attachment] });
+        return interaction.reply({ content: '✅ Export sent to your DMs!', ephemeral: true });
+      } catch (e) {
+        return interaction.reply({ content: '❌ Failed to send DM. Make sure your DMs are open!', ephemeral: true });
+      }
+    }
     }
 
   if (interaction.isButton()) {
@@ -463,6 +500,7 @@ async function registerCommands() {
     new SlashCommandBuilder().setName('batch_remove').setDescription('Remove by ID [Staff]').addIntegerOption(o => o.setName('id').setDescription('ID').setRequired(true)),
     new SlashCommandBuilder().setName('batch_clear').setDescription('Clear pending queue [Staff]'),
     new SlashCommandBuilder().setName('release_batch').setDescription('Manually post the current batch to the release channel [Staff]'),
+    new SlashCommandBuilder().setName('export_batches').setDescription('Export all batches to a text file [Restricted]'),
     new SlashCommandBuilder().setName('post-admin-batch-add').setDescription('Post interactive manual add buttons [Staff]'),
   ].map(c => c.toJSON());
 
