@@ -235,6 +235,34 @@ client.on('interactionCreate', async interaction => {
       }
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
+
+    if (commandName === 'release_batch') {
+      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+      const batch = await get("SELECT * FROM batches WHERE status = 'open' LIMIT 1");
+      if (!batch) return interaction.reply({ content: '❌ No open batch found.', ephemeral: true });
+
+      const reqs = await all("SELECT username, vrfs_id, type FROM batch_requests WHERE batch_id = ?", [batch.id]);
+      if (!reqs.length) return interaction.reply({ content: '❌ This batch is empty.', ephemeral: true });
+
+      await loadSettings();
+      const relId = getSetting('release_channel');
+      if (!relId) return interaction.reply({ content: '❌ Release channel not set. Use `/set-batch-release-channel`', ephemeral: true });
+
+      const relCh = await client.channels.fetch(relId).catch(() => null);
+      if (!relCh) return interaction.reply({ content: '❌ Cannot find release channel.', ephemeral: true });
+
+      await run("UPDATE batches SET status = 'released', released_at = CURRENT_TIMESTAMP WHERE id = ?", [batch.id]);
+      
+      const list = reqs.map((r, i) => `**${i+1}.** ${r.username} — ID: \`${r.vrfs_id}\` (${r.type})`).join('\n');
+      const embed = new EmbedBuilder()
+        .setTitle(`🚀 Batch #${batch.id} RELEASED (Manual)`)
+        .setDescription(`The following requests are ready for processing:\n\n${list}`)
+        .setColor(0x00f5a0)
+        .setTimestamp();
+      
+      await relCh.send({ embeds: [embed] });
+      return interaction.reply({ content: `✅ Batch #${batch.id} released to <#${relId}>`, ephemeral: true });
+    }
     }
 
   if (interaction.isButton()) {
@@ -434,6 +462,7 @@ async function registerCommands() {
       .addStringOption(o => o.setName('type').setDescription('Type').setRequired(true).addChoices(...choices)),
     new SlashCommandBuilder().setName('batch_remove').setDescription('Remove by ID [Staff]').addIntegerOption(o => o.setName('id').setDescription('ID').setRequired(true)),
     new SlashCommandBuilder().setName('batch_clear').setDescription('Clear pending queue [Staff]'),
+    new SlashCommandBuilder().setName('release_batch').setDescription('Manually post the current batch to the release channel [Staff]'),
     new SlashCommandBuilder().setName('post-admin-batch-add').setDescription('Post interactive manual add buttons [Staff]'),
   ].map(c => c.toJSON());
 
