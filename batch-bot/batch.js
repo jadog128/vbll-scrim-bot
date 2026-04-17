@@ -229,8 +229,8 @@ client.on('interactionCreate', async interaction => {
       
       const embed = new EmbedBuilder().setTitle('📦 Recent Batches').setColor(0x5865f2);
       for (const b of rows) {
-        const reqs = await all("SELECT username, vrfs_id FROM batch_requests WHERE batch_id = ?", [b.id]);
-        const list = reqs.map(r => `• **${r.username}** (${r.vrfs_id})`).join('\n') || '*Empty*';
+        const reqs = await all("SELECT username, vrfs_id, proof_url FROM batch_requests WHERE batch_id = ?", [b.id]);
+        const list = reqs.map(r => `• **${r.username}** (${r.vrfs_id}) [Link](${r.proof_url})`).join('\n') || '*Empty*';
         embed.addFields({ name: `Batch #${b.id} [${b.status.toUpperCase()}]`, value: list });
       }
       return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -241,9 +241,8 @@ client.on('interactionCreate', async interaction => {
       const batch = await get("SELECT * FROM batches WHERE status = 'open' LIMIT 1");
       if (!batch) return interaction.reply({ content: '❌ No open batch found.', ephemeral: true });
 
-      const reqs = await all("SELECT username, vrfs_id, type FROM batch_requests WHERE batch_id = ?", [batch.id]);
+      const reqs = await all("SELECT username, vrfs_id, type, proof_url FROM batch_requests WHERE batch_id = ?", [batch.id]);
       if (!reqs.length) return interaction.reply({ content: '❌ This batch is empty.', ephemeral: true });
-
       await loadSettings();
       const relId = getSetting('release_channel');
       if (!relId) return interaction.reply({ content: '❌ Release channel not set. Use `/set-batch-release-channel`', ephemeral: true });
@@ -253,7 +252,7 @@ client.on('interactionCreate', async interaction => {
 
       await run("UPDATE batches SET status = 'released', released_at = CURRENT_TIMESTAMP WHERE id = ?", [batch.id]);
       
-      const list = reqs.map((r, i) => `**${i+1}.** ${r.username} — ID: \`${r.vrfs_id}\` (${r.type})`).join('\n');
+      const list = reqs.map((r, i) => `**${i+1}.** ${r.username} — ID: \`${r.vrfs_id}\` (${r.type}) [Proof](${r.proof_url})`).join('\n');
       const embed = new EmbedBuilder()
         .setTitle(`🚀 Batch #${batch.id} RELEASED (Manual)`)
         .setDescription(`The following requests are ready for processing:\n\n${list}`)
@@ -283,6 +282,7 @@ client.on('interactionCreate', async interaction => {
         if (reqs.length) {
           reqs.forEach(r => {
             output += `• User: ${r.username} (${r.discord_id}) | VRFS ID: ${r.vrfs_id} | Item: ${r.type}\n`;
+            output += `  Proof: ${r.proof_url}\n`;
           });
         } else {
           output += "* No requests in this batch.\n";
@@ -387,8 +387,8 @@ client.on('interactionCreate', async interaction => {
           if (relId) {
             const relCh = await client.channels.fetch(relId).catch(() => null);
             if (relCh) {
-              const reqs = await all("SELECT username, vrfs_id, type FROM batch_requests WHERE batch_id = ?", [batch.id]);
-              const list = reqs.map((r, i) => `**${i+1}.** ${r.username} — ID: \`${r.vrfs_id}\` (${r.type})`).join('\n');
+              const reqs = await all("SELECT username, vrfs_id, type, proof_url FROM batch_requests WHERE batch_id = ?", [batch.id]);
+              const list = reqs.map((r, i) => `**${i+1}.** ${r.username} — ID: \`${r.vrfs_id}\` (${r.type}) [Proof](${r.proof_url})`).join('\n');
               const embed = new EmbedBuilder()
                 .setTitle(`🚀 Batch #${batch.id} FULL & RELEASED`)
                 .setDescription(`The following 8 requests are ready for processing:\n\n${list}`)
