@@ -252,6 +252,7 @@ client.on('interactionCreate', async interaction => {
       const [,, action, id] = customId.split('_');
       const req = await get('SELECT * FROM batch_requests WHERE id = ?', [id]);
       if (!req) return interaction.reply({ content: '❌ Request stale.', ephemeral: true });
+      if (req.status !== 'pre_review') return interaction.reply({ content: '⚠️ This request has already been handled.', ephemeral: true });
 
       if (action === 'approve') {
         await run("UPDATE batch_requests SET status = 'pending' WHERE id = ?", [id]);
@@ -293,8 +294,10 @@ client.on('interactionCreate', async interaction => {
     if (customId.startsWith('batch_done_') || customId.startsWith('batch_deny_')) {
       if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
       const [, action, id] = customId.split('_');
+      const reqCheck = await get('SELECT status FROM batch_requests WHERE id = ?', [id]);
+      if (!reqCheck || reqCheck.status !== 'pending') return interaction.reply({ content: '⚠️ Already processed.', ephemeral: true });
+
       const status = action === 'done' ? 'completed' : 'rejected';
-      await run('UPDATE batch_requests SET status = ?, staff_id = ? WHERE id = ?', [status, interaction.user.id, id]);
       
       if (action === 'done') {
         // --- 📦 Batch Logic ---
