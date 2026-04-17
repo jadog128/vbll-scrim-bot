@@ -3,7 +3,8 @@
  * Phase 8: Pre-Review & DM Refinement
  */
 
-require('dotenv').config({ path: '.env.batch' });
+require('dotenv').config(); // Load standard .env if present
+require('dotenv').config({ path: '.env.batch' }); // Load local override
 const { 
   Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, 
   ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle,
@@ -14,9 +15,12 @@ const http = require('http');
 
 // --- 🔌 Database Setup ---
 const db = createClient({ 
-  url: process.env.TURSO_URL || process.env.SCRIM_TURSO_URL, 
-  authToken: process.env.TURSO_TOKEN || process.env.SCRIM_TURSO_TOKEN 
+  url: process.env.TURSO_URL || process.env.SCRIM_TURSO_URL || "", 
+  authToken: process.env.TURSO_TOKEN || process.env.SCRIM_TURSO_TOKEN || "" 
 });
+if (!process.env.TURSO_URL && !process.env.SCRIM_TURSO_URL) {
+  console.warn("⚠️ Database credentials missing. If you're on Render, set them in the Environment tab!");
+}
 async function run(sql, params = []) { return await db.execute({ sql, args: params }); }
 async function get(sql, params = []) { const r = await db.execute({ sql, args: params }); return r.rows[0]; }
 async function all(sql, params = []) { const r = await db.execute({ sql, args: params }); return r.rows; }
