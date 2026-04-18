@@ -12,12 +12,34 @@ export default async function Dashboard() {
 
   const userId = (session.user as any).id;
   
-  // Fetch user's requests
+  // Fetch user's requests with batch info
   const requestsRes = await execute(
-    "SELECT * FROM batch_requests WHERE discord_id = ? ORDER BY created_at DESC", 
+    `SELECT br.*, b.status as batch_status, 
+     (SELECT COUNT(*) FROM batch_requests WHERE batch_id = br.batch_id) as batch_count
+     FROM batch_requests br 
+     LEFT JOIN batches b ON br.batch_id = b.id 
+     WHERE br.discord_id = ? 
+     ORDER BY br.created_at DESC`, 
     [userId]
   );
   const requests = requestsRes.rows;
+
+  const getProgress = (req: any) => {
+    if (req.status === 'completed' && req.batch_status === 'sent') return 100;
+    if (req.status === 'completed' && req.batch_status === 'released') return 75;
+    if (req.status === 'completed' && !req.batch_status) return 50; // In a batch but not released yet
+    if (req.status === 'pending') return 25;
+    return 10; // Pre-review
+  };
+
+  const getStageName = (req: any) => {
+    if (req.status === 'completed' && req.batch_status === 'sent') return "Delivered In-Game";
+    if (req.status === 'completed' && req.batch_status === 'released') return "Batch Released - Awaiting Dev";
+    if (req.status === 'completed') return `In Batch #${req.batch_id} (${req.batch_count}/8)`;
+    if (req.status === 'pending') return "Verified - Staff Queue";
+    if (req.status === 'rejected') return "Rejected by Staff";
+    return "Initial Verification";
+  };
 
   return (
     <div className="space-y-10 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -67,7 +89,16 @@ export default async function Dashboard() {
 
               <div className="space-y-1 mb-6">
                 <h4 className="text-lg font-bold text-on-surface group-hover:text-primary transition-colors">{req.type}</h4>
-                <p className="text-sm text-on-surface-variant line-clamp-2 font-medium">{req.details || "No additional details provided."}</p>
+                <div className="flex items-center gap-2 mb-2">
+                   <div className="flex-1 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full transition-all duration-1000 ${req.status === 'rejected' ? 'bg-error' : 'bg-primary'}`} 
+                        style={{ width: `${getProgress(req)}%` }} 
+                      />
+                   </div>
+                   <span className="text-[10px] font-black text-primary">{getProgress(req)}%</span>
+                </div>
+                <p className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest">{getStageName(req)}</p>
               </div>
 
               <div className="pt-6 border-t border-outline-variant/10 flex items-center justify-between">
