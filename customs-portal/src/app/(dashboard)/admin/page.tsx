@@ -17,7 +17,14 @@ export default async function AdminPanel() {
   // Fetch Stats
   const batchesRes = await execute("SELECT COUNT(*) as count FROM batches");
   const requestsRes = await execute("SELECT COUNT(*) as count FROM batch_requests");
-  const ticketsRes = await execute("SELECT COUNT(*) as count FROM batch_tickets WHERE status = 'open'");
+  
+  let ticketCount = 0;
+  try {
+    const res = await execute("SELECT COUNT(*) as count FROM batch_tickets WHERE status = 'open'");
+    ticketCount = (res.rows[0] as any).count;
+  } catch (e) {
+    console.error("Tickets table missing or error:", e);
+  }
   
   // Fetch Recent Batches with items
   const batches = await execute("SELECT * FROM batches ORDER BY id DESC LIMIT 5");
@@ -142,9 +149,9 @@ export default async function AdminPanel() {
                    <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-on-surface-variant relative">
                          <ShieldAlert className="w-5 h-5 text-error" />
-                         {(ticketsRes.rows[0] as any).count > 0 && (
+                         {ticketCount > 0 && (
                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-error text-white text-[8px] font-black rounded-full flex items-center justify-center animate-bounce">
-                              {(ticketsRes.rows[0] as any).count}
+                              {ticketCount}
                            </span>
                          )}
                       </div>
