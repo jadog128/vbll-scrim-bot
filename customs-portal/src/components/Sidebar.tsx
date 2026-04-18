@@ -32,7 +32,7 @@ export default function Sidebar() {
 
       {/* CTA */}
       <div className="px-4 mb-6">
-        <Link href="/dashboard">
+        <Link href="/dashboard/new">
           <button className="w-full bg-gradient-to-br from-primary to-primary-container text-white rounded-3xl py-3 px-4 font-semibold text-sm flex items-center justify-center gap-2 hover:shadow-ambient transition-all duration-300 active:scale-[0.98]">
             <span className="material-symbols-outlined text-lg">add</span>
             New Request
