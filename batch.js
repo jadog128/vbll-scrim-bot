@@ -257,6 +257,13 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply({ content: `✅ Ticket staff role set to <@&${role.id}>`, ephemeral: true });
     }
 
+    if (commandName === 'set-ticket-category') {
+      const cat = interaction.options.getChannel('category');
+      if (cat.type !== 4) return interaction.reply({ content: '❌ Please select a Category channel.', ephemeral: true });
+      await setSetting('ticket_category', cat.id);
+      return interaction.reply({ content: `✅ Ticket category set to **${cat.name}**`, ephemeral: true });
+    }
+
     if (commandName === 'batch_option') {
       if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
       const sub = interaction.options.getSubcommand();
@@ -716,40 +723,55 @@ client.on('interactionCreate', async interaction => {
       await run("INSERT INTO batch_tickets (discord_id, username, issue) VALUES (?,?,?)", [interaction.user.id, interaction.user.username, issue]);
       const res = await get("SELECT id FROM batch_tickets WHERE discord_id = ? ORDER BY id DESC LIMIT 1", [interaction.user.id]);
       
-      // Notify Staff
+      // Notify Staff & Create Channel
       try {
         await loadSettings();
-        const tChId = getSetting('ticket_channel');
+        const tCatId = getSetting('ticket_category');
         const tRoleId = getSetting('ticket_role');
-        if (tChId) {
-          const ch = await client.channels.fetch(tChId).catch(() => null);
-          if (ch) {
-            try {
-              const thread = await ch.threads.create({
-                name: `ticket-${res.id}-${interaction.user.username}`,
-                autoArchiveDuration: 10080,
-                reason: `Batch ticket for ${interaction.user.username}`,
-              });
+        const devRole = '1456425209237209281'; // As requested by user
 
-              await thread.members.add(interaction.user.id);
-
-              const ping = tRoleId ? `<@&${tRoleId}>` : '';
-              const embed = new EmbedBuilder()
-                .setTitle(`🎫 New Ticket: #${res.id}`)
-                .setDescription(`**User:** <@${interaction.user.id}> (${interaction.user.username})\n**Issue:** ${issue}\n\nStaff will assist you in this thread.`)
-                .setColor(0xff4d4d)
-                .setTimestamp();
-              
-              await thread.send({ content: `${ping} <@${interaction.user.id}>`, embeds: [embed] });
-            } catch (threadErr) {
-              // Fallback to simple message if threads fail
-              const ping = tRoleId ? `<@&${tRoleId}>` : '';
-              const embed = new EmbedBuilder().setTitle(`🎫 Ticket: #${res.id}`).setDescription(`**User:** <@${interaction.user.id}>\n**Issue:** ${issue}`).setColor(0xff4d4d);
-              await ch.send({ content: `⚠️ Thread creation failed: ${ping}`, embeds: [embed] });
+        if (tCatId) {
+          const guild = interaction.guild;
+          if (guild) {
+            const overwrites = [
+              { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+              { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+              { id: devRole, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
+            ];
+            if (tRoleId && tRoleId !== devRole) {
+              overwrites.push({ id: tRoleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] });
             }
+
+            const channel = await guild.channels.create({
+              name: `ticket-${res.id}-${interaction.user.username}`,
+              parent: tCatId,
+              permissionOverwrites: overwrites
+            });
+
+            const ping = tRoleId ? `<@&${tRoleId}>` : `<@&${devRole}>`;
+            const embed = new EmbedBuilder()
+              .setTitle(`🎫 New Ticket: #${res.id}`)
+              .setDescription(`**User:** <@${interaction.user.id}> (${interaction.user.username})\n**Issue:** ${issue}\n\nStaff and Developers will assist you here.`)
+              .setColor(0xff4d4d)
+              .setTimestamp();
+            
+            await channel.send({ content: `${ping} <@${interaction.user.id}>`, embeds: [embed] });
           }
+        } else {
+           // Fallback to channel message if category not set
+           const tChId = getSetting('ticket_channel');
+           if (tChId) {
+             const ch = await client.channels.fetch(tChId).catch(() => null);
+             if (ch) {
+               const ping = tRoleId ? `<@&${tRoleId}>` : '';
+               const embed = new EmbedBuilder().setTitle(`🎫 Ticket: #${res.id}`).setDescription(`**User:** <@${interaction.user.id}>\n**Issue:** ${issue}`).setColor(0xff4d4d);
+               await ch.send({ content: ping, embeds: [embed] });
+             }
+           }
         }
-      } catch (e) { console.error('Ticket Notify Error:', e); }
+      } catch (e) { 
+        console.error('Ticket Channel Creation Error:', e); 
+      }
 
       return interaction.reply({ content: `✅ Ticket **#${res.id}** submitted! Staff will review it on the portal.`, ephemeral: true });
     }
@@ -852,6 +874,7 @@ async function registerCommands() {
     new SlashCommandBuilder().setName('post-ticket-panel').setDescription('Post the issue ticket panel [Staff]'),
     new SlashCommandBuilder().setName('set-ticket-channel').setDescription('Set channel where new tickets are posted [Staff]').addChannelOption(o => o.setName('channel').setDescription('Channel').setRequired(true)),
     new SlashCommandBuilder().setName('set-ticket-role').setDescription('Set role to ping for new tickets [Staff]').addRoleOption(o => o.setName('role').setDescription('Role').setRequired(true)),
+    new SlashCommandBuilder().setName('set-ticket-category').setDescription('Set category where private ticket channels are created [Staff]').addChannelOption(o => o.setName('category').setDescription('Category').setRequired(true)),
     new SlashCommandBuilder().setName('batch_add').setDescription('Manual add [Staff]')
       .addUserOption(o => o.setName('player').setDescription('Player').setRequired(true))
       .addStringOption(o => o.setName('vrfs_id').setDescription('VRFS ID').setRequired(true))
