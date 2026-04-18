@@ -9,7 +9,8 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminRequests({ searchParams }: { searchParams: { q?: string } }) {
+export default async function AdminRequests(props: { searchParams: Promise<{ q?: string }> }) {
+  const searchParams = await props.searchParams;
   const session = await getServerSession(authOptions);
   if (!(session?.user as any)?.isAdmin) redirect("/");
 
