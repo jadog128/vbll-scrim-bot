@@ -251,6 +251,12 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply({ content: `✅ Ticket alerts channel set to <#${ch.id}>`, ephemeral: true });
     }
 
+    if (commandName === 'set-web-support-channel') {
+      const ch = interaction.options.getChannel('channel');
+      await setSetting('web_support_channel', ch.id);
+      return interaction.reply({ content: `✅ Website chat alerts channel set to <#${ch.id}>`, ephemeral: true });
+    }
+
     if (commandName === 'set-ticket-role') {
       const role = interaction.options.getRole('role');
       await setSetting('ticket_role', role.id);
@@ -930,8 +936,8 @@ async function registerCommands() {
     new SlashCommandBuilder().setName('batch_check').setDescription('View queue [Staff]'),
     new SlashCommandBuilder().setName('view-batches').setDescription('View recent batches and their contents [Staff]'),
     new SlashCommandBuilder().setName('view-logs').setDescription('View staff activity logs [Staff]'),
-    new SlashCommandBuilder().setName('post-ticket-panel').setDescription('Post the issue ticket panel [Staff]'),
     new SlashCommandBuilder().setName('set-ticket-channel').setDescription('Set channel where new tickets are posted [Staff]').addChannelOption(o => o.setName('channel').setDescription('Channel').setRequired(true)),
+    new SlashCommandBuilder().setName('set-web-support-channel').setDescription('Set channel for website chat alerts [Staff]').addChannelOption(o => o.setName('channel').setDescription('Channel').setRequired(true)),
     new SlashCommandBuilder().setName('set-ticket-role').setDescription('Set role to ping for new tickets [Staff]').addRoleOption(o => o.setName('role').setDescription('Role').setRequired(true)),
     new SlashCommandBuilder().setName('set-ticket-category').setDescription('Set category where private ticket channels are created [Staff]').addChannelOption(o => o.setName('category').setDescription('Category').setRequired(true)),
     new SlashCommandBuilder().setName('close-ticket').setDescription('Close and delete the current ticket channel [Staff]'),
