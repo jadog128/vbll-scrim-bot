@@ -57,6 +57,14 @@ async function initDB() {
   await run(`CREATE TABLE IF NOT EXISTS batch_options (
     name TEXT PRIMARY KEY
   )`);
+  await run(`CREATE TABLE IF NOT EXISTS batch_tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    discord_id TEXT,
+    username TEXT,
+    issue TEXT,
+    status TEXT DEFAULT 'open',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
   await run(`CREATE TABLE IF NOT EXISTS staff_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     staff_id TEXT,
@@ -488,10 +496,28 @@ client.on('interactionCreate', async interaction => {
       }
 
       if (vrfs) {
+          const old = await get("SELECT vrfs_id, discord_id FROM batch_requests WHERE id = ?", [id]);
           await run("UPDATE batch_requests SET vrfs_id = ? WHERE id = ?", [vrfs, id]);
           await logStaffAction(interaction.user.id, interaction.user.username, 'EDITED_VRFS', id, `Changed to ${vrfs}`);
+          
+          // Notify User
+          try {
+            const user = await client.users.fetch(old.discord_id);
+            await user.send({ embeds: [new EmbedBuilder().setTitle('📝 Info Updated').setDescription(`A staff member has updated your VRFS ID for request #${id} to \`${vrfs}\`.`).setColor(0x5865f2)] });
+          } catch(e){}
+
           return interaction.reply({ content: `✅ VRFS ID for request #${id} updated to \`${vrfs}\`.` });
       }
+    }
+
+    if (commandName === 'post-ticket-panel') {
+      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+      const embed = new EmbedBuilder()
+        .setTitle('🎫 Batch Issue Ticket')
+        .setDescription('If you have a problem with your batch request or ID, click the button below to open a ticket.')
+        .setColor(0xff4d4d);
+      const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('batch_ticket_open').setLabel('Open Ticket').setStyle(ButtonStyle.Danger));
+      return interaction.reply({ embeds: [embed], components: [row] });
     }
 
     if (commandName === 'view-logs') {
@@ -551,6 +577,14 @@ client.on('interactionCreate', async interaction => {
 
   if (interaction.isButton()) {
     const { customId } = interaction;
+
+    // Ticket Modal Opening
+    if (customId === 'batch_ticket_open') {
+      const modal = new ModalBuilder().setCustomId('batch_ticket_modal').setTitle('Report Batch Issue');
+      const issueInput = new TextInputBuilder().setCustomId('issue_text').setLabel('Explain your issue').setStyle(TextInputStyle.Paragraph).setRequired(true);
+      modal.addComponents(new ActionRowBuilder().addComponents(issueInput));
+      return interaction.showModal(modal);
+    }
 
     // Start DM Flow
     if (customId.startsWith('batch_start_')) {
@@ -662,6 +696,14 @@ client.on('interactionCreate', async interaction => {
       await logStaffAction(interaction.user.id, interaction.user.username, status === 'completed' ? 'FULFILLED' : 'REJECTED', id, `Item: ${req.type}`);
       return interaction.update({ embeds: [embed], components: [] });
     }
+    if (interaction.isModalSubmit()) {
+       if (interaction.customId === 'batch_ticket_modal') {
+         const issue = interaction.fields.getTextInputValue('issue_text');
+         await run("INSERT INTO batch_tickets (discord_id, username, issue) VALUES (?,?,?)", [interaction.user.id, interaction.user.username, issue]);
+         const res = await get("SELECT id FROM batch_tickets WHERE discord_id = ? ORDER BY id DESC LIMIT 1", [interaction.user.id]);
+         return interaction.reply({ content: `✅ Ticket **#${res.id}** submitted! Staff will review it on the portal.`, ephemeral: true });
+       }
+    }
   }
 } catch (err) {
     console.error('[Interaction Error]', err.message);
@@ -758,6 +800,7 @@ async function registerCommands() {
     new SlashCommandBuilder().setName('batch_check').setDescription('View queue [Staff]'),
     new SlashCommandBuilder().setName('view-batches').setDescription('View recent batches and their contents [Staff]'),
     new SlashCommandBuilder().setName('view-logs').setDescription('View staff activity logs [Staff]'),
+    new SlashCommandBuilder().setName('post-ticket-panel').setDescription('Post the issue ticket panel [Staff]'),
     new SlashCommandBuilder().setName('batch_add').setDescription('Manual add [Staff]')
       .addUserOption(o => o.setName('player').setDescription('Player').setRequired(true))
       .addStringOption(o => o.setName('vrfs_id').setDescription('VRFS ID').setRequired(true))
