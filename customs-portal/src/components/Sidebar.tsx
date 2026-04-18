@@ -16,6 +16,8 @@ export default function Sidebar() {
 
   if ((session?.user as any)?.isAdmin) {
     links.unshift({ name: "Admin Dashboard", href: "/admin", icon: "dashboard_customize" });
+    links.push({ name: "Staff Logs", href: "/admin/logs", icon: "shield_person" });
+    links.push({ name: "Batch Archive", href: "/admin/archive", icon: "history" });
   }
 
   return (
