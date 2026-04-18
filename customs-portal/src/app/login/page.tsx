@@ -1,16 +1,9 @@
 "use client";
 
-import { signIn, useSession } from "next-auth/react";
-import { redirect } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { RefreshCw, BarChart3, MessageSquare, Plus, CheckCircle2 } from "lucide-react";
 
-export default function Home() {
-  const { data: session } = useSession();
-
-  if (session) {
-    redirect("/dashboard");
-  }
-
+export default function LoginPage() {
   return (
     <div className="min-h-screen bg-surface text-on-surface font-jakarta antialiased flex overflow-hidden selection:bg-primary selection:text-white fixed inset-0 z-[100]">
       {/* Left Pane: Interaction & Identity Layer */}
@@ -69,6 +62,7 @@ export default function Home() {
         
         {/* Asymmetrical Bento Grid Showcase */}
         <div className="relative z-10 w-full max-w-2xl transform lg:rotate-[-2deg] lg:scale-105 grid grid-cols-12 gap-6 p-8">
+          {/* Card 1 */}
           <div className="col-span-12 md:col-span-8 bg-surface/80 backdrop-blur-2xl rounded-[1.5rem] p-8 shadow-[0_32px_64px_rgba(0,46,32,0.08)]">
             <div className="flex justify-between items-start mb-6">
               <div>
@@ -91,6 +85,7 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Card 2 */}
           <div className="col-span-12 md:col-span-4 bg-surface-container-lowest rounded-[1.5rem] p-6 shadow-[0_16px_48px_rgba(0,46,32,0.06)] flex flex-col justify-between">
             <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center mb-4">
               <MessageSquare className="w-5 h-5 text-on-surface-variant" />
@@ -101,12 +96,14 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Card 3 */}
           <div className="col-span-12 md:col-span-5 bg-gradient-to-br from-primary to-primary-container rounded-[1.5rem] p-8 shadow-[0_24px_48px_rgba(0,46,32,0.15)] text-white">
             <BarChart3 className="mb-6 block w-8 h-8 opacity-80" />
             <div className="text-5xl font-extrabold tracking-tighter mb-2">1,204</div>
             <div className="text-primary-fixed text-xs font-bold uppercase tracking-widest opacity-60">Requests Managed</div>
           </div>
 
+          {/* Card 4 */}
           <div className="col-span-12 md:col-span-7 bg-surface-container-lowest rounded-[1.5rem] p-6 shadow-[0_16px_48px_rgba(0,46,32,0.06)]">
             <h4 className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase mb-6">Recent Activity</h4>
             <div className="space-y-4">
