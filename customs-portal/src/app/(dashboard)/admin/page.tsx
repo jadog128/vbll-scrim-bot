@@ -121,13 +121,13 @@ export default async function AdminPanel() {
             Management Suite
           </h2>
           <div className="bg-surface-container-lowest rounded-3xl p-2 shadow-ambient border border-white grid grid-cols-1 gap-1">
-             <Link href="/admin/requests">
-                <button className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-surface-container-high transition-colors group">
+              <Link href="/admin/requests">
+                <button className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-surface-container-high transition-colors group text-left">
                    <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-on-surface-variant">
                          <BarChart3 className="w-5 h-5" />
                       </div>
-                      <div className="text-left">
+                      <div className="">
                          <div className="text-sm font-bold">Audit & Oversight</div>
                          <div className="text-[10px] text-on-surface-variant font-medium">View full command logs</div>
                       </div>

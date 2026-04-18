@@ -9,10 +9,8 @@ export default function AdminExportTrigger() {
 
   async function exportBatches() {
     setLoading(true);
-    // This triggers the bot to send a DM to the admin with the file
     try {
-      await fetch("/api/admin/export", { method: "POST" });
-      alert("Export triggered! Check your Discord DMs for the file.");
+      window.location.href = "/api/admin/export";
     } catch (e) {
       alert("Failed to trigger export.");
     }
