@@ -57,8 +57,55 @@ async function initDB() {
   await run(`CREATE TABLE IF NOT EXISTS batch_options (
     name TEXT PRIMARY KEY
   )`);
+  await run(`CREATE TABLE IF NOT EXISTS staff_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    staff_id TEXT,
+    staff_name TEXT,
+    action TEXT,
+    target_id TEXT,
+    details TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
   try { await run(`ALTER TABLE batch_requests ADD COLUMN batch_id INTEGER`); } catch(_) {}
   console.log('✅ Batch Database Ready.');
+}
+
+async function logStaffAction(staffId, staffName, action, targetId, details) {
+  try {
+    await run("INSERT INTO staff_logs (staff_id, staff_name, action, target_id, details) VALUES (?,?,?,?,?)", [staffId, staffName, action, targetId, details]);
+  } catch (e) {
+    console.error('[Log Error]', e.message);
+  }
+}
+
+async function checkMilestoneRoles(userId) {
+  // Configizable Role IDs (PLACEHOLDERS - User should update these)
+  const MILESTONES = {
+    5: '123456789012345678', // Collector
+    10: '123456789012345678', // Elite Collector
+    25: '123456789012345678'  // Master Collector
+  };
+
+  const countData = await get("SELECT COUNT(*) as cnt FROM batch_requests WHERE discord_id = ? AND status = 'completed'", [userId]);
+  const count = countData.cnt;
+
+  try {
+    const guild = client.guilds.cache.get(process.env.GUILD_ID);
+    if (!guild) return;
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (!member) return;
+
+    for (const [m, roleId] of Object.entries(MILESTONES)) {
+      if (count >= parseInt(m)) {
+        if (!member.roles.cache.has(roleId)) {
+          await member.roles.add(roleId);
+          console.log(`[Milestone] Awarded role ${roleId} to ${userId} for ${count} customs.`);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[Milestone Error]', e.message);
+  }
 }
 
 // --- ⚙️ Settings Cache ---
@@ -378,7 +425,10 @@ client.on('interactionCreate', async interaction => {
         } catch (e) {}
       }
 
-      return interaction.editReply(`✅ Batch #${batchId} confirmation sent to ${sentCount} players.`);
+      await run("UPDATE batches SET status = 'sent' WHERE id = ?", [batchId]);
+      await logStaffAction(interaction.user.id, interaction.user.username, 'BATCH_SENT', batchId, `Notified ${sentCount} players`);
+
+      return interaction.editReply(`✅ Batch #${batchId} confirmation sent to ${sentCount} players AND batch marked as SENT.`);
     }
 
     if (commandName === 'my_request') {
@@ -432,8 +482,21 @@ client.on('interactionCreate', async interaction => {
 
       if (vrfs) {
           await run("UPDATE batch_requests SET vrfs_id = ? WHERE id = ?", [vrfs, id]);
+          await logStaffAction(interaction.user.id, interaction.user.username, 'EDITED_VRFS', id, `Changed to ${vrfs}`);
           return interaction.reply({ content: `✅ VRFS ID for request #${id} updated to \`${vrfs}\`.` });
       }
+    }
+
+    if (commandName === 'view-logs') {
+       if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+       const logs = await all("SELECT * FROM staff_logs ORDER BY id DESC LIMIT 15");
+       if (!logs.length) return interaction.reply({ content: '📭 No logs found.', ephemeral: true });
+
+       const embed = new EmbedBuilder().setTitle('🛡️ Recent Staff Activity').setColor(0xffa500);
+       logs.forEach(l => {
+         embed.addFields({ name: `${l.staff_name} — ${l.action}`, value: `Target: ${l.target_id} | ${l.details} | <t:${Math.floor(new Date(l.created_at).getTime()/1000)}:R>` });
+       });
+       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
     if (commandName === 'lookup-batch-info') {
@@ -521,9 +584,11 @@ client.on('interactionCreate', async interaction => {
             await run("UPDATE batch_requests SET msg_id = ?, ch_id = ? WHERE id = ?", [msg.id, ch.id, id]);
           }
         }
+        await logStaffAction(interaction.user.id, interaction.user.username, 'APPROVED_PRE_REVIEW', id, `Type: ${req.type}`);
         return interaction.reply({ content: '✅ Approved and added to queue.', ephemeral: true });
       } else {
         await run("UPDATE batch_requests SET status = 'rejected' WHERE id = ?", [id]);
+        await logStaffAction(interaction.user.id, interaction.user.username, 'REJECTED_PRE_REVIEW', id, `Type: ${req.type}`);
         await interaction.message.delete().catch(() => {});
         try {
           const user = await client.users.fetch(req.discord_id);
@@ -583,9 +648,11 @@ client.on('interactionCreate', async interaction => {
         try {
           const user = await client.users.fetch(req.discord_id);
           await user.send({ embeds: [new EmbedBuilder().setTitle(`🆕 Update: #${id}`).setDescription(`Your **${req.type}** is **${status}**.`).setColor(status === 'completed' ? 0x00f5a0 : 0xff4d4d)] });
+          if (status === 'completed') await checkMilestoneRoles(req.discord_id);
         } catch (e) {}
       }
       const embed = EmbedBuilder.from(interaction.message.embeds[0]).setTitle(`${status.toUpperCase()} | ${interaction.message.embeds[0].title}`).setColor(status === 'completed' ? 0x00f5a0 : 0xff4d4d);
+      await logStaffAction(interaction.user.id, interaction.user.username, status === 'completed' ? 'FULFILLED' : 'REJECTED', id, `Item: ${req.type}`);
       return interaction.update({ embeds: [embed], components: [] });
     }
   }
@@ -683,6 +750,7 @@ async function registerCommands() {
       .addSubcommand(s => s.setName('list').setDescription('List all items')),
     new SlashCommandBuilder().setName('batch_check').setDescription('View queue [Staff]'),
     new SlashCommandBuilder().setName('view-batches').setDescription('View recent batches and their contents [Staff]'),
+    new SlashCommandBuilder().setName('view-logs').setDescription('View staff activity logs [Staff]'),
     new SlashCommandBuilder().setName('batch_add').setDescription('Manual add [Staff]')
       .addUserOption(o => o.setName('player').setDescription('Player').setRequired(true))
       .addStringOption(o => o.setName('vrfs_id').setDescription('VRFS ID').setRequired(true))
