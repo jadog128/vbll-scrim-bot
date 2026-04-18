@@ -245,6 +245,18 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply({ content: `✅ Batch Release channel set to <#${ch.id}>`, ephemeral: true });
     }
 
+    if (commandName === 'set-ticket-channel') {
+      const ch = interaction.options.getChannel('channel');
+      await setSetting('ticket_channel', ch.id);
+      return interaction.reply({ content: `✅ Ticket alerts channel set to <#${ch.id}>`, ephemeral: true });
+    }
+
+    if (commandName === 'set-ticket-role') {
+      const role = interaction.options.getRole('role');
+      await setSetting('ticket_role', role.id);
+      return interaction.reply({ content: `✅ Ticket staff role set to <@&${role.id}>`, ephemeral: true });
+    }
+
     if (commandName === 'batch_option') {
       if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
       const sub = interaction.options.getSubcommand();
@@ -696,13 +708,34 @@ client.on('interactionCreate', async interaction => {
       await logStaffAction(interaction.user.id, interaction.user.username, status === 'completed' ? 'FULFILLED' : 'REJECTED', id, `Item: ${req.type}`);
       return interaction.update({ embeds: [embed], components: [] });
     }
-    if (interaction.isModalSubmit()) {
-       if (interaction.customId === 'batch_ticket_modal') {
-         const issue = interaction.fields.getTextInputValue('issue_text');
-         await run("INSERT INTO batch_tickets (discord_id, username, issue) VALUES (?,?,?)", [interaction.user.id, interaction.user.username, issue]);
-         const res = await get("SELECT id FROM batch_tickets WHERE discord_id = ? ORDER BY id DESC LIMIT 1", [interaction.user.id]);
-         return interaction.reply({ content: `✅ Ticket **#${res.id}** submitted! Staff will review it on the portal.`, ephemeral: true });
-       }
+  }
+
+  if (interaction.isModalSubmit()) {
+    if (interaction.customId === 'batch_ticket_modal') {
+      const issue = interaction.fields.getTextInputValue('issue_text');
+      await run("INSERT INTO batch_tickets (discord_id, username, issue) VALUES (?,?,?)", [interaction.user.id, interaction.user.username, issue]);
+      const res = await get("SELECT id FROM batch_tickets WHERE discord_id = ? ORDER BY id DESC LIMIT 1", [interaction.user.id]);
+      
+      // Notify Staff
+      try {
+        await loadSettings();
+        const tChId = getSetting('ticket_channel');
+        const tRoleId = getSetting('ticket_role');
+        if (tChId) {
+          const ch = await client.channels.fetch(tChId).catch(() => null);
+          if (ch) {
+            const ping = tRoleId ? `<@&${tRoleId}>` : '';
+            const embed = new EmbedBuilder()
+              .setTitle(`🎫 New Ticket: #${res.id}`)
+              .setDescription(`**User:** <@${interaction.user.id}> (${interaction.user.username})\n**Issue:** ${issue}`)
+              .setColor(0xff4d4d)
+              .setTimestamp();
+            await ch.send({ content: ping, embeds: [embed] });
+          }
+        }
+      } catch (e) { console.error('Ticket Notify Error:', e); }
+
+      return interaction.reply({ content: `✅ Ticket **#${res.id}** submitted! Staff will review it on the portal.`, ephemeral: true });
     }
   }
 } catch (err) {
@@ -801,6 +834,8 @@ async function registerCommands() {
     new SlashCommandBuilder().setName('view-batches').setDescription('View recent batches and their contents [Staff]'),
     new SlashCommandBuilder().setName('view-logs').setDescription('View staff activity logs [Staff]'),
     new SlashCommandBuilder().setName('post-ticket-panel').setDescription('Post the issue ticket panel [Staff]'),
+    new SlashCommandBuilder().setName('set-ticket-channel').setDescription('Set channel where new tickets are posted [Staff]').addChannelOption(o => o.setName('channel').setDescription('Channel').setRequired(true)),
+    new SlashCommandBuilder().setName('set-ticket-role').setDescription('Set role to ping for new tickets [Staff]').addRoleOption(o => o.setName('role').setDescription('Role').setRequired(true)),
     new SlashCommandBuilder().setName('batch_add').setDescription('Manual add [Staff]')
       .addUserOption(o => o.setName('player').setDescription('Player').setRequired(true))
       .addStringOption(o => o.setName('vrfs_id').setDescription('VRFS ID').setRequired(true))
