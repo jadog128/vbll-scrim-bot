@@ -71,9 +71,25 @@ async function setSetting(key, value) {
   settingsCache[key] = value;
 }
 
-// --- 🌍 Bot API (for DM Notifications from Hub) ---
+// --- 🌍 Bot API (for Web Portal & Hub) ---
 const PORT = process.env.PORT || 3000;
+const API_TOKEN = process.env.WEB_API_TOKEN || "vbll_batch_secret";
+
 http.createServer(async (req, res) => {
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+  // Simple Token Auth
+  const auth = req.headers['authorization'];
+  if (auth !== `Bearer ${API_TOKEN}`) {
+    res.writeHead(401); res.end('Unauthorized');
+    return;
+  }
+
   if (req.method === 'POST' && req.url === '/notify-dm') {
     let body = '';
     req.on('data', chunk => body += chunk);
@@ -94,7 +110,26 @@ http.createServer(async (req, res) => {
     });
     return;
   }
-  res.writeHead(200); res.end('Batch Bot Online\n');
+
+  if (req.method === 'POST' && req.url === '/start-flow') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', async () => {
+      try {
+        const { userId, type } = JSON.parse(body);
+        const user = await client.users.fetch(userId).catch(() => null);
+        if (user) {
+          handleNewRequest(null, type, user);
+          res.writeHead(200); res.end(JSON.stringify({ success: true }));
+        } else {
+          res.writeHead(404); res.end('User not found');
+        }
+      } catch (e) { res.writeHead(400); res.end('Error'); }
+    });
+    return;
+  }
+
+  res.writeHead(200); res.end('Batch Bot API Online\n');
 }).listen(PORT, () => console.log(`🌍 Bot API listening on port ${PORT}`));
 
 // --- 🤖 Bot Client ---
@@ -472,18 +507,23 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-async function handleNewRequest(interaction, type) {
+async function handleNewRequest(interaction, type, providedUser = null) {
   try {
+    const user = providedUser || interaction.user;
     await loadSettings();
     if (getSetting('halted') === 'true') {
       const reason = getSetting('halt_reason') || 'System is currently paused.';
-      return interaction.reply({ embeds: [new EmbedBuilder().setTitle('⏸️ Requests Halted').setDescription(`Custom requests are currently paused.\n\n**Reason:** ${reason}`).setColor(0xffa500)], ephemeral: true });
+      const embed = new EmbedBuilder().setTitle('⏸️ Requests Halted').setDescription(`Custom requests are currently paused.\n\n**Reason:** ${reason}`).setColor(0xffa500);
+      if (interaction) return interaction.reply({ embeds: [embed], ephemeral: true });
+      else return user.send({ embeds: [embed] }).catch(() => {});
     }
 
-    const user = interaction.user;
     const dm = await user.createDM().catch(() => null);
-    if (!dm) return interaction.reply({ content: '❌ Enable DMs first.', ephemeral: true });
-    await interaction.reply({ content: `✅ DM Sent! Check your private messages to finish your **${type}** request.`, ephemeral: true });
+    if (!dm) {
+      if (interaction) return interaction.reply({ content: '❌ Enable DMs first.', ephemeral: true });
+      return;
+    }
+    if (interaction) await interaction.reply({ content: `✅ DM Sent! Check your private messages to finish your **${type}** request.`, ephemeral: true });
 
     const filter = m => m.author.id === user.id;
     const options = { filter, max: 1, time: 300000, errors: ['time'] };
