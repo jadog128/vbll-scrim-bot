@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Veridian Sync - Admin Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed-dim": "#9bd2b8",
+                      "surface-container": "#edeeed",
+                      "primary-container": "#0b4633",
+                      "on-secondary-container": "#765b00",
+                      "surface-container-low": "#f3f4f3",
+                      "on-primary-fixed-variant": "#19503c",
+                      "inverse-primary": "#9bd2b8",
+                      "secondary": "#765b00",
+                      "surface-bright": "#f9f9f8",
+                      "on-primary-fixed": "#002115",
+                      "tertiary-fixed": "#b1f0ce",
+                      "tertiary-container": "#00472f",
+                      "on-secondary-fixed-variant": "#594400",
+                      "on-tertiary-fixed-variant": "#0e5138",
+                      "on-primary-container": "#7db39b",
+                      "primary-fixed": "#b6efd4",
+                      "on-surface": "#191c1c",
+                      "secondary-fixed": "#ffdf93",
+                      "tertiary-fixed-dim": "#95d4b3",
+                      "inverse-on-surface": "#f0f1f0",
+                      "surface-tint": "#336853",
+                      "on-tertiary": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "on-secondary-fixed": "#241a00",
+                      "surface-container-high": "#e7e8e7",
+                      "secondary-container": "#fed56b",
+                      "on-primary": "#ffffff",
+                      "on-error": "#ffffff",
+                      "outline": "#707974",
+                      "on-background": "#191c1c",
+                      "on-tertiary-container": "#78b596",
+                      "primary": "#002e20",
+                      "surface-dim": "#d9dad9",
+                      "background": "#f9f9f8",
+                      "on-tertiary-fixed": "#002114",
+                      "error-container": "#ffdad6",
+                      "secondary-fixed-dim": "#e9c259",
+                      "inverse-surface": "#2e3131",
+                      "outline-variant": "#c0c9c2",
+                      "on-surface-variant": "#404944",
+                      "surface-container-highest": "#e1e3e2",
+                      "surface-variant": "#e1e3e2",
+                      "on-secondary": "#ffffff",
+                      "error": "#ba1a1a",
+                      "surface": "#f9f9f8",
+                      "tertiary": "#002e1d",
+                      "surface-container-lowest": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {},
+              "fontFamily": {
+                      "headline": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "body": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "label": [
+                              "Plus Jakarta Sans"
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+      </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen">
+<!-- TopAppBar from JSON -->
+<header class="fixed top-0 w-full z-50 flex items-center justify-between px-6 py-4 bg-[#f9f9f8] text-[#0b4633] font-['Plus_Jakarta_Sans'] tracking-tight font-semibold">
+<button class="flex items-center justify-center p-2 rounded-full hover:bg-[#f3f4f3]/50 transition-colors duration-300 ease-in-out text-[#0b4633]">
+<span class="material-symbols-outlined">grid_view</span>
+</button>
+<h1 class="text-xl font-bold tracking-tighter text-[#0b4633]">Veridian Sync</h1>
+<div class="w-10 h-10 rounded-full overflow-hidden shadow-sm">
+<img alt="Discord Admin Avatar" class="w-full h-full object-cover" data-alt="close-up portrait of a young professional with short dark hair in a well-lit studio" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbuL73_5b1q36NNwbNAQiyHzJKBPBYRLtIc7xcwNZ95-1iLbqidGtiUoMZJ6nwvAZjEIRv8gZzb8eHF5AZpbCNqwnjRvt1L0Zq9kCYZzKQ5j_a2SzuoX47C8uQ_spYCvAKGW9Ejv589Hd4_iu1_L_vaEAVsBtrsuWilBN-vOWYY1qt4n6fR1hP3Gm_VnJnJwKc1kl24Cs0Rjkh9k3o3Xz7rmboWX1YnYVNUz60GUpX6APFhEYVXbjMcWkhCOw3BoFs7offpr3LDFY"/>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="pt-24 pb-32 px-4 flex flex-col gap-8 max-w-lg mx-auto">
+<!-- Welcome Section -->
+<section class="flex flex-col gap-1 px-2">
+<h2 class="text-sm font-label text-on-surface-variant uppercase tracking-widest font-medium">Dashboard</h2>
+<h3 class="text-3xl font-headline font-bold tracking-tight text-on-surface -ml-[0.02em]">Good morning.</h3>
+</section>
+<!-- Metrics Bento Grid -->
+<section class="grid grid-cols-2 gap-4">
+<!-- Total Requests Card (Primary Highlight) -->
+<div class="bg-gradient-to-br from-primary to-primary-container p-5 rounded-2xl shadow-[0_16px_48px_rgba(0,46,32,0.12)] flex flex-col justify-between min-h-[140px] relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-20">
+<span class="material-symbols-outlined text-4xl text-on-primary">analytics</span>
+</div>
+<span class="text-on-primary-container text-xs font-label font-medium uppercase tracking-wider relative z-10">Total Requests</span>
+<div class="text-4xl font-headline font-extrabold text-on-primary tracking-tight relative z-10 mt-auto">1,402</div>
+</div>
+<!-- Pending Approvals Card (Action Focused) -->
+<div class="bg-surface-container-lowest p-5 rounded-2xl flex flex-col justify-between min-h-[140px]">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant text-xs font-label font-medium uppercase tracking-wider">Pending</span>
+<span class="material-symbols-outlined text-secondary">notifications_active</span>
+</div>
+<div class="mt-auto">
+<div class="text-4xl font-headline font-extrabold text-on-surface tracking-tight">28</div>
+<div class="text-secondary text-xs font-label font-medium mt-1">Requires Review</div>
+</div>
+</div>
+</section>
+<!-- Recent Submissions List -->
+<section class="flex flex-col gap-4">
+<div class="flex items-center justify-between px-2">
+<h3 class="text-lg font-headline font-bold text-on-surface">Recent Submissions</h3>
+<button class="text-sm font-label text-primary-container hover:text-primary transition-colors font-medium">View All</button>
+</div>
+<!-- Card: Pending -->
+<div class="bg-surface-container-lowest p-5 rounded-2xl flex flex-col gap-3">
+<div class="flex justify-between items-start gap-4">
+<div class="flex flex-col gap-1">
+<h4 class="font-headline font-bold text-on-surface text-base">Server Capacity Upgrade</h4>
+<p class="font-body text-sm text-on-surface-variant line-clamp-2">Requesting additional resources for the primary database cluster due to recent user spikes.</p>
+</div>
+<div class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-lg text-xs font-label font-bold tracking-wide whitespace-nowrap">
+                        Pending
+                    </div>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<img alt="User" class="w-6 h-6 rounded-full object-cover" data-alt="small circular portrait of a man with glasses smiling softly" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuuyayqn7kTl5PgpY-vc5GlGR3hC_SyEQd4l3ayj6a2Hhd_-wrrj4Etua6J1c5c0RV9T5Llw07q9G1wmnEAZeKIw4vPqOvgcxTyiui09tb7troO-xiF_XKqaKaGfIkrDPe9F9cz5RIddE7jFebn4G4NxILoA0eC05VuXZ9Dd5ikeW87KrQ5hlg9cctAEhErHJGshmmmBi5_QefYthKE73wrF85WHxQ8127FQh2zfU2mTDmguKB4UctYbxdUxCo2pxaYWQezL-fPho"/>
+<span class="text-xs font-label text-on-surface-variant">Submitted by Alex V. • 2h ago</span>
+</div>
+</div>
+<!-- Card: In Progress -->
+<div class="bg-surface-container-lowest p-5 rounded-2xl flex flex-col gap-3">
+<div class="flex justify-between items-start gap-4">
+<div class="flex flex-col gap-1">
+<h4 class="font-headline font-bold text-on-surface text-base">API Key Rotation</h4>
+<p class="font-body text-sm text-on-surface-variant line-clamp-2">Scheduled security rotation for production environment API keys.</p>
+</div>
+<div class="bg-surface-container-high text-on-surface px-3 py-1 rounded-lg text-xs font-label font-bold tracking-wide whitespace-nowrap flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">sync</span> Active
+                    </div>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<img alt="User" class="w-6 h-6 rounded-full object-cover" data-alt="small circular portrait of a young woman smiling brightly outdoors" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxfQNfEsGO5a7xnhhshZ5js3iBjGAoXzepC9mtXa-leFVkqDjudKnKv-5vuyZ3CvWl4hl57h02IWKBQ_mJKyMxFqu7uzpgHvKxYglz7mSwOYEa4-ss_bIDH4-6IXEdGoA_YOsgk8m0V5MmuSwiXIV18SSRkFF4HXlEJkn7tK64pgV_3aXBRsZ1-cCxJCvdmzqma-4q-LdT3JAnuAwY7DMvjDuKVJVgl560ZisrSpn625DZkgzSs-2Y-Q2WPxvtiaqnV8qD-Ht8xd8"/>
+<span class="text-xs font-label text-on-surface-variant">Submitted by Sarah M. • 4h ago</span>
+</div>
+</div>
+<!-- Card: Completed -->
+<div class="bg-surface-container-lowest p-5 rounded-2xl flex flex-col gap-3 opacity-80">
+<div class="flex justify-between items-start gap-4">
+<div class="flex flex-col gap-1">
+<h4 class="font-headline font-bold text-on-surface text-base">New Subdomain Routing</h4>
+<p class="font-body text-sm text-on-surface-variant line-clamp-2">Configured DNS records for the upcoming marketing campaign landing pages.</p>
+</div>
+<div class="bg-primary-fixed text-on-primary-fixed px-3 py-1 rounded-lg text-xs font-label font-bold tracking-wide whitespace-nowrap">
+                        Completed
+                    </div>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<div class="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-xs text-on-surface font-bold">D</div>
+<span class="text-xs font-label text-on-surface-variant">System Automated • 1d ago</span>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar from JSON -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-3 bg-[#ffffff]/80 backdrop-blur-xl rounded-t-[2rem] shadow-[0_-8px_32px_rgba(11,70,51,0.06)] md:hidden">
+<!-- Active Tab: Overview -->
+<button class="flex flex-col items-center justify-center text-[#0b4633] bg-[#e1e3e2] rounded-2xl px-5 py-2 scale-105 transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">analytics</span>
+<span class="text-[11px] font-medium font-['Plus_Jakarta_Sans'] uppercase tracking-widest mt-1">Overview</span>
+</button>
+<!-- Inactive Tab: Requests -->
+<button class="flex flex-col items-center justify-center text-[#404944] opacity-60 hover:opacity-100 transition-opacity duration-150 py-2">
+<span class="material-symbols-outlined">stacks</span>
+<span class="text-[11px] font-medium font-['Plus_Jakarta_Sans'] uppercase tracking-widest mt-1">Requests</span>
+</button>
+<!-- Inactive Tab: Submit -->
+<button class="flex flex-col items-center justify-center text-[#404944] opacity-60 hover:opacity-100 transition-opacity duration-150 py-2">
+<span class="material-symbols-outlined">add_box</span>
+<span class="text-[11px] font-medium font-['Plus_Jakarta_Sans'] uppercase tracking-widest mt-1">Submit</span>
+</button>
+<!-- Inactive Tab: Profile -->
+<button class="flex flex-col items-center justify-center text-[#404944] opacity-60 hover:opacity-100 transition-opacity duration-150 py-2">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[11px] font-medium font-['Plus_Jakarta_Sans'] uppercase tracking-widest mt-1">Profile</span>
+</button>
+</nav>
+</body></html>

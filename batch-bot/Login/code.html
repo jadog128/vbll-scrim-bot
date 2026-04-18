@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login - Lucid Conservatory</title>
+<!-- Google Fonts: Plus Jakarta Sans & Material Symbols -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration (Design System Integration) -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary": "#002e20",
+                    "on-secondary": "#ffffff",
+                    "tertiary": "#002e1d",
+                    "error-container": "#ffdad6",
+                    "outline-variant": "#c0c9c2",
+                    "secondary": "#765b00",
+                    "on-secondary-fixed-variant": "#594400",
+                    "on-primary-fixed-variant": "#19503c",
+                    "inverse-surface": "#2e3131",
+                    "primary-fixed-dim": "#9bd2b8",
+                    "on-tertiary-fixed-variant": "#0e5138",
+                    "surface": "#f9f9f8",
+                    "on-primary": "#ffffff",
+                    "secondary-fixed": "#ffdf93",
+                    "on-primary-fixed": "#002115",
+                    "surface-dim": "#d9dad9",
+                    "surface-bright": "#f9f9f8",
+                    "surface-container-high": "#e7e8e7",
+                    "on-primary-container": "#7db39b",
+                    "tertiary-fixed-dim": "#95d4b3",
+                    "inverse-primary": "#9bd2b8",
+                    "on-background": "#191c1c",
+                    "on-surface-variant": "#404944",
+                    "secondary-container": "#fed56b",
+                    "tertiary-container": "#00472f",
+                    "surface-tint": "#336853",
+                    "background": "#f9f9f8",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-on-surface": "#f0f1f0",
+                    "error": "#ba1a1a",
+                    "on-error": "#ffffff",
+                    "primary-container": "#0b4633",
+                    "primary-fixed": "#b6efd4",
+                    "surface-variant": "#e1e3e2",
+                    "on-tertiary": "#ffffff",
+                    "on-surface": "#191c1c",
+                    "on-secondary-container": "#765b00",
+                    "outline": "#707974",
+                    "on-secondary-fixed": "#241a00",
+                    "on-tertiary-container": "#78b596",
+                    "on-tertiary-fixed": "#002114",
+                    "secondary-fixed-dim": "#e9c259",
+                    "on-error-container": "#93000a",
+                    "surface-container": "#edeeed",
+                    "tertiary-fixed": "#b1f0ce",
+                    "surface-container-low": "#f3f4f3",
+                    "surface-container-highest": "#e1e3e2"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {},
+            "fontFamily": {
+                    "headline": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "body": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "label": [
+                            "Plus Jakarta Sans"
+                    ]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .symbol-filled {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body min-h-screen antialiased flex overflow-hidden selection:bg-primary selection:text-on-primary">
+<!-- 
+        Navigation Shell Logic: Suppressed. 
+        Intent: Linear/Transactional (Login Page).
+    -->
+<!-- Left Pane: Interaction & Identity Layer -->
+<main class="w-full lg:w-[45%] flex flex-col justify-between p-8 md:p-16 lg:p-24 bg-surface relative z-20 shadow-[32px_0_64px_rgba(0,46,32,0.03)] h-screen overflow-y-auto">
+<!-- Brand Anchor -->
+<header>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center shadow-[0_8px_16px_rgba(0,46,32,0.2)]">
+<span class="material-symbols-outlined text-on-primary symbol-filled">forest</span>
+</div>
+<span class="text-2xl font-headline font-extrabold tracking-tighter text-primary">Lucid Conservatory</span>
+</div>
+</header>
+<!-- Primary Value Proposition & CTA -->
+<div class="max-w-md my-auto">
+<h1 class="text-4xl md:text-5xl lg:text-6xl font-headline font-bold tracking-tight text-primary leading-[1.1] mb-6">
+                Cultivate requests with precision.
+            </h1>
+<p class="text-lg md:text-xl text-on-surface-variant leading-relaxed mb-12 font-medium">
+                Enter a sophisticated workspace designed to streamline your workflow, track progress in real-time, and manage submissions with an editorial-inspired clarity.
+            </p>
+<!-- Prominent Discord Login Button -->
+<!-- Follows Design System: Primary Gradient fill, white text, xl roundedness -->
+<button class="w-full group relative flex items-center justify-center gap-4 bg-gradient-to-br from-primary to-primary-container text-on-primary py-5 px-8 rounded-xl shadow-[0_16px_32px_rgba(0,46,32,0.12)] hover:shadow-[0_24px_48px_rgba(0,46,32,0.2)] transition-all duration-300 transform hover:-translate-y-1">
+<!-- Decorative subtle glow inside button -->
+<div class="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+<svg class="w-7 h-7 relative z-10 fill-current" viewbox="0 0 127.14 96.36">
+<path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1,105.25,105.25,0,0,0,32.19-16.14h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.31,60,73.31,53s5-12.74,11.43-12.74S96.3,46,96.19,53,91.08,65.69,84.69,65.69Z"></path>
+</svg>
+<span class="text-xl font-headline font-bold tracking-tight relative z-10">Login with Discord</span>
+</button>
+<div class="mt-8 flex items-center gap-3 text-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+<span>Secure, OAuth2 authentication. No passwords required.</span>
+</div>
+</div>
+<!-- Footer / Legal -->
+<footer class="text-sm text-on-surface-variant/70 font-medium">
+            © 2023 Lucid Conservatory. High-End Request Management.
+        </footer>
+</main>
+<!-- Right Pane: Contextual Showcase (Hidden on mobile) -->
+<!-- Utilizes surface-container-low to create tonal depth against the primary background -->
+<aside class="hidden lg:flex w-[55%] bg-surface-container-low relative overflow-hidden items-center justify-center h-screen">
+<!-- Abstract Botanical/Ambient Background to fit "Conservatory" theme -->
+<div class="absolute inset-0 z-0 opacity-40 mix-blend-multiply" data-alt="abstract close up of lush deep green monstera plant leaves with soft diffused sunlight filtering through creating subtle organic patterns" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBmnCRq0s8lJpgzyS-v9nOBvCPV46vgdqrAuGZ1YQ50GnsDFImNgFR1ZxN5JH2lc3Zsbx_lfvI97AkqHJOb0CXmSO0o9TsDqC5FdGndOQBUoAnJ0bmXhxDpIzC_sYJkJ-44IQ-SAhnK3x_OxDKBNkJt9h4zbu0ZY1Mf29qXjIPI4UgZM9oDoYiMbB3dzQy5bXV2vVqXFEBR-GLN5llM8-AA8fvAireceSD60LOKysbhR3qpLGF7MAXOyu_57Un7UzawgeKetbwBwnA'); background-size: cover; background-position: center;">
+</div>
+<!-- Gradient Overlay to soften image and blend with UI -->
+<div class="absolute inset-0 z-0 bg-gradient-to-tr from-surface-container-low/90 via-surface-container-low/70 to-primary-fixed-dim/30"></div>
+<!-- Asymmetrical Bento Grid Showcase (Surgical Precision) -->
+<div class="relative z-10 w-full max-w-2xl transform lg:rotate-[-2deg] lg:scale-105 grid grid-cols-12 gap-6 p-8">
+<!-- Glassmorphism Highlight Card -->
+<!-- Note: No 1px solid borders. Relies on shadow and tonal shift. -->
+<div class="col-span-12 md:col-span-8 bg-surface/80 backdrop-blur-2xl rounded-[1.5rem] p-8 shadow-[0_32px_64px_rgba(0,46,32,0.08)]">
+<div class="flex justify-between items-start mb-6">
+<div>
+<span class="text-xs font-label font-bold tracking-wider text-primary uppercase mb-1 block">Active Workflow</span>
+<h3 class="text-2xl font-headline font-bold text-on-surface">Design System V2</h3>
+</div>
+<!-- Status Chip: Nested, secondary color for attention -->
+<div class="bg-secondary-container text-on-secondary-container px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 shadow-sm">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                        In Review
+                    </div>
+</div>
+<!-- Progress Bar: No borders, tonal track -->
+<div class="mt-8">
+<div class="flex justify-between text-sm font-medium text-on-surface-variant mb-2">
+<span>Milestone Progress</span>
+<span>74%</span>
+</div>
+<div class="h-3 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full w-[74%]"></div>
+</div>
+</div>
+</div>
+<!-- Discord Integration Mock Card -->
+<div class="col-span-12 md:col-span-4 bg-surface-container-lowest rounded-[1.5rem] p-6 shadow-[0_16px_48px_rgba(0,46,32,0.06)] flex flex-col justify-between">
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-on-surface-variant">forum</span>
+</div>
+<div>
+<h4 class="text-lg font-headline font-bold text-on-surface mb-1">Live Sync</h4>
+<p class="text-sm text-on-surface-variant leading-relaxed">Direct integration with your server channels.</p>
+</div>
+</div>
+<!-- Deep Primary Accent Card -->
+<div class="col-span-12 md:col-span-5 bg-gradient-to-br from-primary to-primary-container rounded-[1.5rem] p-8 shadow-[0_24px_48px_rgba(0,46,32,0.15)] text-on-primary">
+<span class="material-symbols-outlined mb-6 block text-3xl opacity-80">analytics</span>
+<div class="text-5xl font-headline font-extrabold tracking-tighter mb-2">1,204</div>
+<div class="text-primary-fixed text-sm font-medium tracking-wide">Requests Managed</div>
+</div>
+<!-- List/Nested Items Showcase -->
+<div class="col-span-12 md:col-span-7 bg-surface-container-lowest rounded-[1.5rem] p-6 shadow-[0_16px_48px_rgba(0,46,32,0.06)]">
+<h4 class="text-sm font-label font-bold tracking-wider text-on-surface-variant uppercase mb-4">Recent Activity</h4>
+<div class="space-y-4">
+<!-- List Item 1 -->
+<div class="flex items-center gap-4 group">
+<div class="w-10 h-10 rounded-xl bg-surface-container-low flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">add_task</span>
+</div>
+<div>
+<div class="text-sm font-bold text-on-surface">Asset Pack Delivery</div>
+<div class="text-xs text-on-surface-variant">Approved by Admin • 2m ago</div>
+</div>
+</div>
+<!-- List Item 2 -->
+<div class="flex items-center gap-4 group">
+<div class="w-10 h-10 rounded-xl bg-surface-container-low flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">comment</span>
+</div>
+<div>
+<div class="text-sm font-bold text-on-surface">Feedback Logged</div>
+<div class="text-xs text-on-surface-variant">Client Channel • 1h ago</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</body></html>
