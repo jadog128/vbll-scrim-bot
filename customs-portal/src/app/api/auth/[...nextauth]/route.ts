@@ -1,0 +1,36 @@
+import NextAuth from "next-auth";
+import DiscordProvider from "next-auth/providers/discord";
+import { isMemberAdmin } from "@/lib/discord";
+
+const handler = NextAuth({
+  providers: [
+    DiscordProvider({
+      clientId: process.env.DISCORD_CLIENT_ID!,
+      clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+      authorization: { params: { scope: "identify email" } },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, profile }) {
+      if (profile) {
+        token.id = (profile as any).id;
+        token.username = (profile as any).username;
+        token.isAdmin = await isMemberAdmin(token.id as string);
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        (session.user as any).id = token.id;
+        (session.user as any).username = token.username;
+        (session.user as any).isAdmin = token.isAdmin;
+      }
+      return session;
+    },
+  },
+  pages: {
+    signIn: '/login',
+  },
+});
+
+export { handler as GET, handler as POST };
