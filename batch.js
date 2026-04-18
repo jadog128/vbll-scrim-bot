@@ -264,6 +264,15 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply({ content: `✅ Ticket category set to **${cat.name}**`, ephemeral: true });
     }
 
+    if (commandName === 'close-ticket') {
+      if (!interaction.channel.name.startsWith('ticket-')) return interaction.reply({ content: '❌ This can only be used in ticket channels.', ephemeral: true });
+      const id = interaction.channel.name.split('-')[1];
+      await run("UPDATE batch_tickets SET status = 'closed' WHERE id = ?", [id]);
+      await interaction.reply({ content: '🔒 Ticket marked as closed. Deleting channel in 5 seconds...' });
+      setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
+      return;
+    }
+
     if (commandName === 'batch_option') {
       if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
       const sub = interaction.options.getSubcommand();
@@ -715,6 +724,14 @@ client.on('interactionCreate', async interaction => {
       await logStaffAction(interaction.user.id, interaction.user.username, status === 'completed' ? 'FULFILLED' : 'REJECTED', id, `Item: ${req.type}`);
       return interaction.update({ embeds: [embed], components: [] });
     }
+    
+    if (customId.startsWith('batch_ticket_close_')) {
+      const id = customId.split('_').pop();
+      await run("UPDATE batch_tickets SET status = 'closed' WHERE id = ?", [id]);
+      await interaction.reply({ content: '🔒 Ticket closed. This channel will be removed in 5 seconds.' });
+      setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
+      return;
+    }
   }
 
   if (interaction.isModalSubmit()) {
@@ -755,7 +772,11 @@ client.on('interactionCreate', async interaction => {
               .setColor(0xff4d4d)
               .setTimestamp();
             
-            await channel.send({ content: `${ping} <@${interaction.user.id}>`, embeds: [embed] });
+            const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId(`batch_ticket_close_${res.id}`).setLabel('Close Ticket').setStyle(ButtonStyle.Secondary)
+            );
+
+            await channel.send({ content: `${ping} <@${interaction.user.id}>`, embeds: [embed], components: [row] });
           }
         } else {
            // Fallback to channel message if category not set
@@ -875,6 +896,7 @@ async function registerCommands() {
     new SlashCommandBuilder().setName('set-ticket-channel').setDescription('Set channel where new tickets are posted [Staff]').addChannelOption(o => o.setName('channel').setDescription('Channel').setRequired(true)),
     new SlashCommandBuilder().setName('set-ticket-role').setDescription('Set role to ping for new tickets [Staff]').addRoleOption(o => o.setName('role').setDescription('Role').setRequired(true)),
     new SlashCommandBuilder().setName('set-ticket-category').setDescription('Set category where private ticket channels are created [Staff]').addChannelOption(o => o.setName('category').setDescription('Category').setRequired(true)),
+    new SlashCommandBuilder().setName('close-ticket').setDescription('Close and delete the current ticket channel [Staff]'),
     new SlashCommandBuilder().setName('batch_add').setDescription('Manual add [Staff]')
       .addUserOption(o => o.setName('player').setDescription('Player').setRequired(true))
       .addStringOption(o => o.setName('vrfs_id').setDescription('VRFS ID').setRequired(true))
