@@ -19,6 +19,7 @@ export async function GET() {
     VBLL_ADMIN_ROLE_ID: !!process.env.VBLL_ADMIN_ROLE_ID,
     NODE_ENV: process.env.NODE_ENV,
     VERCEL: !!process.env.VERCEL,
+    ALL_VBLL_KEYS: Object.keys(process.env).filter(key => key.startsWith("VBLL_")),
   };
 
   return NextResponse.json(envCheck);
