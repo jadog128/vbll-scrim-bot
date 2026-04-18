@@ -5,8 +5,8 @@ import { isMemberAdmin } from "@/lib/discord";
 export const authOptions: NextAuthOptions = {
   providers: [
     DiscordProvider({
-      clientId: (process.env.VBLL_DISCORD_CLIENT_ID || process.env.DISCORD_CLIENT_ID) || "",
-      clientSecret: (process.env.VBLL_DISCORD_CLIENT_SECRET || process.env.DISCORD_CLIENT_SECRET) || "",
+      clientId: "1491103459942989905",
+      clientSecret: "d67TEmOW3O2GcsF6MwHJhsFMNmM0u6J2",
       authorization: { params: { scope: "identify email" } },
     }),
   ],
