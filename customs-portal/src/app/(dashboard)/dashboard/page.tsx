@@ -3,7 +3,6 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { execute } from "@/lib/db";
 import { Send, Clock, CheckCircle2, Package, RefreshCw } from "lucide-react";
-import RequestTrigger from "@/components/RequestTrigger";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +23,7 @@ export default async function Dashboard() {
     <div className="space-y-10 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Hero Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-primary/5 rounded-3xl p-8 border border-primary/10 relative overflow-hidden group">
+        <div className="bg-primary/5 rounded-3xl p-8 border border-primary/10 relative overflow-hidden group col-span-full">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
              <Package className="w-20 h-20 text-primary" />
           </div>
@@ -35,14 +34,6 @@ export default async function Dashboard() {
             </div>
             <p className="text-on-surface-variant text-sm mt-2 font-medium">Pending items in active batches</p>
           </div>
-        </div>
-
-        <div className="md:col-span-2 bg-surface-container-low rounded-[2.5rem] p-8 border border-outline-variant/10 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold text-on-surface tracking-tight">Ready for a new project?</h2>
-            <p className="text-on-surface-variant font-medium">Initiate a custom request flow directly in your DMs.</p>
-          </div>
-          <RequestTrigger type="Custom Request" />
         </div>
       </div>
 

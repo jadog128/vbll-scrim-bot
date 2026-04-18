@@ -10,7 +10,6 @@ export default function Sidebar() {
 
   const links = [
     { name: "My Requests", href: "/dashboard", icon: "receipt_long" },
-    { name: "Submission", href: "/dashboard/new", icon: "add_task" },
   ];
 
   if ((session?.user as any)?.isAdmin) {
@@ -28,16 +27,6 @@ export default function Sidebar() {
           <h1 className="text-xl font-bold text-primary tracking-tight">VBLL Portal</h1>
           <p className="text-sm text-on-surface-variant font-medium">Request Management</p>
         </div>
-      </div>
-
-      {/* CTA */}
-      <div className="px-4 mb-6">
-        <Link href="/dashboard/new">
-          <button className="w-full bg-gradient-to-br from-primary to-primary-container text-white rounded-3xl py-3 px-4 font-semibold text-sm flex items-center justify-center gap-2 hover:shadow-ambient transition-all duration-300 active:scale-[0.98]">
-            <span className="material-symbols-outlined text-lg">add</span>
-            New Request
-          </button>
-        </Link>
       </div>
 
       {/* Navigation Links */}

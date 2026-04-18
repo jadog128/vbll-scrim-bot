@@ -36,12 +36,18 @@ export async function POST(req: Request) {
             timestamp: new Date().toISOString()
         };
         
-        // This button logic in the bot uses IDs for listeners, so we might just send pure embed
-        // to avoid mismatching component versions, or send similar buttons.
-        const discordMsg = await sendDiscordMessage(preId, { embeds: [embed] });
-        if (discordMsg) {
-            await execute("UPDATE batch_requests SET msg_id = ?, ch_id = ? WHERE id = ?", [discordMsg.id, preId, requestId]);
+        try {
+            const discordMsg = await sendDiscordMessage(preId, { embeds: [embed] });
+            if (discordMsg) {
+                await execute("UPDATE batch_requests SET msg_id = ?, ch_id = ? WHERE id = ?", [discordMsg.id, preId, requestId]);
+            } else {
+                console.error("Discord send failed: null returned");
+            }
+        } catch (discordErr: any) {
+            console.error("Discord send error:", discordErr.message);
         }
+    } else {
+        console.error("pre_review_channel setting not found");
     }
 
     return NextResponse.json({ success: true, requestId });

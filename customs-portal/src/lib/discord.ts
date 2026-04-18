@@ -28,19 +28,20 @@ export async function deleteDiscordMessage(channelId: string, messageId: string)
 }
 
 export async function sendDiscordMessage(channelId: string, content: any) {
-    if (!BOT_TOKEN) return null;
-    try {
-      const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-        method: "POST",
-        headers: { 
-          Authorization: `Bot ${BOT_TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(content)
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {}
-    return null;
+    if (!BOT_TOKEN) throw new Error("BOT_TOKEN is missing");
+    const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+      method: "POST",
+      headers: { 
+        Authorization: `Bot ${BOT_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(content)
+    });
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Discord API Error: ${res.status} - ${err}`);
+    }
+    return await res.json();
 }
 
 export async function getSettingFromDB(key: string) {
