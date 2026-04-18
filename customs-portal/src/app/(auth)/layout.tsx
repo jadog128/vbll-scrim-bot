@@ -1,5 +1,3 @@
-import Providers from "@/components/Providers";
-
 export default function AuthLayout({
   children,
 }: {
@@ -7,7 +5,7 @@ export default function AuthLayout({
 }) {
   return (
     <div className="min-h-screen bg-surface">
-      <Providers>{children}</Providers>
+      {children}
     </div>
   );
 }
