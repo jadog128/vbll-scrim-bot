@@ -846,6 +846,14 @@ async function handleNewRequest(interaction, type, providedUser = null) {
       else return user.send({ embeds: [embed] }).catch(() => {});
     }
 
+    // Duplicate Check
+    const existing = await get("SELECT id FROM batch_requests WHERE discord_id = ? AND type = ? AND status NOT IN ('completed', 'rejected')", [user.id, type]);
+    if (existing) {
+       const msg = `❌ You already have an active request for a **${type}** (ID: #${existing.id}). Please wait for it to be completed or rejected before ordering another one.`;
+       if (interaction) return interaction.reply({ content: msg, ephemeral: true });
+       return user.send(msg).catch(() => {});
+    }
+
     const dm = await user.createDM().catch(() => null);
     if (!dm) {
       if (interaction) return interaction.reply({ content: '❌ Enable DMs first.', ephemeral: true });
