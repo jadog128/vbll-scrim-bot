@@ -12,6 +12,11 @@ export async function GET() {
     NEXTAUTH_URL: !!process.env.NEXTAUTH_URL,
     NEXTAUTH_SECRET: !!process.env.NEXTAUTH_SECRET,
     VBLL_NEXTAUTH_SECRET: !!process.env.VBLL_NEXTAUTH_SECRET,
+    VBLL_TURSO_URL: !!process.env.VBLL_TURSO_URL,
+    VBLL_TURSO_TOKEN: !!process.env.VBLL_TURSO_TOKEN,
+    VBLL_DISCORD_TOKEN: !!process.env.VBLL_DISCORD_TOKEN,
+    VBLL_DISCORD_GUILD_ID: !!process.env.VBLL_DISCORD_GUILD_ID,
+    VBLL_ADMIN_ROLE_ID: !!process.env.VBLL_ADMIN_ROLE_ID,
     NODE_ENV: process.env.NODE_ENV,
     VERCEL: !!process.env.VERCEL,
   };
