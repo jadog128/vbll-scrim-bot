@@ -42,7 +42,7 @@ export default async function Dashboard() {
             <h2 className="text-3xl font-bold text-on-surface tracking-tight">Ready for a new project?</h2>
             <p className="text-on-surface-variant font-medium">Initiate a custom request flow directly in your DMs.</p>
           </div>
-          <RequestTrigger />
+          <RequestTrigger type="Custom Request" />
         </div>
       </div>
 
