@@ -12,7 +12,7 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-surface text-on-surface font-jakarta antialiased flex overflow-hidden selection:bg-primary selection:text-white fixed inset-0 z-[100]">
+    <div className="min-h-screen bg-surface text-on-surface font-jakarta antialiased flex overflow-hidden selection:bg-primary selection:text-white">
       {/* Left Pane: Interaction & Identity Layer */}
       <main className="w-full lg:w-[45%] flex flex-col justify-between p-8 md:p-16 lg:p-24 bg-surface relative z-20 shadow-[32px_0_64px_rgba(0,46,32,0.03)] h-screen overflow-y-auto">
         {/* Brand Anchor */}

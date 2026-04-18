@@ -17,8 +17,7 @@ export default async function AdminPanel() {
   // Fetch Stats
   const batchesRes = await execute("SELECT COUNT(*) as count FROM batches");
   const requestsRes = await execute("SELECT COUNT(*) as count FROM batch_requests");
-  const pendingRes = await execute("SELECT COUNT(*) as count FROM batch_requests WHERE status = 'pending'");
-
+  
   // Fetch Recent Batches with items
   const batches = await execute("SELECT * FROM batches ORDER BY id DESC LIMIT 5");
   const batchesWithItems = await Promise.all(batches.rows.map(async (b: any) => {
@@ -80,7 +79,6 @@ export default async function AdminPanel() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Active Batches */}
         <div className="space-y-4">
           <h2 className="text-lg font-bold flex items-center gap-2 text-on-surface">
             <span className="material-symbols-outlined text-on-surface-variant text-[20px]">stacks</span>
@@ -111,14 +109,12 @@ export default async function AdminPanel() {
                       <span className="font-bold text-primary/60">{r.type}</span>
                     </div>
                   ))}
-                  {b.requests.length === 0 && <div className="text-[10px] text-on-surface-variant italic">Waiting for assignments...</div>}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Global Controls */}
         <div className="space-y-4">
           <h2 className="text-lg font-bold flex items-center gap-2 text-on-surface">
             <span className="material-symbols-outlined text-on-surface-variant text-[20px]">settings_suggest</span>
@@ -134,20 +130,6 @@ export default async function AdminPanel() {
                       <div className="text-left">
                          <div className="text-sm font-bold">Audit & Oversight</div>
                          <div className="text-[10px] text-on-surface-variant font-medium">View full command logs</div>
-                      </div>
-                   </div>
-                   <span className="material-symbols-outlined text-on-surface-variant opacity-20 group-hover:opacity-100 transition-opacity">arrow_forward_ios</span>
-                </button>
-             </Link>
-             <Link href="/admin/config">
-                <button className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-surface-container-high transition-colors group">
-                   <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-on-surface-variant">
-                         <Settings className="w-5 h-5" />
-                      </div>
-                      <div className="text-left">
-                         <div className="text-sm font-bold">Global Configuration</div>
-                         <div className="text-[10px] text-on-surface-variant font-medium">Manage bot channels & roles</div>
                       </div>
                    </div>
                    <span className="material-symbols-outlined text-on-surface-variant opacity-20 group-hover:opacity-100 transition-opacity">arrow_forward_ios</span>
