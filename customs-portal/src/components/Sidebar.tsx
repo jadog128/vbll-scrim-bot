@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-
 import SidebarProfileCard from "./SidebarProfileCard";
 
 export default function Sidebar() {
@@ -12,7 +11,7 @@ export default function Sidebar() {
 
   const links = [
     { name: "My Requests", href: "/dashboard", icon: "receipt_long" },
-    { name: "Inventory", href: "/dashboard", icon: "inventory_2" },
+    { name: "Inventory", href: "/inventory", icon: "inventory_2" },
   ];
 
   if ((session?.user as any)?.isAdmin) {
@@ -20,49 +19,57 @@ export default function Sidebar() {
   }
 
   return (
-    <nav className="bg-[#f3f4f3] text-[#0b4633] w-72 h-full py-6 flex flex-col space-y-2 border-r border-outline-variant/10">
+    <nav className="bg-[#f8f9f8] text-[#0b4633] w-72 h-full py-8 flex flex-col border-r border-outline-variant/10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
       {/* Header */}
-      <div className="px-6 mb-8 flex items-center gap-4">
-        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-ambient">
+      <div className="px-8 mb-10 flex items-center gap-4">
+        <div className="w-11 h-11 rounded-2xl bg-primary flex items-center justify-center text-white shadow-ambient transition-transform hover:scale-105 active:scale-95">
           <span className="material-symbols-outlined icon-fill">hive</span>
         </div>
         <div>
-          <h1 className="text-xl font-bold text-primary tracking-tight">VBLL Portal</h1>
-          <p className="text-sm text-on-surface-variant font-medium">Request Management</p>
+          <h1 className="text-xl font-black text-primary tracking-tighter leading-none">Lucid Portal</h1>
+          <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1 opacity-60">Management</p>
         </div>
       </div>
 
       {/* Profile Section */}
-      <div className="mb-6">
+      <div className="mb-8">
          <SidebarProfileCard />
       </div>
 
       {/* Navigation Links */}
-      <div className="flex-1 px-2 space-y-1">
+      <div className="flex-1 px-4 space-y-2">
         {links.map((link) => {
-          const isActive = pathname === link.href;
+          // Check if exactly this path or if it's a subpath of admin
+          const isActive = pathname === link.href || (link.href === '/admin' && pathname.startsWith('/admin'));
+          
           return (
             <Link 
-              key={link.href} 
+              key={link.name} 
               href={link.href}
-              className={`p-3 mx-2 flex items-center gap-3 rounded-xl transition-all ${
+              className={`p-4 mx-2 flex items-center gap-4 rounded-3xl transition-all duration-300 group ${
                 isActive 
-                  ? "bg-white text-primary shadow-sm font-semibold" 
-                  : "text-on-surface-variant hover:translate-x-1 hover:bg-white/50"
+                  ? "bg-white text-primary shadow-[0_8px_32px_rgba(0,0,0,0.06)] scale-[1.02] border border-white" 
+                  : "text-on-surface-variant/70 hover:bg-white/50 hover:text-on-surface hover:translate-x-1"
               }`}
             >
-              <span className={`material-symbols-outlined text-[20px] ${isActive ? "icon-fill" : ""}`}>
-                {link.icon}
+              <div className={`p-2 rounded-xl transition-colors ${isActive ? "bg-primary/5 text-primary" : "text-on-surface-variant/40 group-hover:text-primary/40"}`}>
+                <span className={`material-symbols-outlined text-[22px] block ${isActive ? "icon-fill" : ""}`}>
+                  {link.icon}
+                </span>
+              </div>
+              <span className={`text-sm tracking-tight ${isActive ? "font-black" : "font-semibold"}`}>
+                {link.name}
               </span>
-              <span className="text-sm">{link.name}</span>
             </Link>
           );
         })}
       </div>
 
-      {/* Footer Links */}
-      <div className="px-2 mt-auto pt-4 space-y-1 text-xs font-medium text-on-surface-variant uppercase tracking-widest text-center opacity-40">
-        VBLL Operations v1.0
+      {/* Footer */}
+      <div className="px-8 mt-auto pt-6 border-t border-primary/5">
+        <div className="text-[9px] font-black text-on-surface-variant/30 uppercase tracking-[0.2em] text-center">
+          VBLL Operations v1.2
+        </div>
       </div>
     </nav>
   );
