@@ -67,6 +67,13 @@ async function initDB() {
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
   try { await run(`ALTER TABLE batch_requests ADD COLUMN batch_id INTEGER`); } catch(_) {}
+  
+  // Add a seed log if empty
+  const logCheck = await get("SELECT COUNT(*) as cnt FROM staff_logs");
+  if (logCheck.cnt === 0) {
+    await run("INSERT INTO staff_logs (staff_id, staff_name, action, target_id, details) VALUES (?,?,?,?,?)", ['SYSTEM', 'SYSTEM', 'INITIALIZED', '0', 'Audit logging system successfully activated.']);
+  }
+
   console.log('✅ Batch Database Ready.');
 }
 
