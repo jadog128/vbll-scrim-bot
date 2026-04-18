@@ -724,13 +724,29 @@ client.on('interactionCreate', async interaction => {
         if (tChId) {
           const ch = await client.channels.fetch(tChId).catch(() => null);
           if (ch) {
-            const ping = tRoleId ? `<@&${tRoleId}>` : '';
-            const embed = new EmbedBuilder()
-              .setTitle(`🎫 New Ticket: #${res.id}`)
-              .setDescription(`**User:** <@${interaction.user.id}> (${interaction.user.username})\n**Issue:** ${issue}`)
-              .setColor(0xff4d4d)
-              .setTimestamp();
-            await ch.send({ content: ping, embeds: [embed] });
+            try {
+              const thread = await ch.threads.create({
+                name: `ticket-${res.id}-${interaction.user.username}`,
+                autoArchiveDuration: 10080,
+                reason: `Batch ticket for ${interaction.user.username}`,
+              });
+
+              await thread.members.add(interaction.user.id);
+
+              const ping = tRoleId ? `<@&${tRoleId}>` : '';
+              const embed = new EmbedBuilder()
+                .setTitle(`🎫 New Ticket: #${res.id}`)
+                .setDescription(`**User:** <@${interaction.user.id}> (${interaction.user.username})\n**Issue:** ${issue}\n\nStaff will assist you in this thread.`)
+                .setColor(0xff4d4d)
+                .setTimestamp();
+              
+              await thread.send({ content: `${ping} <@${interaction.user.id}>`, embeds: [embed] });
+            } catch (threadErr) {
+              // Fallback to simple message if threads fail
+              const ping = tRoleId ? `<@&${tRoleId}>` : '';
+              const embed = new EmbedBuilder().setTitle(`🎫 Ticket: #${res.id}`).setDescription(`**User:** <@${interaction.user.id}>\n**Issue:** ${issue}`).setColor(0xff4d4d);
+              await ch.send({ content: `⚠️ Thread creation failed: ${ping}`, embeds: [embed] });
+            }
           }
         }
       } catch (e) { console.error('Ticket Notify Error:', e); }
