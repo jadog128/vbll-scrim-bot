@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { execute } from "@/lib/db";
-import { ShieldCheck, Package, Layers, Users, ExternalLink, Settings, BarChart3, Radio } from "lucide-react";
+import { ShieldCheck, Package, Layers, Users, ExternalLink, Settings, BarChart3, Radio, ShieldAlert } from "lucide-react";
 import AdminActions from "@/components/AdminActions";
 import Link from "next/link";
 import AdminExportTrigger from "@/components/AdminExportTrigger";
@@ -17,6 +17,7 @@ export default async function AdminPanel() {
   // Fetch Stats
   const batchesRes = await execute("SELECT COUNT(*) as count FROM batches");
   const requestsRes = await execute("SELECT COUNT(*) as count FROM batch_requests");
+  const ticketsRes = await execute("SELECT COUNT(*) as count FROM batch_tickets WHERE status = 'open'");
   
   // Fetch Recent Batches with items
   const batches = await execute("SELECT * FROM batches ORDER BY id DESC LIMIT 5");
@@ -130,6 +131,26 @@ export default async function AdminPanel() {
                       <div className="">
                          <div className="text-sm font-bold">Audit & Oversight</div>
                          <div className="text-[10px] text-on-surface-variant font-medium">View full command logs</div>
+                      </div>
+                   </div>
+                   <span className="material-symbols-outlined text-on-surface-variant opacity-20 group-hover:opacity-100 transition-opacity">arrow_forward_ios</span>
+                </button>
+             </Link>
+
+             <Link href="/admin/tickets">
+                <button className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-surface-container-high transition-colors group text-left">
+                   <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-on-surface-variant relative">
+                         <ShieldAlert className="w-5 h-5 text-error" />
+                         {(ticketsRes.rows[0] as any).count > 0 && (
+                           <span className="absolute -top-1 -right-1 w-4 h-4 bg-error text-white text-[8px] font-black rounded-full flex items-center justify-center animate-bounce">
+                              {(ticketsRes.rows[0] as any).count}
+                           </span>
+                         )}
+                      </div>
+                      <div className="">
+                         <div className="text-sm font-bold">Support Tickets</div>
+                         <div className="text-[10px] text-on-surface-variant font-medium">Handle batch issues reported by users</div>
                       </div>
                    </div>
                    <span className="material-symbols-outlined text-on-surface-variant opacity-20 group-hover:opacity-100 transition-opacity">arrow_forward_ios</span>

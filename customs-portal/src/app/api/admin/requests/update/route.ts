@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { execute } from "@/lib/db";
+import { sendDiscordDM } from "@/lib/discord";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -9,10 +10,27 @@ export async function POST(req: Request) {
 
   const { id, vrfs_id, status, batch_id } = await req.json();
 
+  // Get current info for notification
+  const currentRes = await execute("SELECT vrfs_id, discord_id, status FROM batch_requests WHERE id = ?", [id]);
+  const current = currentRes.rows[0] as any;
+
   await execute(
     "UPDATE batch_requests SET vrfs_id = ?, status = ?, batch_id = ? WHERE id = ?", 
     [vrfs_id, status, batch_id === "" ? null : batch_id, id]
   );
+
+  // Notify User if anything changed
+  if (current && (current.vrfs_id !== vrfs_id || current.status !== status)) {
+     try {
+       await sendDiscordDM(current.discord_id, {
+         embeds: [{
+           title: "📝 Request Updated",
+           description: `Your request **#${id}** has been updated by staff.\n\n**New VRFS ID:** \`${vrfs_id}\`\n**New Status:** \`${status.toUpperCase()}\``,
+           color: 0x5865f2
+         }]
+       });
+     } catch(e) {}
+  }
   
   // Log the action
   if (session?.user) {

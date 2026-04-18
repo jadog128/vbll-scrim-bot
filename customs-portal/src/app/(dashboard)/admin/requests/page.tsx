@@ -4,27 +4,44 @@ import { redirect } from "next/navigation";
 import { execute } from "@/lib/db";
 import { History, ShieldAlert, ListFilter, Search } from "lucide-react";
 import AdminRequestRow from "@/components/AdminRequestRow";
+import AdminSearchBar from "@/components/AdminSearchBar";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminRequests() {
+export default async function AdminRequests({ searchParams }: { searchParams: { q?: string } }) {
   const session = await getServerSession(authOptions);
   if (!(session?.user as any)?.isAdmin) redirect("/");
 
-  // Fetch all non-completed requests
-  const activeRequests = await execute(
-    "SELECT * FROM batch_requests WHERE status != 'completed' AND status != 'rejected' ORDER BY created_at DESC"
-  );
+  const query = searchParams?.q || "";
+  
+  // Fetch active requests (potentially filtered)
+  let activeRequestsSql = "SELECT * FROM batch_requests WHERE status != 'completed' AND status != 'rejected'";
+  const activeParams: any[] = [];
 
-  // Fetch recently completed for history
-  const history = await execute(
-    "SELECT * FROM batch_requests WHERE status = 'completed' OR status = 'rejected' ORDER BY created_at DESC LIMIT 10"
-  );
+  if (query) {
+    activeRequestsSql += " AND (username LIKE ? OR vrfs_id LIKE ? OR id = ?)";
+    activeParams.push(`%${query}%`, `%${query}%`, query);
+  }
+  activeRequestsSql += " ORDER BY created_at DESC";
+
+  const activeRequests = await execute(activeRequestsSql, activeParams);
+
+  // Fetch recently completed for history (potentially filtered)
+  let historySql = "SELECT * FROM batch_requests WHERE (status = 'completed' OR status = 'rejected')";
+  const historyParams: any[] = [];
+  
+  if (query) {
+    historySql += " AND (username LIKE ? OR vrfs_id LIKE ? OR id = ?)";
+    historyParams.push(`%${query}%`, `%${query}%`, query);
+  }
+  historySql += " ORDER BY created_at DESC LIMIT 15";
+  
+  const history = await execute(historySql, historyParams);
 
   return (
     <div className="space-y-10 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h2 className="text-3xl font-bold text-on-surface tracking-tight mb-1 flex items-center gap-3">
              <Link href="/admin">
@@ -32,8 +49,10 @@ export default async function AdminRequests() {
              </Link>
              Audit & Oversight
           </h2>
-          <p className="text-on-surface-variant text-sm font-medium">Manage and fulfill active player submissions.</p>
+          <p className="text-on-surface-variant text-sm font-medium">Manage and fulfill player submissions.</p>
         </div>
+        
+        <AdminSearchBar />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
