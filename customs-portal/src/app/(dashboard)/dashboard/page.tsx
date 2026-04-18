@@ -32,8 +32,8 @@ export default async function Dashboard() {
     FROM batch_requests LIMIT 1
   `);
   const stats = statsRes.rows[0] as any;
-  const avgVerify = (stats?.avg_verify || 8 * 3600) * 1000;
-  const avgSend = (stats?.avg_send || 2 * 24 * 3600) * 1000;
+  const avgVerify = Math.max(1, (stats?.avg_verify || 8 * 3600)) * 1000;
+  const avgSend = Math.max(1, (stats?.avg_send || 2 * 24 * 3600)) * 1000;
 
   const getProgress = (req: any) => {
     if (req.status === 'completed' && req.batch_status === 'sent') return 100;
@@ -57,16 +57,20 @@ export default async function Dashboard() {
     if (req.status === 'rejected') return "N/A";
     
     if (req.status === 'pre_review') {
-      const elapsed = Date.now() - new Date(req.created_at).getTime();
+      const createdAtStr = req.created_at.includes(' ') ? req.created_at.replace(' ', 'T') + 'Z' : req.created_at;
+      const elapsed = Date.now() - new Date(createdAtStr).getTime();
       const remain = Math.max(0, avgVerify - elapsed);
+      if (remain <= 0) return "Soon";
       return remain > 3600000 ? `~${Math.round(remain/3600000)}h` : `~${Math.round(remain/60000)}m`;
     }
     
     if (req.status === 'completed' && req.batch_status === 'released') {
-      const releasedAt = req.batch_released_at ? new Date(req.batch_released_at).getTime() : Date.now();
+      const releasedAtStr = req.batch_released_at.includes(' ') ? req.batch_released_at.replace(' ', 'T') + 'Z' : req.batch_released_at;
+      const releasedAt = new Date(releasedAtStr).getTime();
       const elapsed = Date.now() - releasedAt;
       const remain = Math.max(0, avgSend - elapsed);
-      return `~${Math.round(remain / (24 * 3600000))} days`;
+      const days = Math.round(remain / (24 * 3600000));
+      return days <= 0 ? "Ready Soon" : `~${days} days`;
     }
     
     if (req.status === 'pending' || (req.status === 'completed' && !req.batch_status)) {
