@@ -26,8 +26,8 @@ export async function POST(req: Request) {
 
   try {
     await execute(
-      "INSERT INTO batch_tickets (discord_id, username, issue, status) VALUES (?, ?, ?, ?)",
-      [(session.user as any).id, session.user.name, issue, 'open']
+      "INSERT INTO batch_tickets (discord_id, username, issue, status, source) VALUES (?, ?, ?, ?, ?)",
+      [(session.user as any).id, session.user.name, issue, 'open', 'web']
     );
     const newTicket = await execute("SELECT last_insert_rowid() as id");
     return NextResponse.json({ success: true, id: (newTicket.rows[0] as any).id });

@@ -48,7 +48,14 @@ export default function AdminTicketRow({ ticket, onStatusUpdate }: { ticket: any
              </div>
              <div>
                 <h4 className="font-bold text-on-surface truncate">{ticket.username}</h4>
-                <div className="text-[10px] font-black text-error uppercase tracking-widest">TICKET #{ticket.id}</div>
+                <div className="flex items-center gap-2">
+                   <div className="text-[10px] font-black text-error uppercase tracking-widest">TICKET #{ticket.id}</div>
+                   {ticket.source === 'web' ? (
+                     <div className="px-2 py-0.5 bg-primary/10 text-primary text-[8px] font-black uppercase rounded-full">Web Interface</div>
+                   ) : (
+                     <div className="px-2 py-0.5 bg-secondary/10 text-secondary text-[8px] font-black uppercase rounded-full">Discord Bot</div>
+                   )}
+                </div>
              </div>
           </div>
           <div className="text-[11px] font-black text-on-surface-variant opacity-30 flex items-center gap-1.5">
