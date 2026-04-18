@@ -21,7 +21,7 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
   const activeParams: any[] = [];
 
   if (query) {
-    activeRequestsSql += " AND (username LIKE ? OR vrfs_id LIKE ? OR id = ?)";
+    activeRequestsSql += " AND (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?) OR id = ?)";
     activeParams.push(`%${query}%`, `%${query}%`, query);
   }
   activeRequestsSql += " ORDER BY created_at DESC";
@@ -33,10 +33,11 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
   const historyParams: any[] = [];
   
   if (query) {
-    historySql += " AND (username LIKE ? OR vrfs_id LIKE ? OR id = ?)";
+    historySql += " AND (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?) OR id = ?)";
     historyParams.push(`%${query}%`, `%${query}%`, query);
   }
-  historySql += " ORDER BY created_at DESC LIMIT 15";
+  historySql += " ORDER BY created_at DESC";
+  if (!query) historySql += " LIMIT 25";
   
   const history = await execute(historySql, historyParams);
 
