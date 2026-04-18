@@ -1,61 +1,69 @@
 import GlassButton from "@/components/ui/GlassButton";
 import GlassCard from "@/components/ui/GlassCard";
-import { ArrowRight, Box, Shield, Zap } from "lucide-react";
+import { ArrowRight, Bot, Shield, Zap, Layers } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="flex flex-col items-center text-center space-y-12 py-12">
+    <div className="flex flex-col items-center text-center space-y-16 py-20 pb-40 min-h-[80vh] relative overflow-hidden">
+      {/* Decorative Hero Blur */}
+      <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] -z-10" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-secondary/5 rounded-full blur-[120px] -z-10" />
+
       {/* Hero Section */}
-      <div className="space-y-6 max-w-3xl">
-        <h1 className="text-6xl md:text-7xl font-black tracking-tighter leading-none">
-          ELEVATE YOUR <br />
-          <span className="text-blue-500">CUSTOM GEAR</span>
+      <div className="space-y-8 max-w-4xl relative z-10">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary uppercase text-[10px] font-black tracking-widest mb-4">
+          <Zap className="w-3 h-3 animate-pulse" /> Official VBLL Customs Portal
+        </div>
+        
+        <h1 className="text-7xl md:text-8xl font-black tracking-tight leading-[0.9] text-primary">
+          LUCID <span className="text-on-surface-variant/20 italic">PORTAL</span>
         </h1>
-        <p className="text-lg text-white/50 max-w-xl mx-auto">
-          The official VBLL Customs Portal. Track your requests, manage batches, and get your gear verified in record time.
+        
+        <p className="text-xl text-on-surface-variant font-medium max-w-2xl mx-auto leading-relaxed">
+          The next generation of request management. Track batches, verify items, and synchronize with the Discord operations center.
         </p>
-        <div className="flex gap-4 justify-center pt-4">
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
           <Link href="/dashboard">
-            <GlassButton variant="primary" size="lg" className="gap-2">
-              Get Started <ArrowRight className="w-5 h-5" />
+            <GlassButton variant="primary" size="lg" className="w-full sm:w-auto shadow-ambient">
+              Enter Dashboard <ArrowRight className="w-5 h-5 ml-2" />
             </GlassButton>
           </Link>
           <Link href="https://discord.gg/vbll" target="_blank">
-            <GlassButton size="lg">Join Discord</GlassButton>
+            <GlassButton variant="outline" size="lg" className="w-full sm:w-auto">
+              Join Discord Community
+            </GlassButton>
           </Link>
         </div>
       </div>
 
-      {/* Features Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full pt-12">
-        <GlassCard className="text-left space-y-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-600/20 flex items-center justify-center border border-blue-500/20">
-            <Zap className="text-blue-400" />
+      {/* Stats/Features Minimal Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl pt-10">
+        <div className="flex flex-col items-center p-8 rounded-[3rem] bg-surface-container-low border border-outline-variant/10 space-y-4">
+          <div className="w-14 h-14 rounded-3xl bg-primary flex items-center justify-center text-white shadow-ambient">
+            <Layers className="w-7 h-7" />
           </div>
-          <h3 className="text-xl font-bold">Fast Tracking</h3>
-          <p className="text-white/40 text-sm">Real-time updates on your request status. No more guessing when your gear is ready.</p>
-        </GlassCard>
+          <h3 className="text-xl font-bold text-primary italic underline underline-offset-4 decoration-primary/20">Bento Batches</h3>
+          <p className="text-on-surface-variant text-sm font-medium leading-relaxed uppercase tracking-wider opacity-60">Optimized grouping for shipping dev oversight.</p>
+        </div>
 
-        <GlassCard className="text-left space-y-4">
-          <div className="w-12 h-12 rounded-xl bg-purple-600/20 flex items-center justify-center border border-purple-500/20">
-            <Box className="text-purple-400" />
+        <div className="flex flex-col items-center p-8 rounded-[3rem] bg-surface-container-low border border-outline-variant/10 space-y-4">
+          <div className="w-14 h-14 rounded-3xl bg-secondary flex items-center justify-center text-white shadow-ambient">
+            <Shield className="w-7 h-7" />
           </div>
-          <h3 className="text-xl font-bold">Smart Batches</h3>
-          <p className="text-white/40 text-sm">Automated grouping of requests into batches of 8 for streamlined developer processing.</p>
-        </GlassCard>
+          <h3 className="text-xl font-bold text-secondary italic underline underline-offset-4 decoration-secondary/20">Encrypted Flow</h3>
+          <p className="text-on-surface-variant text-sm font-medium leading-relaxed uppercase tracking-wider opacity-60">Direct Bot-to-Web Handshake protocol enabled.</p>
+        </div>
 
-        <GlassCard className="text-left space-y-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-600/20 flex items-center justify-center border border-emerald-500/20">
-            <Shield className="text-emerald-400" />
+        <div className="flex flex-col items-center p-8 rounded-[3rem] bg-surface-container-low border border-outline-variant/10 space-y-4">
+          <div className="w-14 h-14 rounded-3xl bg-white border border-primary/20 flex items-center justify-center text-primary shadow-ambient">
+            <Bot className="w-7 h-7" />
           </div>
-          <h3 className="text-xl font-bold">Secure Portal</h3>
-          <p className="text-white/40 text-sm">Secure Discord OAuth integration ensures only you can manage your personal requests.</p>
-        </GlassCard>
+          <h3 className="text-xl font-bold text-primary italic underline underline-offset-4 decoration-primary/20">Auto Sync</h3>
+          <p className="text-on-surface-variant text-sm font-medium leading-relaxed uppercase tracking-wider opacity-60">Real-time status mirroring across all environments.</p>
+        </div>
       </div>
-
-      {/* Animated Background Decoration */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-500/10 blur-[120px] rounded-full -z-20 pointer-events-none animate-pulse" />
     </div>
   );
 }

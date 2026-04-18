@@ -1,9 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { execute } from "@/lib/db";
-import GlassCard from "@/components/ui/GlassCard";
-import GlassButton from "@/components/ui/GlassButton";
-import { ShieldCheck, Package, Layers, Users, ExternalLink, Settings } from "lucide-react";
+import { ShieldCheck, Package, Layers, Users, ExternalLink, Settings, BarChart3, Radio } from "lucide-react";
 import AdminActions from "@/components/AdminActions";
 import Link from "next/link";
 import AdminExportTrigger from "@/components/AdminExportTrigger";
@@ -28,101 +26,142 @@ export default async function AdminPanel() {
   }));
 
   return (
-    <div className="space-y-10 pb-20">
-      <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
-          <ShieldCheck className="text-blue-500 w-10 h-10" />
-          ADMIN COMMAND CENTER
-        </h1>
+    <div className="space-y-10 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h2 className="text-3xl font-bold text-on-surface tracking-tight mb-1 flex items-center gap-3">
+            <span className="material-symbols-outlined text-primary text-3xl">admin_panel_settings</span>
+            Command Center
+          </h2>
+          <p className="text-on-surface-variant text-sm font-medium">Global request oversight and batch deployment.</p>
+        </div>
         <AdminActions />
       </div>
 
-      {/* Stats Overview */}
+      {/* Stats Bento */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <GlassCard hover={false} className="border-blue-500/20 bg-blue-500/5">
-          <div className="text-blue-400 text-xs font-black uppercase mb-1">Total Batches</div>
-          <div className="text-4xl font-black">{(batchesRes.rows[0] as any).count}</div>
-        </GlassCard>
-        <GlassCard hover={false} className="border-purple-500/20 bg-purple-500/5">
-          <div className="text-purple-400 text-xs font-black uppercase mb-1">Total Requests</div>
-          <div className="text-4xl font-black">{(requestsRes.rows[0] as any).count}</div>
-        </GlassCard>
-        <GlassCard hover={false} className="border-yellow-500/20 bg-yellow-500/5">
-          <div className="text-yellow-400 text-xs font-black uppercase mb-1">Pending Sync</div>
-          <div className="text-4xl font-black">{(pendingRes.rows[0] as any).count}</div>
-        </GlassCard>
+        <div className="bg-primary/5 rounded-3xl p-6 border border-primary/10 group hover:border-primary/30 transition-all">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white">
+              <span className="material-symbols-outlined text-[20px]">layers</span>
+            </div>
+            <div className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest">Active Jobs</div>
+          </div>
+          <div className="text-4xl font-black text-primary">{(batchesRes.rows[0] as any).count}</div>
+          <p className="text-xs text-on-surface-variant mt-2 font-medium">Successfully aggregated batches</p>
+        </div>
+
+        <div className="bg-secondary/5 rounded-3xl p-6 border border-secondary/10 group hover:border-secondary/30 transition-all">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-white">
+              <span className="material-symbols-outlined text-[20px]">group</span>
+            </div>
+            <div className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest">Player Volume</div>
+          </div>
+          <div className="text-4xl font-black text-secondary">{(requestsRes.rows[0] as any).count}</div>
+          <p className="text-xs text-on-surface-variant mt-2 font-medium">Total registered requests</p>
+        </div>
+
+        <div className="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 group hover:border-outline-variant/30 transition-all">
+          <div className="flex items-center gap-4 mb-4">
+             <div className="relative w-12 h-12 rounded-full border-4 border-surface-container-highest flex items-center justify-center">
+                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
+                   <path className="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="85, 100" stroke-width="4"></path>
+                </svg>
+                <Radio className="w-4 h-4 text-primary animate-pulse" />
+             </div>
+             <div>
+                <p className="text-xs font-black text-on-surface uppercase tracking-widest">System Health</p>
+                <div className="text-2xl font-black text-primary">OPTIMAL</div>
+             </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Active Batches */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Layers className="text-white/40" />
-            Live Batches
+          <h2 className="text-lg font-bold flex items-center gap-2 text-on-surface">
+            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">stacks</span>
+            Recent Deployments
           </h2>
           <div className="space-y-4">
             {batchesWithItems.map((b: any) => (
-              <GlassCard key={b.id} className="space-y-4">
+              <div key={b.id} className="bg-surface-container-lowest rounded-3xl p-6 shadow-ambient border border-white space-y-4 hover:translate-y-[-2px] transition-transform">
                 <div className="flex items-center justify-between">
-                  <div className="font-bold flex items-center gap-2">
-                    Batch #{b.id}
-                    <span className={`text-[10px] px-2 py-0.5 rounded ${b.status === 'released' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}`}>
-                      {b.status.toUpperCase()}
-                    </span>
+                  <div>
+                    <div className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1">Batch Instance</div>
+                    <div className="font-bold text-primary">#VER-BATCH-{b.id}</div>
                   </div>
-                  <div className="text-[10px] text-white/20">
-                    {b.released_at ? new Date(b.released_at).toLocaleString() : 'Processing...'}
-                  </div>
+                  <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter shadow-sm ${
+                    b.status === 'released' ? 'bg-primary text-white' : 'bg-secondary-container text-on-secondary-container'
+                  }`}>
+                    {b.status}
+                  </span>
                 </div>
 
-                <div className="space-y-2">
+                <div className="bg-surface-container-low rounded-2xl p-4 space-y-2">
                   {b.requests.map((r: any) => (
-                    <div key={r.id} className="text-xs flex items-center justify-between p-2 rounded bg-white/5 border border-white/5">
-                      <span className="flex items-center gap-2">
-                        <Users className="w-3 h-3 text-white/20" />
-                        {r.username} <span className="text-white/30">({r.vrfs_id})</span>
+                    <div key={r.id} className="text-xs flex items-center justify-between">
+                      <span className="flex items-center gap-2 font-medium">
+                        <Users className="w-3 h-3 text-on-surface-variant/40" />
+                        {r.username}
                       </span>
-                      <span className="font-mono text-blue-400/80">{r.type}</span>
+                      <span className="font-bold text-primary/60">{r.type}</span>
                     </div>
                   ))}
-                  {b.requests.length === 0 && <div className="text-xs text-white/20 italic p-2">Waitings for items...</div>}
+                  {b.requests.length === 0 && <div className="text-[10px] text-on-surface-variant italic">Waiting for assignments...</div>}
                 </div>
-              </GlassCard>
+              </div>
             ))}
           </div>
         </div>
 
         {/* Global Controls */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Settings className="text-white/40" />
-            System Management
+          <h2 className="text-lg font-bold flex items-center gap-2 text-on-surface">
+            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">settings_suggest</span>
+            Management Suite
           </h2>
-          <GlassCard className="grid grid-cols-1 gap-3">
-             <Link href="/admin/requests" className="w-full">
-                <GlassButton className="w-full justify-start gap-3">
-                   <Package className="w-5 h-5 text-blue-400" />
-                   Review Audit Logs
-                </GlassButton>
+          <div className="bg-surface-container-lowest rounded-3xl p-2 shadow-ambient border border-white grid grid-cols-1 gap-1">
+             <Link href="/admin/requests">
+                <button className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-surface-container-high transition-colors group">
+                   <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-on-surface-variant">
+                         <BarChart3 className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                         <div className="text-sm font-bold">Audit & Oversight</div>
+                         <div className="text-[10px] text-on-surface-variant font-medium">View full command logs</div>
+                      </div>
+                   </div>
+                   <span className="material-symbols-outlined text-on-surface-variant opacity-20 group-hover:opacity-100 transition-opacity">arrow_forward_ios</span>
+                </button>
              </Link>
-             <Link href="/admin/config" className="w-full">
-                <GlassButton className="w-full justify-start gap-3">
-                   <ShieldCheck className="w-5 h-5 text-purple-400" />
-                   Bot Configuration
-                </GlassButton>
+             <Link href="/admin/config">
+                <button className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-surface-container-high transition-colors group">
+                   <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-on-surface-variant">
+                         <Settings className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                         <div className="text-sm font-bold">Global Configuration</div>
+                         <div className="text-[10px] text-on-surface-variant font-medium">Manage bot channels & roles</div>
+                      </div>
+                   </div>
+                   <span className="material-symbols-outlined text-on-surface-variant opacity-20 group-hover:opacity-100 transition-opacity">arrow_forward_ios</span>
+                </button>
              </Link>
-             <GlassButton variant="secondary" className="w-full justify-start gap-3">
-                <ExternalLink className="w-5 h-5 text-white/40" />
-                Go to Bot Channel
-             </GlassButton>
-          </GlassCard>
+          </div>
 
-          <div className="mt-8 p-6 rounded-3xl border border-white/5 bg-mesh-alt bg-white/2 flex flex-col items-center text-center space-y-3">
-             <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center animate-pulse">
-                <Layers className="text-blue-400 w-8 h-8" />
+          <div className="mt-8 bg-gradient-to-br from-primary to-primary-container rounded-[2.5rem] p-8 text-on-primary shadow-floating flex flex-col items-center text-center space-y-4">
+             <div className="w-16 h-16 rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                <span className="material-symbols-outlined text-3xl">download_done</span>
              </div>
-             <h3 className="font-black">BATCH CONSOLIDATION</h3>
-             <p className="text-sm text-white/30">Generate a report of all batches for the shipping developers.</p>
+             <div className="space-y-1">
+                <h3 className="text-xl font-bold tracking-tight uppercase">Batch Consolidation</h3>
+                <p className="text-sm text-primary-fixed-dim/80 max-w-xs">Generate the official report for production developers.</p>
+             </div>
              <AdminExportTrigger />
           </div>
         </div>
