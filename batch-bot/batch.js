@@ -427,6 +427,48 @@ client.on('interactionCreate', async interaction => {
           return interaction.reply({ content: `✅ VRFS ID for request #${id} updated to \`${vrfs}\`.` });
       }
     }
+
+    if (commandName === 'lookup-batch-info') {
+      const batchId = interaction.options.getInteger('batch_id');
+      const batch = await get("SELECT * FROM batches WHERE id = ?", [batchId]);
+      if (!batch) return interaction.reply({ content: '❌ Batch not found.', ephemeral: true });
+
+      const reqs = await all("SELECT COUNT(*) as cnt FROM batch_requests WHERE batch_id = ?", [batchId]);
+      const count = reqs[0].cnt;
+
+      let statusMsg = "";
+      let emoji = "⏳";
+      let progress = 0;
+
+      if (batch.status === 'open') {
+          statusMsg = "Still collecting requests. Needs 8 to be released.";
+          progress = (count / 8) * 100;
+          emoji = "📁";
+      } else if (batch.status === 'released') {
+          statusMsg = "Batch is FULL and waiting for the developer to send it in-game.";
+          progress = 75;
+          emoji = "🚀";
+      } else if (batch.status === 'sent') {
+          statusMsg = "This batch has been successfully sent in-game!";
+          progress = 100;
+          emoji = "✅";
+      }
+
+      const barFull = '🟩';
+      const barEmpty = '⬜';
+      const barLength = 10;
+      const filledLength = Math.round((progress / 100) * barLength);
+      const bar = barFull.repeat(filledLength) + barEmpty.repeat(barLength - filledLength);
+
+      const embed = new EmbedBuilder()
+        .setTitle(`${emoji} Batch Info: #${batchId}`)
+        .setDescription(`**Progress:** ${progress.toFixed(0)}%\n${bar}\n\n**Current Stage:** ${batch.status.toUpperCase()}\n**Details:** ${statusMsg}`)
+        .addFields({ name: 'Items in Batch', value: `${count}/8 items`, inline: true })
+        .setColor(batch.status === 'sent' ? 0x00f5a0 : 0xFFA500)
+        .setTimestamp();
+
+      return interaction.reply({ embeds: [embed] });
+    }
     }
 
   if (interaction.isButton()) {
@@ -653,6 +695,8 @@ async function registerCommands() {
       .addIntegerOption(o => o.setName('request_id').setDescription('The ID of the request to edit').setRequired(true))
       .addStringOption(o => o.setName('vrfs_id').setDescription('New VRFS ID to assign'))
       .addStringOption(o => o.setName('action').setDescription('Action to take').addChoices({ name: 'Remove from Batch', value: 'remove' })),
+    new SlashCommandBuilder().setName('lookup-batch-info').setDescription('Check the status and progress of a specific batch')
+      .addIntegerOption(o => o.setName('batch_id').setDescription('The Batch ID to look up').setRequired(true)),
   ].map(c => c.toJSON());
 
   const rest = new REST({ version: '10' }).setToken(process.env.BATCH_DISCORD_TOKEN);
