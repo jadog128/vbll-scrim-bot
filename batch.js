@@ -325,7 +325,7 @@ client.on('interactionCreate', async interaction => {
           const user = await client.users.fetch(r.discord_id);
           const embed = new EmbedBuilder()
             .setTitle('🚚 Batch Sent!')
-            .setDescription(`Your request for a **${r.type}** (from Batch #${batchId}) has been confirmed sent by the developers!`)
+            .setDescription(`Your request for a **${r.type}** (from Batch #${batchId}) has been confirmed sent to the developers!`)
             .setColor(0x00f5a0)
             .setTimestamp();
           await user.send({ embeds: [embed] });
@@ -334,6 +334,24 @@ client.on('interactionCreate', async interaction => {
       }
 
       return interaction.editReply(`✅ Batch #${batchId} confirmation sent to ${sentCount} players.`);
+    }
+
+    if (commandName === 'my_request') {
+      const req = await get("SELECT * FROM batch_requests WHERE discord_id = ? ORDER BY id DESC LIMIT 1", [interaction.user.id]);
+      if (!req) return interaction.reply({ content: '📭 You currently have no requests in the system.', ephemeral: true });
+
+      const embed = new EmbedBuilder()
+        .setTitle('📂 Your Request Status')
+        .addFields(
+          { name: 'Item', value: req.type, inline: true },
+          { name: 'VRFS ID', value: `\`${req.vrfs_id}\``, inline: true },
+          { name: 'Status', value: req.status.toUpperCase(), inline: true },
+          { name: 'Batch', value: req.batch_id ? `#${req.batch_id}` : 'Not yet assigned', inline: true }
+        )
+        .setColor(req.status === 'completed' ? 0x00f5a0 : 0x5865f2)
+        .setTimestamp();
+
+      return interaction.reply({ embeds: [embed], ephemeral: true });
     }
     }
 
@@ -542,6 +560,7 @@ async function registerCommands() {
     new SlashCommandBuilder().setName('batch_clear').setDescription('Clear pending queue [Staff]'),
     new SlashCommandBuilder().setName('release_batch').setDescription('Manually post the current batch to the release channel [Staff]'),
     new SlashCommandBuilder().setName('export_batches').setDescription('Export all batches to a text file [Restricted]'),
+    new SlashCommandBuilder().setName('my_request').setDescription('Check the status of your own request'),
     new SlashCommandBuilder().setName('batch_halt').setDescription('Pause or resume all batch requests [Staff]')
       .addBooleanOption(o => o.setName('active').setDescription('Set to true to HAULT requests, false to open').setRequired(true))
       .addStringOption(o => o.setName('reason').setDescription('The reason shown to users').setRequired(false)),
