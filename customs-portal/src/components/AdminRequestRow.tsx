@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Package, ExternalLink, Edit2, Check, X } from 'lucide-react';
+import { Package, ExternalLink, Edit2, Check, X, Trash2 } from 'lucide-react';
 
 export default function AdminRequestRow({ request }: { request: any }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -28,6 +28,26 @@ export default function AdminRequestRow({ request }: { request: any }) {
       }
     } catch (e: any) {
       alert(`Update error: ${e.message}`);
+    }
+    setLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Are you sure you want to PERMANENTLY delete request #${request.id}? This cannot be undone.`)) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/requests/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: request.id })
+      });
+      if (res.ok) window.location.reload();
+      else {
+        const data = await res.json().catch(() => ({}));
+        alert(`Delete failed: ${data.error || "Unknown error"}`);
+      }
+    } catch (e: any) {
+      alert(`Delete error: ${e.message}`);
     }
     setLoading(false);
   };
@@ -105,7 +125,15 @@ export default function AdminRequestRow({ request }: { request: any }) {
                >
                  <Edit2 className="w-3.5 h-3.5" />
                </button>
-               {request.proof_url && (
+                <button 
+                  onClick={handleDelete}
+                  disabled={loading}
+                  className="p-2.5 bg-surface-container-low rounded-xl text-error hover:text-white hover:bg-error transition-all shadow-sm"
+                  title="Delete Request"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+                {request.proof_url && (
                  <a 
                    href={request.proof_url} 
                    target="_blank" 
