@@ -261,14 +261,22 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (commandName === 'view-batches') {
-      const rows = await all("SELECT * FROM batches ORDER BY id DESC LIMIT 10");
+      const rows = await all("SELECT * FROM batches ORDER BY id DESC LIMIT 8");
       if (!rows.length) return interaction.reply({ content: '📭 No batches created yet.', ephemeral: true });
       
-      const embed = new EmbedBuilder().setTitle('📦 Recent Batches').setColor(0x5865f2);
+      const embed = new EmbedBuilder()
+        .setTitle('📦 Recent Batches')
+        .setDescription('Only showing latest 8 batches. Full list available on the [Admin Portal](https://customs-portal.vercel.app/admin/requests).')
+        .setColor(0x5865f2);
+        
       for (const b of rows) {
-        const reqs = await all("SELECT username, vrfs_id, proof_url FROM batch_requests WHERE batch_id = ?", [b.id]);
-        const list = reqs.map(r => `• **${r.username}** (${r.vrfs_id}) [Link](${r.proof_url})`).join('\n') || '*Empty*';
-        embed.addFields({ name: `Batch #${b.id} [${b.status.toUpperCase()}]`, value: list });
+        const reqs = await all("SELECT username, vrfs_id FROM batch_requests WHERE batch_id = ? LIMIT 8", [b.id]);
+        const list = reqs.map(r => `• **${r.username}** (\`${r.vrfs_id}\`)`).join('\n') || '*Empty*';
+        
+        // Truncate list if too long for a field
+        const displayList = list.length > 1000 ? list.substring(0, 997) + '...' : list;
+        
+        embed.addFields({ name: `Batch #${b.id} [${b.status.toUpperCase()}]`, value: displayList });
       }
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
