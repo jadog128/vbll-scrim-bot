@@ -45,6 +45,8 @@ async function initDB() {
     proof_url TEXT,
     status TEXT DEFAULT 'pending',
     staff_id TEXT,
+    msg_id TEXT,
+    ch_id TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
   await run(`CREATE TABLE IF NOT EXISTS batches (
@@ -428,7 +430,8 @@ client.on('interactionCreate', async interaction => {
               new ButtonBuilder().setCustomId(`batch_done_${id}`).setLabel('Fulfil').setStyle(ButtonStyle.Success),
               new ButtonBuilder().setCustomId(`batch_deny_${id}`).setLabel('Reject').setStyle(ButtonStyle.Danger)
             );
-            await ch.send({ embeds: [embed], components: [buttons] });
+            const msg = await ch.send({ embeds: [embed], components: [buttons] });
+            await run("UPDATE batch_requests SET msg_id = ?, ch_id = ? WHERE id = ?", [msg.id, ch.id, id]);
           }
         }
         return interaction.reply({ content: '✅ Approved and added to queue.', ephemeral: true });
@@ -567,7 +570,8 @@ async function createRequest(userId, username, vrfsId, type, details, proofUrl) 
         new ButtonBuilder().setCustomId(`batch_pr_approve_${id}`).setLabel('Send to Batches').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`batch_pr_reject_${id}`).setLabel('Decline').setStyle(ButtonStyle.Danger)
       );
-      await ch.send({ embeds: [embed], components: [btns] });
+      const msg = await ch.send({ embeds: [embed], components: [btns] });
+      await run("UPDATE batch_requests SET msg_id = ?, ch_id = ? WHERE id = ?", [msg.id, ch.id, id]);
     }
   }
 }
