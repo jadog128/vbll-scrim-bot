@@ -1,6 +1,6 @@
 import { execute } from "./db";
-const BOT_TOKEN = process.env.VBLL_DISCORD_TOKEN || process.env.BATCH_DISCORD_TOKEN;
-const GUILD_ID = process.env.VBLL_DISCORD_GUILD_ID || process.env.DISCORD_GUILD_ID;
+const BOT_TOKEN = process.env.VBLL_DISCORD_TOKEN || process.env.BATCH_DISCORD_TOKEN || process.env.SCRIM_DISCORD_TOKEN || process.env.DISCORD_TOKEN;
+const GUILD_ID = process.env.VBLL_DISCORD_GUILD_ID || process.env.DISCORD_GUILD_ID || process.env.BATCH_GUILD_ID || process.env.SCRIM_GUILD_ID;
 const ADMIN_ROLE_ID = process.env.VBLL_ADMIN_ROLE_ID || process.env.ADMIN_ROLE_ID;
 
 export async function sendDiscordDM(userId: string, content: any) {

@@ -21,18 +21,22 @@ export async function POST(req: Request) {
     );
 
     // Notify User if anything changed
-    if (current && (current.vrfs_id !== vrfs_id || current.status !== status)) {
+    if (current && current.discord_id && (current.vrfs_id !== vrfs_id || current.status !== status)) {
        try {
-         await sendDiscordDM(current.discord_id, {
+         const dmResult = await sendDiscordDM(current.discord_id, {
            embeds: [{
              title: "📝 Request Updated",
              description: `Your request **#${id}** has been updated by staff.\n\n**New VRFS ID:** \`${vrfs_id}\`\n**New Status:** \`${status.toUpperCase()}\``,
-             color: 0x5865f2
+             color: 0x5865f2,
+             timestamp: new Date().toISOString()
            }]
          });
+         console.log(`DM attempted for user ${current.discord_id}, result:`, dmResult);
        } catch(e) {
          console.error("DM failed:", e);
        }
+    } else if (!current || !current.discord_id) {
+       console.warn(`Cannot send DM: current request or discord_id missing for ID ${id}`);
     }
     
     // Log the action
