@@ -45,7 +45,16 @@ export default function SupportWidget() {
     if (!ticket) return;
     const res = await fetch(`/api/support/messages?ticketId=${ticket.id}`);
     const data = await res.json();
-    if (Array.isArray(data)) setMessages(data);
+    if (Array.isArray(data)) {
+       if (data.length > messages.length) {
+          const lastMsg = data[data.length - 1];
+          if (lastMsg.is_staff && isOpen) {
+             const audio = new Audio("https://raw.githubusercontent.com/jadog128/vbll-scrim-bot/main/notification.mp3");
+             audio.play().catch(() => {});
+          }
+       }
+       setMessages(data);
+    }
 
     // Check typing status
     const tRes = await fetch("/api/support/ticket");

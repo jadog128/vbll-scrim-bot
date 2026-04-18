@@ -44,7 +44,9 @@ export async function POST(req: Request) {
 
     // 2. If user sent it, notify Discord
     if (!isAdmin) {
-       const alertCh = await getSettingFromDB("ticket_channel");
+       let alertCh = await getSettingFromDB("web_support_channel");
+       if (!alertCh) alertCh = await getSettingFromDB("ticket_channel");
+       
        if (alertCh) {
           const embed = {
             title: `💬 New Web Message: Ticket #${ticketId}`,

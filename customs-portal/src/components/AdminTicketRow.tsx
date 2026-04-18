@@ -27,7 +27,16 @@ export default function AdminTicketRow({ ticket, onStatusUpdate }: { ticket: any
   const fetchMessages = async () => {
     const res = await fetch(`/api/support/messages?ticketId=${ticket.id}`);
     const data = await res.json();
-    if (Array.isArray(data)) setMessages(data);
+    if (Array.isArray(data)) {
+       if (data.length > messages.length && messages.length > 0) {
+          const lastMsg = data[data.length - 1];
+          if (!lastMsg.is_staff) {
+             const audio = new Audio("https://raw.githubusercontent.com/jadog128/vbll-scrim-bot/main/notification.mp3");
+             audio.play().catch(() => {});
+          }
+       }
+       setMessages(data);
+    }
 
     // Refresh ticket to check user typing status
     const tRes = await fetch("/api/admin/tickets");

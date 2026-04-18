@@ -9,13 +9,24 @@ export default function AdminTicketsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/admin/tickets")
-      .then(res => res.json())
-      .then(data => {
-        setTickets(Array.isArray(data) ? data : []);
-        setLoading(false);
-      });
-  }, []);
+    const fetchTickets = () => {
+      fetch("/api/admin/tickets")
+        .then(res => res.json())
+        .then(data => {
+          const newTickets = Array.isArray(data) ? data : [];
+          if (newTickets.length > tickets.length && tickets.length > 0) {
+             const audio = new Audio("https://raw.githubusercontent.com/jadog128/vbll-scrim-bot/main/notification.mp3");
+             audio.play().catch(() => {});
+          }
+          setTickets(newTickets);
+          setLoading(false);
+        });
+    };
+
+    fetchTickets();
+    const inv = setInterval(fetchTickets, 10000);
+    return () => clearInterval(inv);
+  }, [tickets.length]);
 
   const handleStatus = async (id: number, status: string) => {
     try {
