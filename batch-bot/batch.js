@@ -390,6 +390,43 @@ client.on('interactionCreate', async interaction => {
 
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
+
+    if (commandName === 'profile') {
+      const target = interaction.options.getUser('user') || interaction.user;
+      const latest = await get("SELECT * FROM batch_requests WHERE discord_id = ? ORDER BY id DESC LIMIT 1", [target.id]);
+      const countRes = await get("SELECT COUNT(*) as cnt FROM batch_requests WHERE discord_id = ? AND status = 'completed'", [target.id]);
+      const pastBatches = await all("SELECT DISTINCT batch_id, created_at FROM batch_requests WHERE discord_id = ? AND batch_id IS NOT NULL ORDER BY batch_id DESC LIMIT 4", [target.id]);
+      
+      const embed = new EmbedBuilder()
+        .setAuthor({ name: target.username, iconURL: target.displayAvatarURL() })
+        .setTitle('👤 Player Profile')
+        .addFields(
+          { name: 'VRFS ID', value: latest?.vrfs_id ? `\`${latest.vrfs_id}\`` : 'None', inline: true },
+          { name: 'Total Customs', value: countRes.cnt.toString(), inline: true },
+          { name: 'Recent Batches', value: pastBatches.map(b => `• Batch #${b.batch_id} (${new Date(b.created_at).toLocaleDateString()})`).join('\n') || 'None yet.' }
+        )
+        .setColor(0x00f5a0)
+        .setThumbnail(target.displayAvatarURL());
+      
+      return interaction.reply({ embeds: [embed] });
+    }
+
+    if (commandName === 'batch-edit') {
+      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+      const id = interaction.options.getInteger('request_id');
+      const vrfs = interaction.options.getString('vrfs_id');
+      const action = interaction.options.getString('action');
+
+      if (action === 'remove') {
+          await run("UPDATE batch_requests SET batch_id = NULL, status = 'pending' WHERE id = ?", [id]);
+          return interaction.reply({ content: `✅ Request #${id} removed from its batch and reset to pending.` });
+      }
+
+      if (vrfs) {
+          await run("UPDATE batch_requests SET vrfs_id = ? WHERE id = ?", [vrfs, id]);
+          return interaction.reply({ content: `✅ VRFS ID for request #${id} updated to \`${vrfs}\`.` });
+      }
+    }
     }
 
   if (interaction.isButton()) {
@@ -611,6 +648,11 @@ async function registerCommands() {
     new SlashCommandBuilder().setName('batch_sent').setDescription('Notify all users in a batch that it has been sent [Staff]')
       .addIntegerOption(o => o.setName('batch_id').setDescription('The Batch ID').setRequired(true)),
     new SlashCommandBuilder().setName('post-admin-batch-add').setDescription('Post interactive manual add buttons [Staff]'),
+    new SlashCommandBuilder().setName('profile').setDescription('View your player stats or another players profile').addUserOption(o => o.setName('user').setDescription('User to view')),
+    new SlashCommandBuilder().setName('batch-edit').setDescription('Edit a specific request in the system [Staff]')
+      .addIntegerOption(o => o.setName('request_id').setDescription('The ID of the request to edit').setRequired(true))
+      .addStringOption(o => o.setName('vrfs_id').setDescription('New VRFS ID to assign'))
+      .addStringOption(o => o.setName('action').setDescription('Action to take').addChoices({ name: 'Remove from Batch', value: 'remove' })),
   ].map(c => c.toJSON());
 
   const rest = new REST({ version: '10' }).setToken(process.env.BATCH_DISCORD_TOKEN);
