@@ -5,8 +5,8 @@ import { isMemberAdmin } from "@/lib/discord";
 const handler = NextAuth({
   providers: [
     DiscordProvider({
-      clientId: process.env.DISCORD_CLIENT_ID!,
-      clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+      clientId: (process.env.VBLL_DISCORD_CLIENT_ID || process.env.DISCORD_CLIENT_ID)!,
+      clientSecret: (process.env.VBLL_DISCORD_CLIENT_SECRET || process.env.DISCORD_CLIENT_SECRET)!,
       authorization: { params: { scope: "identify email" } },
     }),
   ],
@@ -31,6 +31,7 @@ const handler = NextAuth({
   pages: {
     signIn: '/login',
   },
+  secret: process.env.VBLL_NEXTAUTH_SECRET || process.env.NEXTAUTH_SECRET,
 });
 
 export { handler as GET, handler as POST };

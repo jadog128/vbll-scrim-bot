@@ -8,12 +8,15 @@ export async function POST(req: Request) {
   const { type } = await req.json();
   const userId = (session.user as any).id;
 
+  const botUrl = process.env.VBLL_BOT_API_URL || process.env.BOT_API_URL;
+  const botToken = process.env.VBLL_BOT_API_TOKEN || process.env.BOT_API_TOKEN;
+
   try {
-    const botRes = await fetch(`${process.env.BOT_API_URL}/start-flow`, {
+    const botRes = await fetch(`${botUrl}/start-flow`, {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.BOT_API_TOKEN}`
+        "Authorization": `Bearer ${botToken}`
       },
       body: JSON.stringify({ userId, type })
     });
