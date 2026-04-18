@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     const currentReq = currentReqRes.rows[0] as any;
 
     if (action === "approve") {
-      await execute("UPDATE batch_requests SET status = 'pending' WHERE id = ?", [requestId]);
+      await execute("UPDATE batch_requests SET status = 'pending', verified_at = CURRENT_TIMESTAMP WHERE id = ?", [requestId]);
       
       // Sync Discord: Delete from pre-review, send to main review channel
       try {

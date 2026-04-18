@@ -14,7 +14,7 @@ export default async function Dashboard() {
   
   // Fetch user's requests with batch info
   const requestsRes = await execute(
-    `SELECT br.*, b.status as batch_status, 
+    `SELECT br.*, b.status as batch_status, b.released_at as batch_released_at,
      (SELECT COUNT(*) FROM batch_requests WHERE batch_id = br.batch_id) as batch_count
      FROM batch_requests br 
      LEFT JOIN batches b ON br.batch_id = b.id 
@@ -23,6 +23,17 @@ export default async function Dashboard() {
     [userId]
   );
   const requests = requestsRes.rows;
+
+  // Calculate Historical Averages for ETA (in seconds)
+  const statsRes = await execute(`
+    SELECT 
+      (SELECT AVG(unixepoch(verified_at) - unixepoch(created_at)) FROM batch_requests WHERE verified_at IS NOT NULL) as avg_verify,
+      (SELECT AVG(unixepoch(sent_at) - unixepoch(released_at)) FROM batches WHERE sent_at IS NOT NULL) as avg_send
+    FROM batch_requests LIMIT 1
+  `);
+  const stats = statsRes.rows[0] as any;
+  const avgVerify = (stats?.avg_verify || 8 * 3600) * 1000;
+  const avgSend = (stats?.avg_send || 2 * 24 * 3600) * 1000;
 
   const getProgress = (req: any) => {
     if (req.status === 'completed' && req.batch_status === 'sent') return 100;
@@ -39,6 +50,30 @@ export default async function Dashboard() {
     if (req.status === 'pending') return "Verified - Staff Queue";
     if (req.status === 'rejected') return "Rejected by Staff";
     return "Initial Verification";
+  };
+
+  const getETA = (req: any) => {
+    if (req.status === 'completed' && req.batch_status === 'sent') return "Delivered";
+    if (req.status === 'rejected') return "N/A";
+    
+    if (req.status === 'pre_review') {
+      const elapsed = Date.now() - new Date(req.created_at).getTime();
+      const remain = Math.max(0, avgVerify - elapsed);
+      return remain > 3600000 ? `~${Math.round(remain/3600000)}h` : `~${Math.round(remain/60000)}m`;
+    }
+    
+    if (req.status === 'completed' && req.batch_status === 'released') {
+      const releasedAt = req.batch_released_at ? new Date(req.batch_released_at).getTime() : Date.now();
+      const elapsed = Date.now() - releasedAt;
+      const remain = Math.max(0, avgSend - elapsed);
+      return `~${Math.round(remain / (24 * 3600000))} days`;
+    }
+    
+    if (req.status === 'pending' || (req.status === 'completed' && !req.batch_status)) {
+       return "Awaiting Batch Release";
+    }
+    
+    return "Calculating...";
   };
 
   return (
@@ -86,6 +121,13 @@ export default async function Dashboard() {
                   ID: #{req.id.toString().slice(-4)}
                 </div>
               </div>
+
+              {req.status !== 'completed' || req.batch_status !== 'sent' ? (
+                <div className="mb-4 flex items-center gap-2 px-3 py-1.5 bg-primary/5 rounded-full w-fit border border-primary/5">
+                  <span className="text-[9px] font-black uppercase text-primary/60">ETA:</span>
+                  <span className="text-[10px] font-black text-primary">{getETA(req)}</span>
+                </div>
+              ) : null}
 
               <div className="space-y-1 mb-6">
                 <h4 className="text-lg font-bold text-on-surface group-hover:text-primary transition-colors">{req.type}</h4>
