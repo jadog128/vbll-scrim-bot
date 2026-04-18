@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { execute } from "@/lib/db";
 import { Send, Clock, CheckCircle2, Package, RefreshCw } from "lucide-react";
@@ -7,7 +8,7 @@ import RequestTrigger from "@/components/RequestTrigger";
 export const dynamic = "force-dynamic";
 
 export default async function Dashboard() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/api/auth/signin");
 
   const userId = (session.user as any).id;

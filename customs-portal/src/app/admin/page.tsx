@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { execute } from "@/lib/db";
 import { ShieldCheck, Package, Layers, Users, ExternalLink, Settings, BarChart3, Radio } from "lucide-react";
@@ -9,7 +10,7 @@ import AdminExportTrigger from "@/components/AdminExportTrigger";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPanel() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const isAdmin = (session?.user as any)?.isAdmin;
   if (!isAdmin) redirect("/");
 

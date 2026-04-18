@@ -1,10 +1,11 @@
 import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { BarChart3, MessageSquare, Plus, CheckCircle2 } from "lucide-react";
 import LoginButton from "@/components/auth/LoginButton";
 
 export default async function LoginPage() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
 
   if (session) {
     redirect("/dashboard");
