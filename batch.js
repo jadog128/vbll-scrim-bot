@@ -45,6 +45,8 @@ async function initDB() {
     proof_url TEXT,
     status TEXT DEFAULT 'pending',
     staff_id TEXT,
+    msg_id TEXT,
+    ch_id TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
   await run(`CREATE TABLE IF NOT EXISTS batches (
@@ -55,8 +57,70 @@ async function initDB() {
   await run(`CREATE TABLE IF NOT EXISTS batch_options (
     name TEXT PRIMARY KEY
   )`);
+  await run(`CREATE TABLE IF NOT EXISTS batch_tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    discord_id TEXT,
+    username TEXT,
+    issue TEXT,
+    status TEXT DEFAULT 'open',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await run(`CREATE TABLE IF NOT EXISTS staff_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    staff_id TEXT,
+    staff_name TEXT,
+    action TEXT,
+    target_id TEXT,
+    details TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
   try { await run(`ALTER TABLE batch_requests ADD COLUMN batch_id INTEGER`); } catch(_) {}
+  
+  // Add a seed log if empty
+  const logCheck = await get("SELECT COUNT(*) as cnt FROM staff_logs");
+  if (logCheck.cnt === 0) {
+    await run("INSERT INTO staff_logs (staff_id, staff_name, action, target_id, details) VALUES (?,?,?,?,?)", ['SYSTEM', 'SYSTEM', 'INITIALIZED', '0', 'Audit logging system successfully activated.']);
+  }
+
   console.log('✅ Batch Database Ready.');
+}
+
+async function logStaffAction(staffId, staffName, action, targetId, details) {
+  try {
+    await run("INSERT INTO staff_logs (staff_id, staff_name, action, target_id, details) VALUES (?,?,?,?,?)", [staffId, staffName, action, targetId, details]);
+  } catch (e) {
+    console.error('[Log Error]', e.message);
+  }
+}
+
+async function checkMilestoneRoles(userId) {
+  // Configizable Role IDs (PLACEHOLDERS - User should update these)
+  const MILESTONES = {
+    5: '123456789012345678', // Collector
+    10: '123456789012345678', // Elite Collector
+    25: '123456789012345678'  // Master Collector
+  };
+
+  const countData = await get("SELECT COUNT(*) as cnt FROM batch_requests WHERE discord_id = ? AND status = 'completed'", [userId]);
+  const count = countData.cnt;
+
+  try {
+    const guild = client.guilds.cache.get(process.env.GUILD_ID);
+    if (!guild) return;
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (!member) return;
+
+    for (const [m, roleId] of Object.entries(MILESTONES)) {
+      if (count >= parseInt(m)) {
+        if (!member.roles.cache.has(roleId)) {
+          await member.roles.add(roleId);
+          console.log(`[Milestone] Awarded role ${roleId} to ${userId} for ${count} customs.`);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[Milestone Error]', e.message);
+  }
 }
 
 // --- ⚙️ Settings Cache ---
@@ -259,14 +323,22 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (commandName === 'view-batches') {
-      const rows = await all("SELECT * FROM batches ORDER BY id DESC LIMIT 10");
+      const rows = await all("SELECT * FROM batches ORDER BY id DESC LIMIT 8");
       if (!rows.length) return interaction.reply({ content: '📭 No batches created yet.', ephemeral: true });
       
-      const embed = new EmbedBuilder().setTitle('📦 Recent Batches').setColor(0x5865f2);
+      const embed = new EmbedBuilder()
+        .setTitle('📦 Recent Batches')
+        .setDescription('Only showing latest 8 batches. Full list available on the [Admin Portal](https://customs-portal.vercel.app/admin/requests).')
+        .setColor(0x5865f2);
+        
       for (const b of rows) {
-        const reqs = await all("SELECT username, vrfs_id, proof_url FROM batch_requests WHERE batch_id = ?", [b.id]);
-        const list = reqs.map(r => `• **${r.username}** (${r.vrfs_id}) [Link](${r.proof_url})`).join('\n') || '*Empty*';
-        embed.addFields({ name: `Batch #${b.id} [${b.status.toUpperCase()}]`, value: list });
+        const reqs = await all("SELECT username, vrfs_id FROM batch_requests WHERE batch_id = ? LIMIT 8", [b.id]);
+        const list = reqs.map(r => `• **${r.username}** (\`${r.vrfs_id}\`)`).join('\n') || '*Empty*';
+        
+        // Truncate list if too long for a field
+        const displayList = list.length > 1000 ? list.substring(0, 997) + '...' : list;
+        
+        embed.addFields({ name: `Batch #${b.id} [${b.status.toUpperCase()}]`, value: displayList });
       }
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
@@ -368,7 +440,10 @@ client.on('interactionCreate', async interaction => {
         } catch (e) {}
       }
 
-      return interaction.editReply(`✅ Batch #${batchId} confirmation sent to ${sentCount} players.`);
+      await run("UPDATE batches SET status = 'sent' WHERE id = ?", [batchId]);
+      await logStaffAction(interaction.user.id, interaction.user.username, 'BATCH_SENT', batchId, `Notified ${sentCount} players`);
+
+      return interaction.editReply(`✅ Batch #${batchId} confirmation sent to ${sentCount} players AND batch marked as SENT.`);
     }
 
     if (commandName === 'my_request') {
@@ -388,10 +463,128 @@ client.on('interactionCreate', async interaction => {
 
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
+
+    if (commandName === 'profile') {
+      const target = interaction.options.getUser('user') || interaction.user;
+      const latest = await get("SELECT * FROM batch_requests WHERE discord_id = ? ORDER BY id DESC LIMIT 1", [target.id]);
+      const countRes = await get("SELECT COUNT(*) as cnt FROM batch_requests WHERE discord_id = ? AND status = 'completed'", [target.id]);
+      const pastBatches = await all("SELECT DISTINCT batch_id, created_at FROM batch_requests WHERE discord_id = ? AND batch_id IS NOT NULL ORDER BY batch_id DESC LIMIT 4", [target.id]);
+      
+      const embed = new EmbedBuilder()
+        .setAuthor({ name: target.username, iconURL: target.displayAvatarURL() })
+        .setTitle('👤 Player Profile')
+        .addFields(
+          { name: 'VRFS ID', value: latest?.vrfs_id ? `\`${latest.vrfs_id}\`` : 'None', inline: true },
+          { name: 'Total Customs', value: countRes.cnt.toString(), inline: true },
+          { name: 'Recent Batches', value: pastBatches.map(b => `• Batch #${b.batch_id} (${new Date(b.created_at).toLocaleDateString()})`).join('\n') || 'None yet.' }
+        )
+        .setColor(0x00f5a0)
+        .setThumbnail(target.displayAvatarURL());
+      
+      return interaction.reply({ embeds: [embed] });
+    }
+
+    if (commandName === 'batch-edit') {
+      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+      const id = interaction.options.getInteger('request_id');
+      const vrfs = interaction.options.getString('vrfs_id');
+      const action = interaction.options.getString('action');
+
+      if (action === 'remove') {
+          await run("UPDATE batch_requests SET batch_id = NULL, status = 'pending' WHERE id = ?", [id]);
+          return interaction.reply({ content: `✅ Request #${id} removed from its batch and reset to pending.` });
+      }
+
+      if (vrfs) {
+          const old = await get("SELECT vrfs_id, discord_id FROM batch_requests WHERE id = ?", [id]);
+          await run("UPDATE batch_requests SET vrfs_id = ? WHERE id = ?", [vrfs, id]);
+          await logStaffAction(interaction.user.id, interaction.user.username, 'EDITED_VRFS', id, `Changed to ${vrfs}`);
+          
+          // Notify User
+          try {
+            const user = await client.users.fetch(old.discord_id);
+            await user.send({ embeds: [new EmbedBuilder().setTitle('📝 Info Updated').setDescription(`A staff member has updated your VRFS ID for request #${id} to \`${vrfs}\`.`).setColor(0x5865f2)] });
+          } catch(e){}
+
+          return interaction.reply({ content: `✅ VRFS ID for request #${id} updated to \`${vrfs}\`.` });
+      }
+    }
+
+    if (commandName === 'post-ticket-panel') {
+      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+      const embed = new EmbedBuilder()
+        .setTitle('🎫 Batch Issue Ticket')
+        .setDescription('If you have a problem with your batch request or ID, click the button below to open a ticket.')
+        .setColor(0xff4d4d);
+      const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('batch_ticket_open').setLabel('Open Ticket').setStyle(ButtonStyle.Danger));
+      return interaction.reply({ embeds: [embed], components: [row] });
+    }
+
+    if (commandName === 'view-logs') {
+       if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+       const logs = await all("SELECT * FROM staff_logs ORDER BY id DESC LIMIT 15");
+       if (!logs.length) return interaction.reply({ content: '📭 No logs found.', ephemeral: true });
+
+       const embed = new EmbedBuilder().setTitle('🛡️ Recent Staff Activity').setColor(0xffa500);
+       logs.forEach(l => {
+         embed.addFields({ name: `${l.staff_name} — ${l.action}`, value: `Target: ${l.target_id} | ${l.details} | <t:${Math.floor(new Date(l.created_at).getTime()/1000)}:R>` });
+       });
+       return interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    if (commandName === 'lookup-batch-info') {
+      const batchId = interaction.options.getInteger('batch_id');
+      const batch = await get("SELECT * FROM batches WHERE id = ?", [batchId]);
+      if (!batch) return interaction.reply({ content: '❌ Batch not found.', ephemeral: true });
+
+      const reqs = await all("SELECT COUNT(*) as cnt FROM batch_requests WHERE batch_id = ?", [batchId]);
+      const count = reqs[0].cnt;
+
+      let statusMsg = "";
+      let emoji = "⏳";
+      let progress = 0;
+
+      if (batch.status === 'open') {
+          statusMsg = "Still collecting requests. Needs 8 to be released.";
+          progress = (count / 8) * 100;
+          emoji = "📁";
+      } else if (batch.status === 'released') {
+          statusMsg = "Batch is FULL and waiting for the developer to send it in-game.";
+          progress = 75;
+          emoji = "🚀";
+      } else if (batch.status === 'sent') {
+          statusMsg = "This batch has been successfully sent in-game!";
+          progress = 100;
+          emoji = "✅";
+      }
+
+      const barFull = '🟩';
+      const barEmpty = '⬜';
+      const barLength = 10;
+      const filledLength = Math.round((progress / 100) * barLength);
+      const bar = barFull.repeat(filledLength) + barEmpty.repeat(barLength - filledLength);
+
+      const embed = new EmbedBuilder()
+        .setTitle(`${emoji} Batch Info: #${batchId}`)
+        .setDescription(`**Progress:** ${progress.toFixed(0)}%\n${bar}\n\n**Current Stage:** ${batch.status.toUpperCase()}\n**Details:** ${statusMsg}`)
+        .addFields({ name: 'Items in Batch', value: `${count}/8 items`, inline: true })
+        .setColor(batch.status === 'sent' ? 0x00f5a0 : 0xFFA500)
+        .setTimestamp();
+
+      return interaction.reply({ embeds: [embed] });
+    }
     }
 
   if (interaction.isButton()) {
     const { customId } = interaction;
+
+    // Ticket Modal Opening
+    if (customId === 'batch_ticket_open') {
+      const modal = new ModalBuilder().setCustomId('batch_ticket_modal').setTitle('Report Batch Issue');
+      const issueInput = new TextInputBuilder().setCustomId('issue_text').setLabel('Explain your issue').setStyle(TextInputStyle.Paragraph).setRequired(true);
+      modal.addComponents(new ActionRowBuilder().addComponents(issueInput));
+      return interaction.showModal(modal);
+    }
 
     // Start DM Flow
     if (customId.startsWith('batch_start_')) {
@@ -428,12 +621,15 @@ client.on('interactionCreate', async interaction => {
               new ButtonBuilder().setCustomId(`batch_done_${id}`).setLabel('Fulfil').setStyle(ButtonStyle.Success),
               new ButtonBuilder().setCustomId(`batch_deny_${id}`).setLabel('Reject').setStyle(ButtonStyle.Danger)
             );
-            await ch.send({ embeds: [embed], components: [buttons] });
+            const msg = await ch.send({ embeds: [embed], components: [buttons] });
+            await run("UPDATE batch_requests SET msg_id = ?, ch_id = ? WHERE id = ?", [msg.id, ch.id, id]);
           }
         }
+        await logStaffAction(interaction.user.id, interaction.user.username, 'APPROVED_PRE_REVIEW', id, `Type: ${req.type}`);
         return interaction.reply({ content: '✅ Approved and added to queue.', ephemeral: true });
       } else {
         await run("UPDATE batch_requests SET status = 'rejected' WHERE id = ?", [id]);
+        await logStaffAction(interaction.user.id, interaction.user.username, 'REJECTED_PRE_REVIEW', id, `Type: ${req.type}`);
         await interaction.message.delete().catch(() => {});
         try {
           const user = await client.users.fetch(req.discord_id);
@@ -493,10 +689,20 @@ client.on('interactionCreate', async interaction => {
         try {
           const user = await client.users.fetch(req.discord_id);
           await user.send({ embeds: [new EmbedBuilder().setTitle(`🆕 Update: #${id}`).setDescription(`Your **${req.type}** is **${status}**.`).setColor(status === 'completed' ? 0x00f5a0 : 0xff4d4d)] });
+          if (status === 'completed') await checkMilestoneRoles(req.discord_id);
         } catch (e) {}
       }
       const embed = EmbedBuilder.from(interaction.message.embeds[0]).setTitle(`${status.toUpperCase()} | ${interaction.message.embeds[0].title}`).setColor(status === 'completed' ? 0x00f5a0 : 0xff4d4d);
+      await logStaffAction(interaction.user.id, interaction.user.username, status === 'completed' ? 'FULFILLED' : 'REJECTED', id, `Item: ${req.type}`);
       return interaction.update({ embeds: [embed], components: [] });
+    }
+    if (interaction.isModalSubmit()) {
+       if (interaction.customId === 'batch_ticket_modal') {
+         const issue = interaction.fields.getTextInputValue('issue_text');
+         await run("INSERT INTO batch_tickets (discord_id, username, issue) VALUES (?,?,?)", [interaction.user.id, interaction.user.username, issue]);
+         const res = await get("SELECT id FROM batch_tickets WHERE discord_id = ? ORDER BY id DESC LIMIT 1", [interaction.user.id]);
+         return interaction.reply({ content: `✅ Ticket **#${res.id}** submitted! Staff will review it on the portal.`, ephemeral: true });
+       }
     }
   }
 } catch (err) {
@@ -567,7 +773,8 @@ async function createRequest(userId, username, vrfsId, type, details, proofUrl) 
         new ButtonBuilder().setCustomId(`batch_pr_approve_${id}`).setLabel('Send to Batches').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`batch_pr_reject_${id}`).setLabel('Decline').setStyle(ButtonStyle.Danger)
       );
-      await ch.send({ embeds: [embed], components: [btns] });
+      const msg = await ch.send({ embeds: [embed], components: [btns] });
+      await run("UPDATE batch_requests SET msg_id = ?, ch_id = ? WHERE id = ?", [msg.id, ch.id, id]);
     }
   }
 }
@@ -592,6 +799,8 @@ async function registerCommands() {
       .addSubcommand(s => s.setName('list').setDescription('List all items')),
     new SlashCommandBuilder().setName('batch_check').setDescription('View queue [Staff]'),
     new SlashCommandBuilder().setName('view-batches').setDescription('View recent batches and their contents [Staff]'),
+    new SlashCommandBuilder().setName('view-logs').setDescription('View staff activity logs [Staff]'),
+    new SlashCommandBuilder().setName('post-ticket-panel').setDescription('Post the issue ticket panel [Staff]'),
     new SlashCommandBuilder().setName('batch_add').setDescription('Manual add [Staff]')
       .addUserOption(o => o.setName('player').setDescription('Player').setRequired(true))
       .addStringOption(o => o.setName('vrfs_id').setDescription('VRFS ID').setRequired(true))
@@ -607,6 +816,13 @@ async function registerCommands() {
     new SlashCommandBuilder().setName('batch_sent').setDescription('Notify all users in a batch that it has been sent [Staff]')
       .addIntegerOption(o => o.setName('batch_id').setDescription('The Batch ID').setRequired(true)),
     new SlashCommandBuilder().setName('post-admin-batch-add').setDescription('Post interactive manual add buttons [Staff]'),
+    new SlashCommandBuilder().setName('profile').setDescription('View your player stats or another players profile').addUserOption(o => o.setName('user').setDescription('User to view')),
+    new SlashCommandBuilder().setName('batch-edit').setDescription('Edit a specific request in the system [Staff]')
+      .addIntegerOption(o => o.setName('request_id').setDescription('The ID of the request to edit').setRequired(true))
+      .addStringOption(o => o.setName('vrfs_id').setDescription('New VRFS ID to assign'))
+      .addStringOption(o => o.setName('action').setDescription('Action to take').addChoices({ name: 'Remove from Batch', value: 'remove' })),
+    new SlashCommandBuilder().setName('lookup-batch-info').setDescription('Check the status and progress of a specific batch')
+      .addIntegerOption(o => o.setName('batch_id').setDescription('The Batch ID to look up').setRequired(true)),
   ].map(c => c.toJSON());
 
   const rest = new REST({ version: '10' }).setToken(process.env.BATCH_DISCORD_TOKEN);
