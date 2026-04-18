@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   description: "Manage your custom requests and batches",
 };
 
+import SupportWidget from "@/components/SupportWidget";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,6 +30,7 @@ export default function RootLayout({
       <body className={`${jakarta.variable} antialiased bg-surface text-on-surface`}>
         <Providers>
           {children}
+          <SupportWidget />
         </Providers>
         <Analytics />
       </body>
