@@ -17,9 +17,20 @@ export default function AdminTicketsPage() {
   }, []);
 
   const handleStatus = async (id: number, status: string) => {
-     // No API for status yet, but I'll add logic or just refresh for now
-     // Actually I should have a simple status update API
-     alert("Ticket status update feature coming soon. For now, track them here.");
+    try {
+      const res = await fetch("/api/admin/tickets/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status })
+      });
+      if (res.ok) {
+        setTickets(prev => prev.filter(t => t.id !== id));
+      } else {
+        alert("Failed to update ticket.");
+      }
+    } catch (e) {
+      alert("Error updating ticket.");
+    }
   };
 
   return (
