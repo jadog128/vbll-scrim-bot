@@ -29,64 +29,36 @@ export default function AdminRequestRow({ request }: Props) {
   }
 
   return (
-    <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/10 flex items-center justify-between group hover:border-primary/20 transition-all">
-      <div className="flex items-center gap-4">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-            status === 'completed' ? 'bg-primary/10 text-primary' : 
-            status === 'rejected' ? 'bg-error/10 text-error' : 'bg-surface-container-high text-on-surface-variant'
-        }`}>
-            {status === 'completed' ? <Check className="w-5 h-5" /> : 
-             status === 'rejected' ? <X className="w-5 h-5" /> : <Package className="w-5 h-5" />}
-        </div>
-        <div>
-          <div className="font-bold text-on-surface flex items-center gap-2">
-            {request.username}
-            <span className="text-[10px] font-black opacity-30">#{request.id}</span>
+    <div className="bg-surface-container-lowest rounded-3xl p-5 shadow-ambient border border-white hover:border-primary/20 transition-all group">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 flex-1">
+          <div className="w-12 h-12 rounded-2xl bg-surface-container-low flex items-center justify-center text-on-surface-variant group-hover:bg-primary/5 group-hover:text-primary transition-colors">
+            <Package className="w-6 h-6" />
           </div>
-          <div className="text-xs text-on-surface-variant/60 font-medium">{request.type} — {request.vrfs_id}</div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-on-surface">{request.username}</span>
+                <span className="text-[10px] font-black uppercase text-on-surface-variant/40 tracking-widest">#{request.id}</span>
+            </div>
+            <div className="text-[10px] font-medium text-on-surface-variant flex items-center gap-2 mt-0.5">
+               <span className="capitalize">{request.type}</span>
+               <span className="opacity-40">—</span>
+               <span className="truncate max-w-[150px]">{request.vrfs_id}</span>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div className="flex items-center gap-2">
-        {status === 'pre_review' && (
-          <>
-            <button 
-              onClick={() => handleAction('approve')}
-              disabled={loading}
-              className="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"
-              title="Approve to Queue"
-            >
-              <Check className="w-4 h-4" />
-            </button>
-            <button 
-              onClick={() => handleAction('deny')}
-              disabled={loading}
-              className="p-2 rounded-xl bg-error/10 text-error hover:bg-error hover:text-white transition-all"
-              title="Reject"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </>
-        )}
-        
-        {status === 'pending' && (
-          <button 
-            onClick={() => handleAction('fulfill')}
-            disabled={loading}
-            className="px-4 py-2 rounded-xl bg-secondary/10 text-secondary hover:bg-secondary hover:text-white font-bold text-xs transition-all flex items-center gap-2"
-          >
-            <Package className="w-4 h-4" /> Fulfill
-          </button>
-        )}
-
-        <a 
-          href={request.proof_url} 
-          target="_blank" 
-          rel="noreferrer"
-          className="p-2 rounded-xl bg-surface-container-high text-on-surface-variant hover:bg-on-surface hover:text-surface transition-all"
-        >
-          <ExternalLink className="w-4 h-4" />
-        </a>
+        <div className="flex items-center gap-2">
+            <div className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                status === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-surface-container-high text-on-surface-variant'
+            }`}>
+                {status}
+            </div>
+          <a href={request.proof_url} target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-xl bg-surface-container-high hover:bg-primary/10 hover:text-primary transition-all">
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
       </div>
     </div>
   );

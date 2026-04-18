@@ -71,9 +71,16 @@ export default async function Dashboard() {
               </div>
 
               <div className="pt-6 border-t border-outline-variant/10 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                   <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                   <span className="text-[10px] font-black uppercase tracking-tighter text-on-surface-variant">{req.status}</span>
+                <div className="flex flex-col gap-1">
+                   <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${req.status === 'completed' ? 'bg-primary' : 'bg-primary animate-pulse'}`}></span>
+                      <span className="text-[10px] font-black uppercase tracking-tighter text-on-surface-variant">{req.status}</span>
+                   </div>
+                   {req.batch_id && (
+                     <div className="text-[9px] font-bold text-primary flex items-center gap-1">
+                        <Package className="w-2.5 h-2.5" /> Batch #{req.batch_id}
+                     </div>
+                   )}
                 </div>
                 <div className="text-[10px] font-bold text-on-surface-variant/40 italic">
                   {new Date(req.created_at).toLocaleDateString()}

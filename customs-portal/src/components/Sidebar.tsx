@@ -4,12 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 
+import SidebarProfileCard from "./SidebarProfileCard";
+
 export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
 
   const links = [
     { name: "My Requests", href: "/dashboard", icon: "receipt_long" },
+    { name: "Inventory", href: "/dashboard", icon: "inventory_2" },
   ];
 
   if ((session?.user as any)?.isAdmin) {
@@ -27,6 +30,12 @@ export default function Sidebar() {
           <h1 className="text-xl font-bold text-primary tracking-tight">VBLL Portal</h1>
           <p className="text-sm text-on-surface-variant font-medium">Request Management</p>
         </div>
+      </div>
+
+      {/* Profile Section */}
+      <div className="mb-6">
+         {/* @ts-ignore server component in client */}
+         <SidebarProfileCard />
       </div>
 
       {/* Navigation Links */}
