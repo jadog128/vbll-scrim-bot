@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Send, User, ShieldCheck } from "lucide-react";
+import { MessageSquare, X, Send, ShieldCheck, Clock, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 
 export default function SupportWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,28 +12,28 @@ export default function SupportWidget() {
   const [input, setInput] = useState("");
   const [issue, setIssue] = useState("");
   const [loading, setLoading] = useState(false);
+  const [userRequests, setUserRequests] = useState<any[]>([]);
+  const [showRequests, setShowRequests] = useState(false);
+  const [isStaffTyping, setIsStaffTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      fetchTicket();
-    }
+    if (isOpen) fetchTicket();
   }, [isOpen]);
 
   useEffect(() => {
     let interval: any;
     if (isOpen && ticket) {
       fetchMessages();
-      interval = setInterval(fetchMessages, 5000);
+      interval = setInterval(fetchMessages, 4000);
     }
     return () => clearInterval(interval);
   }, [isOpen, ticket]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, showRequests, isStaffTyping]);
 
   const fetchTicket = async () => {
     const res = await fetch("/api/support/ticket");
@@ -45,6 +46,28 @@ export default function SupportWidget() {
     const res = await fetch(`/api/support/messages?ticketId=${ticket.id}`);
     const data = await res.json();
     if (Array.isArray(data)) setMessages(data);
+
+    // Check typing status
+    const tRes = await fetch("/api/support/ticket");
+    const tData = await tRes.json();
+    if (tData?.staff_typing_at) {
+       const last = new Date(tData.staff_typing_at.replace(' ', 'T') + 'Z').getTime();
+       setIsStaffTyping(Date.now() - last < 6000);
+    }
+  };
+
+  const handleTyping = async () => {
+    if (!ticket) return;
+    if (typingTimeoutRef.current) return;
+    
+    await fetch("/api/support/typing", {
+      method: "POST",
+      body: JSON.stringify({ ticketId: ticket.id })
+    });
+    
+    typingTimeoutRef.current = setTimeout(() => {
+      typingTimeoutRef.current = null;
+    }, 3000);
   };
 
   const startTicket = async () => {
@@ -60,6 +83,17 @@ export default function SupportWidget() {
 
   const sendMessage = async () => {
     if (!input.trim() || !ticket) return;
+    
+    if (input.trim() === "/view") {
+       setInput("");
+       const res = await fetch("/api/requests/me");
+       const data = await res.json();
+       setUserRequests(data);
+       setShowRequests(true);
+       return;
+    }
+
+    setShowRequests(false);
     const content = input;
     setInput("");
     const res = await fetch("/api/support/messages", {
@@ -79,7 +113,6 @@ export default function SupportWidget() {
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             className="mb-4 w-80 md:w-96 bg-white rounded-[2rem] shadow-ambient border border-outline-variant/10 overflow-hidden flex flex-col h-[500px]"
           >
-            {/* Header */}
             <div className="p-6 bg-primary text-white flex justify-between items-center">
               <div className="flex items-center gap-3">
                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
@@ -87,7 +120,7 @@ export default function SupportWidget() {
                  </div>
                  <div>
                     <h4 className="text-sm font-black tracking-tight">Support Center</h4>
-                    <p className="text-[10px] font-medium opacity-70">Always online for you</p>
+                    <p className="text-[10px] font-medium opacity-70">Help is one message away</p>
                  </div>
               </div>
               <button onClick={() => setIsOpen(false)} className="hover:rotate-90 transition-transform">
@@ -95,13 +128,12 @@ export default function SupportWidget() {
               </button>
             </div>
 
-            {/* Content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4" ref={scrollRef}>
               {!ticket ? (
                 <div className="space-y-6 py-4">
                    <div className="text-center space-y-2">
-                      <h3 className="font-bold text-on-surface">Need help?</h3>
-                      <p className="text-xs text-on-surface-variant">Explain your issue and a staff member will chat with you here.</p>
+                      <h3 className="font-bold text-on-surface">How can we help?</h3>
+                      <p className="text-xs text-on-surface-variant">Explain your issue to start a live chat.</p>
                    </div>
                    <textarea 
                      value={issue}
@@ -112,15 +144,15 @@ export default function SupportWidget() {
                    <button 
                      onClick={startTicket}
                      disabled={loading}
-                     className="w-full py-4 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-2xl hover:scale-[1.02] transition-transform"
+                     className="w-full py-4 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-2xl hover:scale-[1.02] transition-transform shadow-lg shadow-primary/20"
                    >
-                     {loading ? "Creating..." : "Start Chat"}
+                     {loading ? "Initializing..." : "Start Chat"}
                    </button>
                 </div>
               ) : (
                 <>
                   <div className="text-center text-[10px] font-black text-on-surface-variant/30 uppercase tracking-widest py-2">
-                    Conversation Started
+                    Active Support Ticket
                   </div>
                   {messages.map((m) => (
                     <div key={m.id} className={`flex ${m.is_staff ? 'justify-start' : 'justify-end'}`}>
@@ -136,18 +168,49 @@ export default function SupportWidget() {
                       </div>
                     </div>
                   ))}
+
+                  {showRequests && (
+                    <div className="bg-surface-container-low rounded-2xl p-4 border border-outline-variant/10 space-y-3">
+                       <p className="text-[10px] font-black uppercase text-primary tracking-widest">Your Private Requests:</p>
+                       {userRequests.map(r => (
+                          <Link href="/dashboard" key={r.id} className="block group">
+                             <div className="flex items-center justify-between p-2 rounded-xl border border-transparent hover:border-primary/20 hover:bg-white transition-all">
+                                <div>
+                                   <div className="text-[11px] font-bold text-on-surface">{r.type}</div>
+                                   <div className="text-[9px] font-medium text-on-surface-variant/60">ID: #{r.id} • {r.status}</div>
+                                </div>
+                                <ExternalLink className="w-3 h-3 text-primary opacity-0 group-hover:opacity-100" />
+                             </div>
+                          </Link>
+                       ))}
+                       {userRequests.length === 0 && <p className="text-[10px] opacity-50 italic">No requests found.</p>}
+                    </div>
+                  )}
+
+                  {isStaffTyping && (
+                    <div className="flex justify-start">
+                       <div className="bg-surface-container-high px-4 py-2 rounded-full flex gap-1 items-center">
+                          <span className="w-1 h-1 bg-on-surface-variant rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                          <span className="w-1 h-1 bg-on-surface-variant rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                          <span className="w-1 h-1 bg-on-surface-variant rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                          <span className="ml-2 text-[10px] font-black uppercase text-on-surface-variant/50">Staff is typing</span>
+                       </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
 
-            {/* Input */}
             {ticket && (
               <div className="p-4 border-t border-outline-variant/10 flex gap-2">
                 <input 
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    handleTyping();
+                  }}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder="Type a message..."
+                  placeholder="Type a message or /view..."
                   className="flex-1 px-4 py-2 bg-surface-container-low rounded-xl text-sm border-none focus:ring-2 focus:ring-primary/20"
                 />
                 <button onClick={sendMessage} className="p-2.5 bg-primary text-white rounded-xl hover:scale-110 transition-transform">

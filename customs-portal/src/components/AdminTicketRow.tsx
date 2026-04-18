@@ -1,31 +1,53 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, Clock, Send, ShieldCheck, ChevronDown, ChevronUp } from "lucide-react";
+import { ShieldAlert, Clock, Send, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function AdminTicketRow({ ticket, onStatusUpdate }: { ticket: any, onStatusUpdate: (id: number, status: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState("");
+  const [isUserTyping, setIsUserTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
     let interval: any;
     if (isOpen) {
       fetchMessages();
-      interval = setInterval(fetchMessages, 5000);
+      interval = setInterval(fetchMessages, 4000);
     }
     return () => clearInterval(interval);
   }, [isOpen]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages]);
+  }, [messages, isUserTyping]);
 
   const fetchMessages = async () => {
     const res = await fetch(`/api/support/messages?ticketId=${ticket.id}`);
     const data = await res.json();
     if (Array.isArray(data)) setMessages(data);
+
+    // Refresh ticket to check user typing status
+    const tRes = await fetch("/api/admin/tickets");
+    const tData = await tRes.json();
+    const currentTicket = tData.find((t: any) => t.id === ticket.id);
+    if (currentTicket?.user_typing_at) {
+       const last = new Date(currentTicket.user_typing_at.replace(' ', 'T') + 'Z').getTime();
+       setIsUserTyping(Date.now() - last < 6000);
+    }
+  };
+
+  const handleTyping = async () => {
+    if (typingTimeoutRef.current) return;
+    await fetch("/api/support/typing", {
+      method: "POST",
+      body: JSON.stringify({ ticketId: ticket.id })
+    });
+    typingTimeoutRef.current = setTimeout(() => {
+      typingTimeoutRef.current = null;
+    }, 3000);
   };
 
   const sendMessage = async () => {
@@ -103,12 +125,26 @@ export default function AdminTicketRow({ ticket, onStatusUpdate }: { ticket: any
                     </div>
                   </div>
                 ))}
+                
+                {isUserTyping && (
+                  <div className="flex justify-start">
+                     <div className="bg-surface-container-low px-4 py-2 rounded-full flex gap-1 items-center">
+                        <span className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                        <span className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                        <span className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                        <span className="ml-2 text-[10px] font-black uppercase text-primary/50">User is typing</span>
+                     </div>
+                  </div>
+                )}
              </div>
 
              <div className="flex gap-2">
                 <input 
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    handleTyping();
+                  }}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                   placeholder="Type a response..."
                   className="flex-1 px-5 py-3 bg-surface-container-low rounded-2xl text-sm border-none focus:ring-2 focus:ring-primary/20"
