@@ -468,7 +468,7 @@ client.on('interactionCreate', async interaction => {
         } catch (e) {}
       }
 
-      await run("UPDATE batches SET status = 'sent' WHERE id = ?", [batchId]);
+      await run("UPDATE batches SET status = 'sent', sent_at = CURRENT_TIMESTAMP WHERE id = ?", [batchId]);
       await logStaffAction(interaction.user.id, interaction.user.username, 'BATCH_SENT', batchId, `Notified ${sentCount} players`);
 
       return interaction.editReply(`✅ Batch #${batchId} confirmation sent to ${sentCount} players AND batch marked as SENT.`);
@@ -478,15 +478,45 @@ client.on('interactionCreate', async interaction => {
       const req = await get("SELECT * FROM batch_requests WHERE discord_id = ? ORDER BY id DESC LIMIT 1", [interaction.user.id]);
       if (!req) return interaction.reply({ content: '📭 You currently have no requests in the system.', ephemeral: true });
 
+      // Calculate ETA
+      const stats = await (async () => {
+        const last5R = await all("SELECT created_at, verified_at FROM batch_requests WHERE verified_at IS NOT NULL ORDER BY id DESC LIMIT 5");
+        const last5B = await all("SELECT released_at, sent_at FROM batches WHERE sent_at IS NOT NULL ORDER BY id DESC LIMIT 5");
+        let v_avg = 8 * 3600 * 1000; 
+        let s_avg = 2 * 24 * 3600 * 1000;
+        if (last5R.length) v_avg = last5R.reduce((acc, r) => acc + (new Date(r.verified_at).getTime() - new Date(r.created_at).getTime()), 0) / last5R.length;
+        if (last5B.length) s_avg = last5B.reduce((acc, b) => acc + (new Date(b.sent_at).getTime() - new Date(b.released_at).getTime()), 0) / last5B.length;
+        return { v_avg, s_avg };
+      })();
+
+      let eta = "Unknown";
+      if (req.status === 'pre_review') {
+        const timeSoFar = Date.now() - new Date(req.created_at).getTime();
+        const remain = Math.max(0, stats.v_avg - timeSoFar);
+        eta = remain > 3600000 ? `~${Math.round(remain/3600000)} hours` : `~${Math.round(remain/60000)} mins`;
+      } else if (req.status === 'pending') {
+        eta = "Waiting for Batch to fill";
+      } else if (req.status === 'completed') {
+        const b = await get("SELECT released_at, sent_at, status FROM batches WHERE id = ?", [req.batch_id]);
+        if (b?.status === 'released') {
+          const timeSoFar = Date.now() - new Date(b.released_at).getTime();
+          const remain = Math.max(0, stats.s_avg - timeSoFar);
+          eta = `~${Math.round(remain / (24 * 3600000))} days`;
+        } else if (b?.status === 'sent') {
+          eta = "Delivered!";
+        }
+      }
+
       const embed = new EmbedBuilder()
         .setTitle('📂 Your Request Status')
         .addFields(
           { name: 'Item', value: req.type, inline: true },
-          { name: 'VRFS ID', value: `\`${req.vrfs_id}\``, inline: true },
           { name: 'Status', value: req.status.toUpperCase(), inline: true },
-          { name: 'Batch', value: req.batch_id ? `#${req.batch_id}` : 'Not yet assigned', inline: true }
+          { name: 'ETA', value: eta, inline: true },
+          { name: 'Current Batch', value: req.batch_id ? `#${req.batch_id}` : 'Pending Assignment', inline: true }
         )
         .setColor(req.status === 'completed' ? 0x00f5a0 : 0x5865f2)
+        .setFooter({ text: 'ETA is based on historical averages' })
         .setTimestamp();
 
       return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -629,7 +659,7 @@ client.on('interactionCreate', async interaction => {
       if (req.status !== 'pre_review') return interaction.reply({ content: '⚠️ This request has already been handled.', ephemeral: true });
 
       if (action === 'approve') {
-        await run("UPDATE batch_requests SET status = 'pending' WHERE id = ?", [id]);
+        await run("UPDATE batch_requests SET status = 'pending', verified_at = CURRENT_TIMESTAMP WHERE id = ?", [id]);
         await interaction.message.delete().catch(() => {});
         // DM User
         try {
