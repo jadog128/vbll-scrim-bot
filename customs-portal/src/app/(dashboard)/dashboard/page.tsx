@@ -15,7 +15,7 @@ export default async function Dashboard() {
   
   // Fetch user's requests
   const requestsRes = await execute(
-    "SELECT * FROM batch_requests WHERE user_id = ? ORDER BY created_at DESC", 
+    "SELECT * FROM batch_requests WHERE discord_id = ? ORDER BY created_at DESC", 
     [userId]
   );
   const requests = requestsRes.rows;
