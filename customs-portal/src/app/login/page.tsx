@@ -1,9 +1,15 @@
-"use client";
+import { getServerSession } from "next-auth/next";
+import { redirect } from "next/navigation";
+import { BarChart3, MessageSquare, Plus, CheckCircle2 } from "lucide-react";
+import LoginButton from "@/components/auth/LoginButton";
 
-import { signIn } from "next-auth/react";
-import { RefreshCw, BarChart3, MessageSquare, Plus, CheckCircle2 } from "lucide-react";
+export default async function LoginPage() {
+  const session = await getServerSession();
 
-export default function LoginPage() {
+  if (session) {
+    redirect("/dashboard");
+  }
+
   return (
     <div className="min-h-screen bg-surface text-on-surface font-jakarta antialiased flex overflow-hidden selection:bg-primary selection:text-white fixed inset-0 z-[100]">
       {/* Left Pane: Interaction & Identity Layer */}
@@ -14,7 +20,7 @@ export default function LoginPage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center shadow-[0_8px_16px_rgba(0,46,32,0.2)]">
               <span className="material-symbols-outlined text-white icon-fill">forest</span>
             </div>
-            <span className="text-2xl font-bold tracking-tighter text-primary">Lucid Conservatory</span>
+            <span className="text-2xl font-bold tracking-tighter text-primary">VBLL Portal</span>
           </div>
         </header>
 
@@ -29,16 +35,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <button 
-            onClick={() => signIn("discord", { callbackUrl: "/dashboard" })}
-            className="w-full group relative flex items-center justify-center gap-4 bg-gradient-to-br from-primary to-primary-container text-white py-5 px-8 rounded-xl shadow-[0_16px_32px_rgba(0,46,32,0.12)] hover:shadow-[0_24px_48px_rgba(0,46,32,0.2)] transition-all duration-300 transform hover:-translate-y-1"
-          >
-            <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <svg className="w-7 h-7 relative z-10 fill-current" viewBox="0 0 127.14 96.36">
-              <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1,105.25,105.25,0,0,0,32.19-16.14h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.31,60,73.31,53s5-12.74,11.43-12.74S96.3,46,96.19,53,91.08,65.69,84.69,65.69Z"></path>
-            </svg>
-            <span className="text-xl font-bold tracking-tight relative z-10">Login with Discord</span>
-          </button>
+          <LoginButton />
 
           <div className="flex items-center gap-3 text-sm text-on-surface-variant">
             <span className="material-symbols-outlined text-[18px]">verified_user</span>
@@ -48,7 +45,7 @@ export default function LoginPage() {
 
         {/* Footer / Legal */}
         <footer className="text-sm text-on-surface-variant/70 font-medium pt-8 uppercase tracking-widest text-[10px]">
-          © 2026 Lucid Conservatory • High-End Request Management.
+          © 2026 VBLL • High-End Request Management.
         </footer>
       </main>
 
@@ -62,7 +59,6 @@ export default function LoginPage() {
         
         {/* Asymmetrical Bento Grid Showcase */}
         <div className="relative z-10 w-full max-w-2xl transform lg:rotate-[-2deg] lg:scale-105 grid grid-cols-12 gap-6 p-8">
-          {/* Card 1 */}
           <div className="col-span-12 md:col-span-8 bg-surface/80 backdrop-blur-2xl rounded-[1.5rem] p-8 shadow-[0_32px_64px_rgba(0,46,32,0.08)]">
             <div className="flex justify-between items-start mb-6">
               <div>
@@ -85,7 +81,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Card 2 */}
           <div className="col-span-12 md:col-span-4 bg-surface-container-lowest rounded-[1.5rem] p-6 shadow-[0_16px_48px_rgba(0,46,32,0.06)] flex flex-col justify-between">
             <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center mb-4">
               <MessageSquare className="w-5 h-5 text-on-surface-variant" />
@@ -96,14 +91,12 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Card 3 */}
           <div className="col-span-12 md:col-span-5 bg-gradient-to-br from-primary to-primary-container rounded-[1.5rem] p-8 shadow-[0_24px_48px_rgba(0,46,32,0.15)] text-white">
             <BarChart3 className="mb-6 block w-8 h-8 opacity-80" />
             <div className="text-5xl font-extrabold tracking-tighter mb-2">1,204</div>
             <div className="text-primary-fixed text-xs font-bold uppercase tracking-widest opacity-60">Requests Managed</div>
           </div>
 
-          {/* Card 4 */}
           <div className="col-span-12 md:col-span-7 bg-surface-container-lowest rounded-[1.5rem] p-6 shadow-[0_16px_48px_rgba(0,46,32,0.06)]">
             <h4 className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase mb-6">Recent Activity</h4>
             <div className="space-y-4">
