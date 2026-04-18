@@ -17,6 +17,14 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Check for duplicate active requests
+    const existingRes = await execute(
+      "SELECT id FROM batch_requests WHERE discord_id = ? AND type = ? AND status NOT IN ('completed', 'rejected')",
+      [(session.user as any).id, type]
+    );
+    if (existingRes.rows.length > 0) {
+      return NextResponse.json({ error: `You already have an active request for ${type} (#${(existingRes.rows[0] as any).id}).` }, { status: 400 });
+    }
     // 1. Insert into database
     await execute(
       "INSERT INTO batch_requests (discord_id, username, vrfs_id, type, proof_url, status) VALUES (?, ?, ?, ?, ?, ?)",
