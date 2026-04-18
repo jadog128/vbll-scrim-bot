@@ -34,7 +34,6 @@ export default function Sidebar() {
 
       {/* Profile Section */}
       <div className="mb-6">
-         {/* @ts-ignore server component in client */}
          <SidebarProfileCard />
       </div>
 
