@@ -31,7 +31,8 @@ const handler = NextAuth({
   pages: {
     signIn: '/login',
   },
-  secret: process.env.VBLL_NEXTAUTH_SECRET || process.env.NEXTAUTH_SECRET,
+  secret: process.env.VBLL_NEXTAUTH_SECRET || process.env.NEXTAUTH_SECRET || "vbll_default_secret_change_me",
+  debug: true, // Enable debug logs for the user to see in Vercel
 });
 
 export { handler as GET, handler as POST };

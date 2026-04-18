@@ -21,7 +21,7 @@ export default function Home() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center shadow-[0_8px_16px_rgba(0,46,32,0.2)]">
               <span className="material-symbols-outlined text-white icon-fill">forest</span>
             </div>
-            <span className="text-2xl font-bold tracking-tighter text-primary">Lucid Conservatory</span>
+            <span className="text-2xl font-bold tracking-tighter text-primary">VBLL Portal</span>
           </div>
         </header>
 
@@ -55,7 +55,7 @@ export default function Home() {
 
         {/* Footer / Legal */}
         <footer className="text-sm text-on-surface-variant/70 font-medium pt-8 uppercase tracking-widest text-[10px]">
-          © 2026 Lucid Conservatory • High-End Request Management.
+          © 2026 VBLL • High-End Request Management.
         </footer>
       </main>
 

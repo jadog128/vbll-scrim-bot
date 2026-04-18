@@ -25,7 +25,7 @@ export default function Sidebar() {
           <span className="material-symbols-outlined icon-fill">hive</span>
         </div>
         <div>
-          <h1 className="text-xl font-bold text-primary tracking-tight">Lucid Portal</h1>
+          <h1 className="text-xl font-bold text-primary tracking-tight">VBLL Portal</h1>
           <p className="text-sm text-on-surface-variant font-medium">Request Management</p>
         </div>
       </div>

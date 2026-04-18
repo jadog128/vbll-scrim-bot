@@ -13,7 +13,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Lucid Portal - Request Management",
+  title: "VBLL Portal - Request Management",
   description: "Manage your custom requests and batches",
 };
 
