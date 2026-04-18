@@ -281,8 +281,7 @@ client.on('interactionCreate', async interaction => {
         
         if (reqs.length) {
           reqs.forEach(r => {
-            output += `• User: ${r.username} (${r.discord_id}) | VRFS ID: ${r.vrfs_id} | Item: ${r.type}\n`;
-            output += `  Proof: ${r.proof_url}\n`;
+            output += `${r.vrfs_id}|${r.username} | ${r.type} | ${r.proof_url}\n`;
           });
         } else {
           output += "* No requests in this batch.\n";
@@ -310,6 +309,31 @@ client.on('interactionCreate', async interaction => {
       await setSetting('halt_reason', reason);
       
       return interaction.reply({ content: `✅ Batch requests are now **${active ? 'HALTED' : 'OPEN'}**.\nReason: *${reason}*`, ephemeral: true });
+    }
+
+    if (commandName === 'batch_sent') {
+      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+      const batchId = interaction.options.getInteger('batch_id');
+      const reqs = await all("SELECT discord_id, type FROM batch_requests WHERE batch_id = ?", [batchId]);
+      
+      if (!reqs.length) return interaction.reply({ content: `❌ No requests found for Batch #${batchId}.`, ephemeral: true });
+
+      await interaction.deferReply({ ephemeral: true });
+      let sentCount = 0;
+      for (const r of reqs) {
+        try {
+          const user = await client.users.fetch(r.discord_id);
+          const embed = new EmbedBuilder()
+            .setTitle('🚚 Batch Sent!')
+            .setDescription(`Your request for a **${r.type}** (from Batch #${batchId}) has been confirmed sent by the developers!`)
+            .setColor(0x00f5a0)
+            .setTimestamp();
+          await user.send({ embeds: [embed] });
+          sentCount++;
+        } catch (e) {}
+      }
+
+      return interaction.editReply(`✅ Batch #${batchId} confirmation sent to ${sentCount} players.`);
     }
     }
 
@@ -521,6 +545,8 @@ async function registerCommands() {
     new SlashCommandBuilder().setName('batch_halt').setDescription('Pause or resume all batch requests [Staff]')
       .addBooleanOption(o => o.setName('active').setDescription('Set to true to HAULT requests, false to open').setRequired(true))
       .addStringOption(o => o.setName('reason').setDescription('The reason shown to users').setRequired(false)),
+    new SlashCommandBuilder().setName('batch_sent').setDescription('Notify all users in a batch that it has been sent [Staff]')
+      .addIntegerOption(o => o.setName('batch_id').setDescription('The Batch ID').setRequired(true)),
     new SlashCommandBuilder().setName('post-admin-batch-add').setDescription('Post interactive manual add buttons [Staff]'),
   ].map(c => c.toJSON());
 
