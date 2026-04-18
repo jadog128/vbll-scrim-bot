@@ -20,10 +20,14 @@ export default function AdminRequestRow({ request }: { request: any }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: request.id, ...formData })
       });
-      if (res.ok) window.location.reload();
-      else alert("Update failed");
-    } catch (e) {
-      alert("Update failed");
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`Update failed: ${data.error || "Unknown error"}`);
+      }
+    } catch (e: any) {
+      alert(`Update error: ${e.message}`);
     }
     setLoading(false);
   };
