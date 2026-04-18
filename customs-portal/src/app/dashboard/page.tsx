@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { execute } from "@/lib/db";
-import { Send, Clock, CheckCircle2, Package, Timer, Sync } from "lucide-react";
+import { Send, Clock, CheckCircle2, Package, RefreshCw } from "lucide-react";
 import RequestTrigger from "@/components/RequestTrigger";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +54,7 @@ export default async function Dashboard() {
                       <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
                       Processing
                     </span>
-                    <span className="text-xs text-on-surface-variant font-medium">Batch ID: #BQ-{activeBatch.batch_id}</span>
+                    <span className="text-xs text-on-surface-variant font-medium">Batch ID: #BQ-{String(activeBatch.batch_id)}</span>
                   </div>
                   <h3 className="text-2xl font-bold text-on-surface tracking-tight uppercase">Current Work Queue</h3>
                 </div>
