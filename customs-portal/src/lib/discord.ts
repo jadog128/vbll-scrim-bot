@@ -3,6 +3,33 @@ const BOT_TOKEN = process.env.VBLL_DISCORD_TOKEN || process.env.BATCH_DISCORD_TO
 const GUILD_ID = process.env.VBLL_DISCORD_GUILD_ID || process.env.DISCORD_GUILD_ID;
 const ADMIN_ROLE_ID = process.env.VBLL_ADMIN_ROLE_ID || process.env.ADMIN_ROLE_ID;
 
+export async function sendDiscordDM(userId: string, content: any) {
+  if (!BOT_TOKEN) return;
+  try {
+    // 1. Create DM channel
+    const dmRes = await fetch(`https://discord.com/api/v10/users/@me/channels`, {
+      method: "POST",
+      headers: { 
+        Authorization: `Bot ${BOT_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ recipient_id: userId })
+    });
+    if (!dmRes.ok) return;
+    const dmChannel = await dmRes.json();
+    
+    // 2. Send Message
+    await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
+      method: "POST",
+      headers: { 
+        Authorization: `Bot ${BOT_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(content)
+    });
+  } catch (e) {}
+}
+
 export async function updateDiscordMessage(channelId: string, messageId: string, content: any) {
   if (!BOT_TOKEN) return;
   try {
