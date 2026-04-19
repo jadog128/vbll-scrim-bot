@@ -24,7 +24,7 @@ export const authOptions: NextAuthOptions = {
           if (res.ok) {
             const guilds = await res.json();
             // Filter guilds where user has Administrator permission (0x8)
-            const manageable = guilds.filter((g: any) => (parseInt(g.permissions) & 0x8) === 0x8);
+            const manageable = guilds.filter((g: any) => (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8));
             token.manageableGuilds = manageable.map((g: any) => ({
               id: g.id,
               name: g.name,

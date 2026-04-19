@@ -8,7 +8,7 @@ export default function TopBar() {
   const pathname = usePathname();
 
   const getPageTitle = () => {
-    if (pathname === "/admin") return "Conservatory";
+    if (pathname === "/admin" || pathname === "/admin/select") return "Conservatory";
     if (pathname === "/dashboard") return "Dashboard";
     return "Portal";
   };
