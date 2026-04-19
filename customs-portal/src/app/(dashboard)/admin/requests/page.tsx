@@ -15,26 +15,38 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
   if (!(session?.user as any)?.isAdmin) redirect("/");
 
   const query = searchParams?.q || "";
-  
-  // Fetch active requests (potentially filtered)
+  const idMatch = query.match(/^#?(\d+)$/);
+  const searchId = idMatch ? parseInt(idMatch[1]) : null;
+
+  // Fetch active requests
   let activeRequestsSql = "SELECT * FROM batch_requests WHERE status != 'completed' AND status != 'rejected'";
   const activeParams: any[] = [];
 
   if (query) {
-    activeRequestsSql += " AND (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?) OR id = ?)";
-    activeParams.push(`%${query}%`, `%${query}%`, query);
+    if (searchId) {
+      activeRequestsSql += " AND (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?) OR id = ?)";
+      activeParams.push(`%${query}%`, `%${query}%`, searchId);
+    } else {
+      activeRequestsSql += " AND (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?))";
+      activeParams.push(`%${query}%`, `%${query}%`);
+    }
   }
   activeRequestsSql += " ORDER BY created_at DESC";
 
   const activeRequests = await execute(activeRequestsSql, activeParams);
 
-  // Fetch recently completed for history (potentially filtered)
+  // Fetch recently completed for history
   let historySql = "SELECT * FROM batch_requests WHERE (status = 'completed' OR status = 'rejected')";
   const historyParams: any[] = [];
   
   if (query) {
-    historySql += " AND (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?) OR id = ?)";
-    historyParams.push(`%${query}%`, `%${query}%`, query);
+    if (searchId) {
+       historySql += " AND (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?) OR id = ?)";
+       historyParams.push(`%${query}%`, `%${query}%`, searchId);
+    } else {
+       historySql += " AND (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?))";
+       historyParams.push(`%${query}%`, `%${query}%`);
+    }
   }
   historySql += " ORDER BY created_at DESC";
   if (!query) historySql += " LIMIT 25";
