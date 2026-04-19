@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import SidebarProfileCard from "./SidebarProfileCard";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentGuildId = searchParams.get("guild");
   const { data: session } = useSession();
 
   const links = [
@@ -54,10 +56,15 @@ export default function Sidebar() {
           const isSwitchLink = link.name === "Switch League";
           const Component = isSwitchLink ? "a" : Link;
           
+          // Append guild param to admin links if we have one
+          const href = (link.href.startsWith("/admin") && !isSwitchLink && currentGuildId)
+            ? `${link.href}?guild=${currentGuildId}`
+            : link.href;
+          
           return (
             <Component 
               key={link.name} 
-              href={link.href}
+              href={href}
               className={`p-4 mx-2 flex items-center gap-4 rounded-3xl transition-all duration-300 group ${
                 isActive 
                   ? "bg-white text-primary shadow-[0_8px_32px_rgba(0,0,0,0.06)] scale-[1.02] border border-white" 

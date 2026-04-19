@@ -3,14 +3,23 @@
 import { useEffect, useState } from "react";
 import { MessageSquare, CheckCircle } from "lucide-react";
 import AdminTicketRow from "@/components/AdminTicketRow";
+import { useSearchParams, useRouter } from "next/navigation";
 
 export default function AdminTicketsPage() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const guildId = searchParams.get("guild");
 
   useEffect(() => {
+    if (!guildId) {
+      router.push("/admin/select");
+      return;
+    }
+
     const fetchTickets = () => {
-      fetch("/api/admin/tickets")
+      fetch(`/api/admin/tickets?guild=${guildId}`)
         .then(res => res.json())
         .then(data => {
           const newTickets = Array.isArray(data) ? data : [];

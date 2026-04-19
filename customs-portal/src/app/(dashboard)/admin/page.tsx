@@ -156,7 +156,7 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
             Management Suite
           </h2>
           <div className="bg-surface-container-lowest rounded-3xl p-2 shadow-ambient border border-white grid grid-cols-1 gap-1">
-              <Link href="/admin/requests">
+              <Link href={`/admin/requests?guild=${finalGuildId}`}>
                 <button className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-surface-container-high transition-colors group text-left">
                    <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-on-surface-variant">

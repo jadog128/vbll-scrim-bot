@@ -9,10 +9,13 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminRequests(props: { searchParams: Promise<{ q?: string }> }) {
+export default async function AdminRequests(props: { searchParams: Promise<{ q?: string; guild?: string }> }) {
   const searchParams = await props.searchParams;
   const session = await getServerSession(authOptions);
   if (!(session?.user as any)?.isAdmin) redirect("/");
+
+  const selectedGuildId = searchParams.guild;
+  if (!selectedGuildId) redirect("/admin/select");
 
   const query = searchParams?.q || "";
   const idMatch = query.match(/^#?(\d+)$/);
@@ -21,38 +24,34 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
   // 1. Fetch search results (if searching) - Search ALL statuses
   let searchResults: any[] = [];
   if (query) {
-    let searchSql = "SELECT * FROM batch_requests WHERE (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?)";
-    const params: any[] = [`%${query}%`, `%${query}%`];
+    let searchSql = "SELECT * FROM batch_requests WHERE (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?)) AND guild_id = ?";
+    const params: any[] = [`%${query}%`, `%${query}%`, selectedGuildId];
     if (searchId) {
-      searchSql += " OR id = ?";
-      params.push(searchId);
+      searchSql = "SELECT * FROM batch_requests WHERE (id = ? OR LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?)) AND guild_id = ?";
+      params.unshift(searchId);
     }
-    searchSql += ") ORDER BY created_at DESC LIMIT 100";
+    searchSql += " ORDER BY created_at DESC LIMIT 100";
     const res = await execute(searchSql, params);
     searchResults = res.rows;
   }
 
   // 2. Fetch Active Queue (Only if NOT searching, or as secondary)
-  let activeRequestsSql = "SELECT * FROM batch_requests WHERE status NOT IN ('completed', 'rejected')";
-  const activeParams: any[] = [];
-  if (query) {
-    // If searching, we already have results in searchResults, but lets keep filters for sub-lists if needed
-    // Actually, lets just use SearchResults as the main view when searching.
-  }
+  let activeRequestsSql = "SELECT * FROM batch_requests WHERE status NOT IN ('completed', 'rejected') AND guild_id = ?";
+  const activeParams: any[] = [selectedGuildId];
   activeRequestsSql += " ORDER BY created_at DESC";
   const activeRequests = await execute(activeRequestsSql, activeParams);
 
   // 3. Fetch History
-  let historySql = "SELECT * FROM batch_requests WHERE status IN ('completed', 'rejected')";
+  let historySql = "SELECT * FROM batch_requests WHERE status IN ('completed', 'rejected') AND guild_id = ?";
   historySql += " ORDER BY created_at DESC LIMIT 50";
-  const history = await execute(historySql, []);
+  const history = await execute(historySql, [selectedGuildId]);
 
   return (
     <div className="space-y-10 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h2 className="text-3xl font-bold text-on-surface tracking-tight mb-1 flex items-center gap-3">
-             <Link href="/admin">
+             <Link href={`/admin?guild=${selectedGuildId}`}>
                 <span className="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors cursor-pointer">arrow_back</span>
              </Link>
              Audit & Oversight

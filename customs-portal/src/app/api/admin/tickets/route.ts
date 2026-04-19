@@ -3,11 +3,16 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { execute } from "@/lib/db";
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!(session?.user as any)?.isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const tickets = await execute("SELECT * FROM batch_tickets WHERE status = 'open' ORDER BY created_at DESC", []);
+  const { searchParams } = new URL(req.url);
+  const guildId = searchParams.get("guild");
+  
+  if (!guildId) return NextResponse.json({ error: "Guild ID required" }, { status: 400 });
+
+  const tickets = await execute("SELECT * FROM batch_tickets WHERE status = 'open' AND guild_id = ? ORDER BY created_at DESC", [guildId]);
   
   return NextResponse.json(tickets.rows);
 }
