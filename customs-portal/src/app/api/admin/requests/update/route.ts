@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     // Notify Bot to Sync Discord Embed & Trigger Waterfall
     try {
       const botHost = process.env.BOT_SERVER_HOST || process.env.BOT_SERVER_IP || "localhost:3000";
-      const botToken = process.env.WEB_API_TOKEN || "vbll_batch_secret";
+      const botToken = process.env.WEB_API_TOKEN || "vbll_batch_v2_secret_key";
       
       // Sync the request embed
       await fetch(`http://${botHost}/sync-message`, {

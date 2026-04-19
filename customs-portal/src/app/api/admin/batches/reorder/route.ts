@@ -8,7 +8,7 @@ export async function POST() {
 
   try {
     const botHost = process.env.BOT_SERVER_HOST || process.env.BOT_SERVER_IP || "localhost:3000";
-    const botToken = process.env.WEB_API_TOKEN || "vbll_batch_secret";
+    const botToken = process.env.WEB_API_TOKEN || "vbll_batch_v2_secret_key";
     
     // Trigger Waterfall on Bot
     const res = await fetch(`http://${botHost}/reorder`, {
