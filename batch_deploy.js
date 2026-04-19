@@ -70,6 +70,11 @@ const commands = [
     .setDescription('Permanently delete review messages from a specific ID downwards [Staff Only]')
     .addIntegerOption(o => o.setName('start_id').setDescription('The Request ID to start from').setRequired(true)),
 
+  new SlashCommandBuilder()
+    .setName('batch_slowdown')
+    .setDescription('Set a delay (in seconds) between each request being sent to the staff channel [Staff Only]')
+    .addIntegerOption(o => o.setName('seconds').setDescription('Seconds to wait between each post (0 to disable)').setRequired(true)),
+
 ].map(c => c.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.BATCH_DISCORD_TOKEN);

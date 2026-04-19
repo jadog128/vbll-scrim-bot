@@ -85,6 +85,49 @@ async function initDB() {
   console.log('✅ Batch Database Ready.');
 }
 
+let preReviewQueue = [];
+let isProcessingQueue = false;
+
+async function processPreReviewQueue() {
+  if (isProcessingQueue || preReviewQueue.length === 0) return;
+  isProcessingQueue = true;
+
+  while (preReviewQueue.length > 0) {
+    const item = preReviewQueue[0];
+    await sendToPreReview(item);
+    preReviewQueue.shift();
+
+    const delay = parseInt(getSetting('slowdown_seconds') || '0');
+    if (delay > 0 && preReviewQueue.length > 0) {
+      await new Promise(r => setTimeout(r, delay * 1000));
+    }
+  }
+  isProcessingQueue = false;
+}
+
+async function sendToPreReview(req) {
+  try {
+    await loadSettings();
+    const preId = getSetting('pre_review_channel');
+    if (!preId) return;
+    const ch = await client.channels.fetch(preId).catch(() => null);
+    if (!ch) return;
+
+    const embed = new EmbedBuilder()
+      .setTitle(`🔍 Pre-Review: ${req.type.toUpperCase()} (#${req.id})`)
+      .setDescription(`**Player:** <@${req.discord_id}> \n**Username:** ${req.username}\n**VRFS ID:** ${req.vrfs_id} \n\n**Proof Link:** ${req.proof_url || 'No link provided'}`)
+      .setColor(0xFFA500);
+    const btns = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`batch_pr_approve_${req.id}`).setLabel('Send to Batches').setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId(`batch_pr_reject_${req.id}`).setLabel('Decline').setStyle(ButtonStyle.Danger)
+    );
+    const msg = await ch.send({ embeds: [embed], components: [btns] });
+    await run("UPDATE batch_requests SET msg_id = ?, ch_id = ? WHERE id = ?", [msg.id, ch.id, req.id]);
+  } catch (e) {
+    console.error('[sendToPreReview Error]', e.message);
+  }
+}
+
 async function logStaffAction(staffId, staffName, action, targetId, details) {
   try {
     await run("INSERT INTO staff_logs (staff_id, staff_name, action, target_id, details) VALUES (?,?,?,?,?)", [staffId, staffName, action, targetId, details]);
@@ -468,8 +511,14 @@ client.on('interactionCreate', async interaction => {
         await run("UPDATE batch_requests SET msg_id = NULL, ch_id = NULL WHERE id = ?", [r.id]);
       }
 
-      await logStaffAction(interaction.user.id, interaction.user.username, 'MASS_MSG_DELETE', startId, `Deleted ${deletedCount} messages.`);
       return interaction.editReply(`✅ Successfully deleted **${deletedCount}** review messages from ID #${startId} down.`);
+    }
+
+    if (commandName === 'batch_slowdown') {
+      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+      const seconds = interaction.options.getInteger('seconds');
+      await setSetting('slowdown_seconds', seconds.toString());
+      return interaction.reply({ content: `✅ Slowdown set to **${seconds} seconds** between messages in the staff channel.`, ephemeral: true });
     }
 
     if (commandName === 'post-admin-batch-add') {
@@ -1033,26 +1082,11 @@ async function handleNewRequest(interaction, type, providedUser = null) {
 
 async function createRequest(userId, username, vrfsId, type, details, proofUrl) {
   await run('INSERT INTO batch_requests (discord_id, username, vrfs_id, type, details, proof_url, status) VALUES (?,?,?,?,?,?,?)', [userId, username, vrfsId, type, details, proofUrl, 'pre_review']);
-  const req = await get('SELECT id FROM batch_requests WHERE discord_id = ? ORDER BY id DESC LIMIT 1', [userId]);
-  const id = req.id;
-
-  await loadSettings();
-  const preId = getSetting('pre_review_channel');
-  if (preId) {
-    const ch = await client.channels.fetch(preId).catch(() => null);
-    if (ch) {
-      const embed = new EmbedBuilder()
-        .setTitle(`🔍 Pre-Review: ${type.toUpperCase()} (#${id})`)
-        .setDescription(`**Player:** <@${userId}> \n**Username:** ${username}\n**VRFS ID:** ${vrfsId} \n\n**Proof Link:** ${proofUrl || 'No link provided'}`)
-        .setColor(0xFFA500);
-      const btns = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`batch_pr_approve_${id}`).setLabel('Send to Batches').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId(`batch_pr_reject_${id}`).setLabel('Decline').setStyle(ButtonStyle.Danger)
-      );
-      const msg = await ch.send({ embeds: [embed], components: [btns] });
-      await run("UPDATE batch_requests SET msg_id = ?, ch_id = ? WHERE id = ?", [msg.id, ch.id, id]);
-    }
-  }
+  const req = await get('SELECT id, discord_id, username, vrfs_id, type, proof_url FROM batch_requests WHERE discord_id = ? ORDER BY id DESC LIMIT 1', [userId]);
+  
+  // Push to the slowdown queue instead of posting immediately
+  preReviewQueue.push(req);
+  processPreReviewQueue();
 }
 
 async function registerCommands() {
