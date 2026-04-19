@@ -1,5 +1,6 @@
 import { NextAuthOptions } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
+import { execute } from "@/lib/db";
 import { isMemberAdmin } from "@/lib/discord";
 
 export const authOptions: NextAuthOptions = {
@@ -25,12 +26,20 @@ export const authOptions: NextAuthOptions = {
             const guilds = await res.json();
             // Filter guilds where user has Administrator permission (0x8)
             const manageable = guilds.filter((g: any) => (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8));
-            token.manageableGuilds = manageable.map((g: any) => ({
+            
+            // Fetch partnered guilds (where the bot is active) from DB
+            const { rows: settings } = await execute("SELECT guild_id FROM guild_settings");
+            const partneredIds = new Set(settings.map((s: any) => s.guild_id));
+
+            // Only count them as manageable if the bot is actually there
+            const validManageable = manageable.filter((g: any) => partneredIds.has(g.id));
+
+            token.manageableGuilds = validManageable.map((g: any) => ({
               id: g.id,
               name: g.name,
               icon: g.icon
             }));
-            token.isAdmin = manageable.length > 0;
+            token.isAdmin = validManageable.length > 0;
           }
         } catch (e) {
           console.error("Failed to fetch guilds:", e);
