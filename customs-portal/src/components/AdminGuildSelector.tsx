@@ -12,7 +12,7 @@ interface Guild {
 }
 
 export default function AdminGuildSelector({ guilds }: { guilds: Guild[] }) {
-  const [filter, setFilter] = useState<"all" | "active">("all");
+  const [filter, setFilter] = useState<"all" | "active">("active");
   const [search, setSearch] = useState("");
 
   const filteredGuilds = guilds.filter(g => {

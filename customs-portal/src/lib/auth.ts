@@ -29,17 +29,17 @@ export const authOptions: NextAuthOptions = {
             
             // Fetch partnered guilds (where the bot is active) from DB
             const { rows: settings } = await execute("SELECT guild_id FROM guild_settings");
-            const partneredIds = new Set(settings.map((s: any) => s.guild_id));
+            const partneredIds = new Set(settings.map((s: any) => String(s.guild_id)));
 
-            // Only count them as manageable if the bot is actually there
-            const validManageable = manageable.filter((g: any) => partneredIds.has(g.id));
-
-            token.manageableGuilds = validManageable.map((g: any) => ({
+            const manageableGuilds = manageable.map((g: any) => ({
               id: g.id,
               name: g.name,
-              icon: g.icon
+              icon: g.icon,
+              hasBot: partneredIds.has(String(g.id))
             }));
-            token.isAdmin = validManageable.length > 0;
+
+            token.manageableGuilds = manageableGuilds;
+            token.isAdmin = manageableGuilds.some((g: any) => g.hasBot);
           }
         } catch (e) {
           console.error("Failed to fetch guilds:", e);
