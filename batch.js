@@ -139,31 +139,72 @@ async function setSetting(key, value) {
 const PORT = process.env.PORT || 3000;
 const API_TOKEN = process.env.WEB_API_TOKEN || "vbll_batch_secret";
 
+async function syncRequestMessage(requestId) {
+  const req = await get("SELECT * FROM batch_requests WHERE id = ?", [requestId]);
+  if (!req || !req.msg_id || !req.ch_id) return;
+  try {
+    const ch = await client.channels.fetch(req.ch_id).catch(() => null);
+    if (!ch) return;
+    const msg = await ch.messages.fetch(req.msg_id).catch(() => null);
+    if (!msg) return;
+
+    const embed = new EmbedBuilder().setTitle(`📥 Queue: ${req.type} (#${req.id})`)
+      .setDescription(`**Player:** <@${req.discord_id}> \n**Username:** ${req.username}\n**VRFS ID:** ${req.vrfs_id}\n**Proof:** [Message Link](${req.proof_url})`)
+      .setColor(0x5865f2).setTimestamp();
+    
+    if (req.batch_id) {
+       embed.addFields({ name: 'Current Batch', value: `#${req.batch_id}`, inline: true });
+    }
+    await msg.edit({ embeds: [embed] });
+  } catch(e) {}
+}
+
+async function waterfallBatches() {
+  const openBatches = await all("SELECT * FROM batches WHERE status = 'open' ORDER BY id ASC");
+  for (const b of openBatches) {
+    const countData = await get("SELECT COUNT(*) as cnt FROM batch_requests WHERE batch_id = ?", [b.id]);
+    let count = countData.cnt;
+    while (count < 8) {
+       // Try pulling from future batches first
+       let next = await get(`SELECT id, discord_id, type FROM batch_requests WHERE batch_id IN (SELECT id FROM batches WHERE status = 'open' AND id > ?) ORDER BY batch_id ASC, created_at ASC LIMIT 1`, [b.id]);
+       
+       // If no future batches, pull from pending queue
+       if (!next) {
+          next = await get("SELECT id, discord_id, type FROM batch_requests WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1");
+          if (next) {
+             await run("UPDATE batch_requests SET status = 'completed', verified_at = CURRENT_TIMESTAMP WHERE id = ?", [next.id]);
+          }
+       }
+
+       if (!next) break;
+       await run("UPDATE batch_requests SET batch_id = ? WHERE id = ?", [b.id, next.id]);
+       count++;
+       try {
+         const u = await client.users.fetch(next.discord_id);
+         await u.send({ embeds: [new EmbedBuilder().setTitle('📦 Priority Bump').setDescription(`Your **${next.type}** was moved to **Batch #${b.id}** to fill a gap!`).setColor(0x5865f2)] });
+       } catch(e){}
+       await syncRequestMessage(next.id);
+    }
+  }
+}
+
 http.createServer(async (req, res) => {
-  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-  // Simple Token Auth
   const auth = req.headers['authorization'];
-  if (auth !== `Bearer ${API_TOKEN}`) {
-    res.writeHead(401); res.end('Unauthorized');
-    return;
-  }
+  if (auth !== `Bearer ${API_TOKEN}`) { res.writeHead(401); res.end('Unauthorized'); return; }
 
   if (req.method === 'POST' && req.url === '/notify-dm') {
-    let body = '';
-    req.on('data', chunk => body += chunk);
+    let body = ''; req.on('data', chunk => body += chunk);
     req.on('end', async () => {
       try {
         const { userId, status, type, id } = JSON.parse(body);
         const user = await client.users.fetch(userId).catch(() => null);
         if (user) {
-          const embed = new EmbedBuilder()
-            .setTitle(`🆕 Order Update: #${id}`)
+          const embed = new EmbedBuilder().setTitle(`🆕 Order Update: #${id}`)
             .setDescription(`Your request for a **${type.toUpperCase()}** has been **${status.toUpperCase()}**.`)
             .setColor(status === 'completed' ? 0x00f5a0 : status === 'approved' ? 0x5865f2 : 0xff4d4d)
             .setTimestamp();
@@ -175,19 +216,32 @@ http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'POST' && req.url === '/reorder') {
+     await waterfallBatches();
+     res.writeHead(200); res.end(JSON.stringify({ success: true }));
+     return;
+  }
+
+  if (req.method === 'POST' && req.url === '/sync-message') {
+    let body = ''; req.on('data', chunk => body += chunk);
+    req.on('end', async () => {
+      try {
+        const { requestId } = JSON.parse(body);
+        await syncRequestMessage(requestId);
+        res.writeHead(200); res.end('OK');
+      } catch(e) { res.writeHead(400); res.end('Error'); }
+    });
+    return;
+  }
+
   if (req.method === 'POST' && req.url === '/start-flow') {
-    let body = '';
-    req.on('data', chunk => body += chunk);
+    let body = ''; req.on('data', chunk => body += chunk);
     req.on('end', async () => {
       try {
         const { userId, type } = JSON.parse(body);
         const user = await client.users.fetch(userId).catch(() => null);
-        if (user) {
-          handleNewRequest(null, type, user);
-          res.writeHead(200); res.end(JSON.stringify({ success: true }));
-        } else {
-          res.writeHead(404); res.end('User not found');
-        }
+        if (user) { handleNewRequest(null, type, user); res.writeHead(200); res.end(JSON.stringify({ success: true })); }
+        else { res.writeHead(404); res.end('User not found'); }
       } catch (e) { res.writeHead(400); res.end('Error'); }
     });
     return;
@@ -720,10 +774,10 @@ client.on('interactionCreate', async interaction => {
       
       if (action === 'done') {
         // --- 📦 Batch Logic ---
-        let batch = await get("SELECT * FROM batches WHERE status = 'open' LIMIT 1");
+        let batch = await get("SELECT * FROM batches WHERE status = 'open' ORDER BY id ASC LIMIT 1");
         if (!batch) {
           await run("INSERT INTO batches (status) VALUES ('open')");
-          batch = await get("SELECT * FROM batches WHERE status = 'open' LIMIT 1");
+          batch = await get("SELECT * FROM batches WHERE status = 'open' ORDER BY id ASC LIMIT 1");
         }
         
         await run("UPDATE batch_requests SET batch_id = ? WHERE id = ?", [batch.id, id]);
