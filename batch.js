@@ -409,41 +409,34 @@ client.on('interactionCreate', async interaction => {
 
       await interaction.deferReply({ ephemeral: true });
 
-      // Find all pending OR completed (un-sent) requests <= startId
-      const targetReqs = await all("SELECT * FROM batch_requests WHERE id <= ? AND status IN ('pending', 'completed')", [startId]);
-      if (!targetReqs.length) return interaction.editReply(`📭 No eligible requests (Pending or Accepted) found from #${startId} downwards.`);
+      // Find all PRE-REVIEW requests <= startId (Ignores accepted ones)
+      const targetReqs = await all("SELECT * FROM batch_requests WHERE id <= ? AND status = 'pre_review'", [startId]);
+      if (!targetReqs.length) return interaction.editReply(`📭 No requests in 'Pending Review' found from #${startId} downwards.`);
 
       let declinedCount = 0;
       for (const req of targetReqs) {
-        // Update DB: Set to declined and REMOVE from any batch
-        await run("UPDATE batch_requests SET status = 'declined', batch_id = NULL WHERE id = ?", [req.id]);
+        // Update DB: Set to declined
+        await run("UPDATE batch_requests SET status = 'declined' WHERE id = ?", [req.id]);
         
         // Notify User
         try {
           const user = await client.users.fetch(req.discord_id);
           const embed = new EmbedBuilder()
             .setTitle('❌ Request Declined')
-            .setDescription(`Your request for a **${req.type}** (ID #${req.id}) has been declined.`)
+            .setDescription(`Your request for a **${req.type}** (ID #${req.id}) was not approved by staff.`)
             .addFields({ name: 'Reason', value: reason })
             .setColor(0xff4d4d)
             .setTimestamp();
           await user.send({ embeds: [embed] });
         } catch (e) {}
 
-        // Sync Message (Updates the embed in the review channel)
+        // Sync Message (Updates the embed in the review channel to 'Declined')
         await syncRequestMessage(req.id);
         declinedCount++;
       }
 
-      // TRIGGER WATERFALL: This fills the gaps left by the declined people and updates the website!
-      try {
-        await waterfallBatches();
-      } catch (e) {
-        console.error('[Mass Decline Waterfall Error]', e.message);
-      }
-
-      await logStaffAction(interaction.user.id, interaction.user.username, 'MASS_DECLINE', startId, `Declined ${declinedCount} requests. Reason: ${reason}`);
-      return interaction.editReply(`✅ Mass declined **${declinedCount}** requests (Pending & Accepted) and re-stacked the waterfall.`);
+      await logStaffAction(interaction.user.id, interaction.user.username, 'MASS_DECLINE_REVIEW', startId, `Declined ${declinedCount} pre-review requests. Reason: ${reason}`);
+      return interaction.editReply(`✅ Mass declined **${declinedCount}** requests that were in 'Pending Review'. Accepted items were not touched.`);
     }
 
     if (commandName === 'batch_mass_delete_messages') {
@@ -452,8 +445,9 @@ client.on('interactionCreate', async interaction => {
 
       await interaction.deferReply({ ephemeral: true });
 
-      const rows = await all("SELECT id, msg_id, ch_id FROM batch_requests WHERE id <= ? AND msg_id IS NOT NULL", [startId]);
-      if (!rows.length) return interaction.editReply(`📭 No review messages found for requests <= #${startId}.`);
+      // Only delete messages for those that were NOT accepted (Sitting in review or already declined)
+      const rows = await all("SELECT id, msg_id, ch_id FROM batch_requests WHERE id <= ? AND msg_id IS NOT NULL AND status IN ('pre_review', 'declined')", [startId]);
+      if (!rows.length) return interaction.editReply(`📭 No eligible review messages (Pending Review or Declined) found for requests <= #${startId}.`);
 
       let deletedCount = 0;
       for (const r of rows) {
