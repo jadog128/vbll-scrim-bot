@@ -409,14 +409,14 @@ client.on('interactionCreate', async interaction => {
 
       await interaction.deferReply({ ephemeral: true });
 
-      // Find all pending requests <= startId
-      const pending = await all("SELECT * FROM batch_requests WHERE id <= ? AND status = 'pending'", [startId]);
-      if (!pending.length) return interaction.editReply(`📭 No pending requests found from #${startId} downwards.`);
+      // Find all pending OR completed (un-sent) requests <= startId
+      const targetReqs = await all("SELECT * FROM batch_requests WHERE id <= ? AND status IN ('pending', 'completed')", [startId]);
+      if (!targetReqs.length) return interaction.editReply(`📭 No eligible requests (Pending or Accepted) found from #${startId} downwards.`);
 
       let declinedCount = 0;
-      for (const req of pending) {
-        // Update DB
-        await run("UPDATE batch_requests SET status = 'declined' WHERE id = ?", [req.id]);
+      for (const req of targetReqs) {
+        // Update DB: Set to declined and REMOVE from any batch
+        await run("UPDATE batch_requests SET status = 'declined', batch_id = NULL WHERE id = ?", [req.id]);
         
         // Notify User
         try {
@@ -428,17 +428,22 @@ client.on('interactionCreate', async interaction => {
             .setColor(0xff4d4d)
             .setTimestamp();
           await user.send({ embeds: [embed] });
-        } catch (e) {
-          console.warn(`[Mass Decline] Could not notify user ${req.discord_id}: ${e.message}`);
-        }
+        } catch (e) {}
 
         // Sync Message (Updates the embed in the review channel)
         await syncRequestMessage(req.id);
         declinedCount++;
       }
 
-      await logStaffAction(interaction.user.id, interaction.user.username, 'MASS_DECLINE', startId, `Declined ${declinedCount} requests from #${startId} down. Reason: ${reason}`);
-      return interaction.editReply(`✅ Mass declined **${declinedCount}** requests from #${startId} down to #1.`);
+      // TRIGGER WATERFALL: This fills the gaps left by the declined people and updates the website!
+      try {
+        await waterfallBatches();
+      } catch (e) {
+        console.error('[Mass Decline Waterfall Error]', e.message);
+      }
+
+      await logStaffAction(interaction.user.id, interaction.user.username, 'MASS_DECLINE', startId, `Declined ${declinedCount} requests. Reason: ${reason}`);
+      return interaction.editReply(`✅ Mass declined **${declinedCount}** requests (Pending & Accepted) and re-stacked the waterfall.`);
     }
 
     if (commandName === 'batch_mass_delete_messages') {
