@@ -679,7 +679,7 @@ client.on('interactionCreate', async interaction => {
           const ch = await client.channels.fetch(qId).catch(() => null);
           if (ch) {
             const embed = new EmbedBuilder().setTitle(`📥 Queue: ${req.type} (#${id})`)
-              .setDescription(`**Player:** <@${req.discord_id}>\n**VRFS ID:** ${req.vrfs_id}\n**Proof:** [Message Link](${req.proof_url})`)
+              .setDescription(`**Player:** <@${req.discord_id}> \n**Username:** ${req.username}\n**VRFS ID:** ${req.vrfs_id}\n**Proof:** [Message Link](${req.proof_url})`)
               .setColor(0x5865f2).setTimestamp();
             const buttons = new ActionRowBuilder().addComponents(
               new ButtonBuilder().setCustomId(`batch_done_${id}`).setLabel('Fulfil').setStyle(ButtonStyle.Success),
