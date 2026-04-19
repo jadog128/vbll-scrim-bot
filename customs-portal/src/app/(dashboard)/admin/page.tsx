@@ -9,36 +9,26 @@ import AdminExportTrigger from "@/components/AdminExportTrigger";
 
 export const dynamic = "force-dynamic";
 
+import AdminGuildSelector from "@/components/AdminGuildSelector";
+
 export default async function AdminPanel(props: { searchParams: Promise<{ guild?: string }> }) {
   const session = await getServerSession(authOptions);
   const manageableGuilds = (session?.user as any)?.manageableGuilds || [];
   const searchParams = await props.searchParams;
+  
+  // Fetch guilds that have settings (bot is active)
+  const activeGuildsRes = await execute("SELECT DISTINCT guild_id FROM guild_settings");
+  const activeGuildIds = new Set(activeGuildsRes.rows.map((r: any) => r.guild_id));
+
+  const guildsWithBotInfo = manageableGuilds.map((g: any) => ({
+    ...g,
+    hasBot: activeGuildIds.has(g.id)
+  }));
+
   const selectedGuildId = searchParams.guild || (manageableGuilds.length === 1 ? manageableGuilds[0].id : null);
 
   if (!selectedGuildId && manageableGuilds.length > 1) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-in fade-in zoom-in duration-500">
-        <div className="text-center space-y-2">
-          <h2 className="text-3xl font-black text-on-surface tracking-tight">Select a League</h2>
-          <p className="text-on-surface-variant font-medium">Which server would you like to manage today?</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
-          {manageableGuilds.map((g: any) => (
-            <Link key={g.id} href={`/admin?guild=${g.id}`} className="group p-6 bg-surface-container-low rounded-[2rem] border border-outline-variant/10 hover:border-primary/30 transition-all hover:translate-y-[-4px]">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-white text-2xl font-black shadow-ambient group-hover:scale-105 transition-transform">
-                  {g.icon ? <img src={`https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png`} className="w-full h-full rounded-2xl" /> : g.name[0]}
-                </div>
-                <div>
-                   <div className="font-bold text-lg text-on-surface group-hover:text-primary transition-colors">{g.name}</div>
-                   <div className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest mt-1">Manage Server</div>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-    );
+    return <AdminGuildSelector guilds={guildsWithBotInfo} />;
   }
 
   // Fallback to default guild if still null (for safety)

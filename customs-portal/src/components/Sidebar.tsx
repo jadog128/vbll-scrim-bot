@@ -16,6 +16,13 @@ export default function Sidebar() {
 
   if ((session?.user as any)?.isAdmin) {
     links.unshift({ name: "Admin Dashboard", href: "/admin", icon: "dashboard_customize" });
+    
+    // Check if user has multiple guilds to switch between
+    const guilds = (session?.user as any)?.manageableGuilds || [];
+    if (guilds.length > 1) {
+      links.push({ name: "Switch League", href: "/admin", icon: "swap_horiz" }); // Re-visiting /admin without ?guild triggers the selector
+    }
+    
     links.push({ name: "Staff Logs", href: "/admin/logs", icon: "shield_person" });
     links.push({ name: "Batch Archive", href: "/admin/archive", icon: "history" });
   }
