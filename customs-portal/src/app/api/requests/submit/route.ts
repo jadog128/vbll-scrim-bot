@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     if (preId) {
         const embed = {
             title: `🔍 Pre-Review: ${type.toUpperCase()} (#${requestId})`,
-            description: `**Player:** <@${(session.user as any).id}> \n**VRFS ID:** ${vrfsId} \n\n**Proof Link:** ${proofUrl}\n\n*(Submitted via Web Portal)*`,
+            description: `**Player:** <@${(session.user as any).id}> \n**Username:** ${session.user.name}\n**VRFS ID:** ${vrfsId} \n\n**Proof Link:** ${proofUrl}\n\n*(Submitted via Web Portal)*`,
             color: 0xFFA500,
             timestamp: new Date().toISOString()
         };
