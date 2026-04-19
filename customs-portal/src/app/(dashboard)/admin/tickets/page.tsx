@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { MessageSquare, CheckCircle } from "lucide-react";
 import AdminTicketRow from "@/components/AdminTicketRow";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function AdminTicketsPage() {
+function TicketsContent() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
@@ -86,5 +86,13 @@ export default function AdminTicketsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AdminTicketsPage() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center animate-pulse text-on-surface-variant">Synchronizing Secure Context...</div>}>
+      <TicketsContent />
+    </Suspense>
   );
 }
