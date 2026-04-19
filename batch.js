@@ -665,32 +665,37 @@ client.on('interactionCreate', async interaction => {
       if (req.status !== 'pre_review') return interaction.reply({ content: '⚠️ This request has already been handled.', ephemeral: true });
 
       if (action === 'approve') {
-        await run("UPDATE batch_requests SET status = 'pending', verified_at = CURRENT_TIMESTAMP WHERE id = ?", [id]);
-        await interaction.message.delete().catch(() => {});
-        // DM User
         try {
-          const user = await client.users.fetch(req.discord_id);
-          await user.send({ embeds: [new EmbedBuilder().setTitle('✅ Verified!').setDescription(`Your **${req.type}** is now in the queue (#${id}).`).setColor(0x00f5a0)] });
-        } catch (e) {}
-        // Send to Queue
-        await loadSettings();
-        const qId = getSetting('review_channel');
-        if (qId) {
-          const ch = await client.channels.fetch(qId).catch(() => null);
-          if (ch) {
-            const embed = new EmbedBuilder().setTitle(`📥 Queue: ${req.type} (#${id})`)
-              .setDescription(`**Player:** <@${req.discord_id}> \n**Username:** ${req.username}\n**VRFS ID:** ${req.vrfs_id}\n**Proof:** [Message Link](${req.proof_url})`)
-              .setColor(0x5865f2).setTimestamp();
-            const buttons = new ActionRowBuilder().addComponents(
-              new ButtonBuilder().setCustomId(`batch_done_${id}`).setLabel('Fulfil').setStyle(ButtonStyle.Success),
-              new ButtonBuilder().setCustomId(`batch_deny_${id}`).setLabel('Reject').setStyle(ButtonStyle.Danger)
-            );
-            const msg = await ch.send({ embeds: [embed], components: [buttons] });
-            await run("UPDATE batch_requests SET msg_id = ?, ch_id = ? WHERE id = ?", [msg.id, ch.id, id]);
+          await run("UPDATE batch_requests SET status = 'pending', verified_at = CURRENT_TIMESTAMP WHERE id = ?", [id]);
+          await interaction.message.delete().catch(() => {});
+          // DM User
+          try {
+            const user = await client.users.fetch(req.discord_id);
+            await user.send({ embeds: [new EmbedBuilder().setTitle('✅ Verified!').setDescription(`Your **${req.type}** is now in the queue (#${id}).`).setColor(0x00f5a0)] });
+          } catch (e) {}
+          // Send to Queue
+          await loadSettings();
+          const qId = getSetting('review_channel');
+          if (qId) {
+            const ch = await client.channels.fetch(qId).catch(() => null);
+            if (ch) {
+              const embed = new EmbedBuilder().setTitle(`📥 Queue: ${req.type} (#${id})`)
+                .setDescription(`**Player:** <@${req.discord_id}> \n**Username:** ${req.username}\n**VRFS ID:** ${req.vrfs_id}\n**Proof:** [Message Link](${req.proof_url})`)
+                .setColor(0x5865f2).setTimestamp();
+              const buttons = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`batch_done_${id}`).setLabel('Fulfil').setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId(`batch_deny_${id}`).setLabel('Reject').setStyle(ButtonStyle.Danger)
+              );
+              const msg = await ch.send({ embeds: [embed], components: [buttons] });
+              await run("UPDATE batch_requests SET msg_id = ?, ch_id = ? WHERE id = ?", [msg.id, ch.id, id]);
+            }
           }
+          await logStaffAction(interaction.user.id, interaction.user.username, 'APPROVED_PRE_REVIEW', id, `Type: ${req.type}`);
+          return interaction.reply({ content: '✅ Approved and added to queue.', ephemeral: true });
+        } catch (err) {
+          console.error('[Approval Error]', err);
+          return interaction.reply({ content: `❌ Error during approval: ${err.message}`, ephemeral: true });
         }
-        await logStaffAction(interaction.user.id, interaction.user.username, 'APPROVED_PRE_REVIEW', id, `Type: ${req.type}`);
-        return interaction.reply({ content: '✅ Approved and added to queue.', ephemeral: true });
       } else {
         await run("UPDATE batch_requests SET status = 'rejected' WHERE id = ?", [id]);
         await logStaffAction(interaction.user.id, interaction.user.username, 'REJECTED_PRE_REVIEW', id, `Type: ${req.type}`);
