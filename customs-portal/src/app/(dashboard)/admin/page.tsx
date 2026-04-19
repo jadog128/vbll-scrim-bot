@@ -6,8 +6,7 @@ import { ShieldCheck, Package, Layers, Users, ExternalLink, Settings, BarChart3,
 import AdminActions from "@/components/AdminActions";
 import Link from "next/link";
 import AdminExportTrigger from "@/components/AdminExportTrigger";
-import AdminAnalytics from "@/components/AdminAnalytics";
-import DraggableGrid from "@/components/DraggableGrid";
+import DashboardManager from "@/components/DashboardManager";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +79,6 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
         </div>
       </div>
     ),
-    analytics: <AdminAnalytics guildId={finalGuildId} />,
     deployments: (
       <div className="space-y-4">
           <h2 className="text-lg font-bold flex items-center gap-2 text-on-surface">
@@ -197,18 +195,11 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
         <AdminActions guildId={finalGuildId} />
       </div>
 
-      <div className="animate-in fade-in duration-1000">
-        {components.stats}
-      </div>
-      
-      <div className="animate-in fade-in duration-1000 delay-150">
-        {components.analytics}
-      </div>
-
-      <DraggableGrid 
+      <DashboardManager 
         guildId={finalGuildId}
-        leftContent={[{ id: 'deployments', content: components.deployments }]}
-        rightContent={[{ id: 'management', content: components.management }]}
+        stats={components.stats}
+        deployments={components.deployments}
+        management={components.management}
       />
     </div>
   );
