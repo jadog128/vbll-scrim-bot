@@ -65,6 +65,11 @@ const commands = [
     .addIntegerOption(o => o.setName('start_id').setDescription('The Request ID to start from (will decline from this to #1)').setRequired(true))
     .addStringOption(o => o.setName('reason').setDescription('Optional reason for declining').setRequired(false)),
 
+  new SlashCommandBuilder()
+    .setName('batch_mass_delete_messages')
+    .setDescription('Permanently delete review messages from a specific ID downwards [Staff Only]')
+    .addIntegerOption(o => o.setName('start_id').setDescription('The Request ID to start from').setRequired(true)),
+
 ].map(c => c.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.BATCH_DISCORD_TOKEN);

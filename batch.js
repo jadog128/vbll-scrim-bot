@@ -441,6 +441,38 @@ client.on('interactionCreate', async interaction => {
       return interaction.editReply(`✅ Mass declined **${declinedCount}** requests from #${startId} down to #1.`);
     }
 
+    if (commandName === 'batch_mass_delete_messages') {
+      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+      const startId = interaction.options.getInteger('start_id');
+
+      await interaction.deferReply({ ephemeral: true });
+
+      const rows = await all("SELECT id, msg_id, ch_id FROM batch_requests WHERE id <= ? AND msg_id IS NOT NULL", [startId]);
+      if (!rows.length) return interaction.editReply(`📭 No review messages found for requests <= #${startId}.`);
+
+      let deletedCount = 0;
+      for (const r of rows) {
+        try {
+          const channel = await client.channels.fetch(r.ch_id).catch(() => null);
+          if (channel) {
+            const msg = await channel.messages.fetch(r.msg_id).catch(() => null);
+            if (msg) {
+              await msg.delete();
+              deletedCount++;
+            }
+          }
+        } catch (e) {
+          console.warn(`[Mass Delete] Could not delete msg ${r.msg_id} for req #${r.id}: ${e.message}`);
+        }
+        
+        // Clear message IDs from DB so we don't try again
+        await run("UPDATE batch_requests SET msg_id = NULL, ch_id = NULL WHERE id = ?", [r.id]);
+      }
+
+      await logStaffAction(interaction.user.id, interaction.user.username, 'MASS_MSG_DELETE', startId, `Deleted ${deletedCount} messages.`);
+      return interaction.editReply(`✅ Successfully deleted **${deletedCount}** review messages from ID #${startId} down.`);
+    }
+
     if (commandName === 'post-admin-batch-add') {
       const items = await all('SELECT name FROM batch_options LIMIT 25');
       if (!items.length) return interaction.reply({ content: '❌ No options configured.', ephemeral: true });
