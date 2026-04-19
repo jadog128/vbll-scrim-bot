@@ -7,11 +7,11 @@ export async function POST() {
   if (!(session?.user as any)?.isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const botIp = process.env.BOT_SERVER_IP || "localhost";
+    const botHost = process.env.BOT_SERVER_HOST || process.env.BOT_SERVER_IP || "localhost:3000";
     const botToken = process.env.WEB_API_TOKEN || "vbll_batch_secret";
     
     // Trigger Waterfall on Bot
-    const res = await fetch(`http://${botIp}:3000/reorder`, {
+    const res = await fetch(`http://${botHost}/reorder`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${botToken}` }
     });

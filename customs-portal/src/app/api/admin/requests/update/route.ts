@@ -49,18 +49,18 @@ export async function POST(req: Request) {
     
     // Notify Bot to Sync Discord Embed & Trigger Waterfall
     try {
-      const botIp = process.env.BOT_SERVER_IP || "localhost";
+      const botHost = process.env.BOT_SERVER_HOST || process.env.BOT_SERVER_IP || "localhost:3000";
       const botToken = process.env.WEB_API_TOKEN || "vbll_batch_secret";
       
       // Sync the request embed
-      await fetch(`http://${botIp}:3000/sync-message`, {
+      await fetch(`http://${botHost}/sync-message`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${botToken}` },
         body: JSON.stringify({ requestId: id })
       }).catch(e => console.error("Bot sync failed", e));
 
       // Trigger Waterfall (to fill gaps)
-      await fetch(`http://${botIp}:3000/reorder`, {
+      await fetch(`http://${botHost}/reorder`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${botToken}` }
       }).catch(e => console.error("Reorder failed", e));
