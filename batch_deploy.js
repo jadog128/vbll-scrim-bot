@@ -76,9 +76,9 @@ const rest = new REST({ version: '10' }).setToken(process.env.BATCH_DISCORD_TOKE
       process.exit(1);
     }
 
-    console.log('🔄 Registering Batch Bot commands (GLOBAL)…');
+    console.log('🔄 Registering Batch Bot commands (GUILD: ' + process.env.BATCH_GUILD_ID + ')…');
     await rest.put(
-      Routes.applicationCommands(process.env.BATCH_CLIENT_ID),
+      Routes.applicationGuildCommands(process.env.BATCH_CLIENT_ID, process.env.BATCH_GUILD_ID),
       { body: commands }
     );
     console.log('✅ Registered ' + commands.length + ' batch commands globally!');
