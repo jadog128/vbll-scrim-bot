@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { execute } from "@/lib/db";
-import { History, ShieldAlert, ListFilter, Search } from "lucide-react";
+import { History, ShieldAlert, ListFilter, Search, Settings2 } from "lucide-react";
 import AdminRequestRow from "@/components/AdminRequestRow";
 import AdminSearchBar from "@/components/AdminSearchBar";
 import Link from "next/link";
@@ -60,7 +60,16 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
           <p className="text-on-surface-variant text-sm font-medium">Manage and fulfill player submissions.</p>
         </div>
         
-        <AdminSearchBar />
+        <div className="flex flex-wrap items-center gap-4">
+           <Link 
+             href="/admin/batches"
+             className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-lg shadow-primary/20"
+           >
+             <Settings2 className="w-4 h-4" />
+             Manage Batches
+           </Link>
+           <AdminSearchBar />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">

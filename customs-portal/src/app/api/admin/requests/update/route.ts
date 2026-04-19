@@ -39,13 +39,24 @@ export async function POST(req: Request) {
        console.warn(`Cannot send DM: current request or discord_id missing for ID ${id}`);
     }
     
-    // Log the action
-    if (session?.user) {
-      await execute(
-        "INSERT INTO staff_logs (staff_id, staff_name, action, target_id, details) VALUES (?,?,?,?,?)",
-        [(session.user as any).id, (session.user as any).username || session.user.name || "Staff", "WEB_EDIT", id.toString(), `Modified VRFS/Status/Batch`]
-      );
-    }
+    // Notify Bot to Sync Discord Embed & Trigger Waterfall
+    try {
+      const botIp = process.env.BOT_SERVER_IP || "localhost";
+      const botToken = process.env.WEB_API_TOKEN || "vbll_batch_secret";
+      
+      // Sync the request embed
+      await fetch(`http://${botIp}:3000/sync-message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${botToken}` },
+        body: JSON.stringify({ requestId: id })
+      }).catch(e => console.error("Bot sync failed", e));
+
+      // Trigger Waterfall (to fill gaps)
+      await fetch(`http://${botIp}:3000/reorder`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${botToken}` }
+      }).catch(e => console.error("Reorder failed", e));
+    } catch(e) {}
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
