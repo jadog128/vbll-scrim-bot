@@ -217,8 +217,13 @@ http.createServer(async (req, res) => {
   }
 
   if (req.method === 'POST' && req.url === '/reorder') {
-     await waterfallBatches();
-     res.writeHead(200); res.end(JSON.stringify({ success: true }));
+     try {
+        await waterfallBatches();
+        res.writeHead(200); res.end(JSON.stringify({ success: true }));
+     } catch(e) {
+        console.error("Waterfall Error:", e);
+        res.writeHead(500); res.end(JSON.stringify({ error: e.message }));
+     }
      return;
   }
 
