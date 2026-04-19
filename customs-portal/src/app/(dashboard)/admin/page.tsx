@@ -25,10 +25,10 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
     hasBot: activeGuildIds.has(g.id)
   }));
 
-  const selectedGuildId = searchParams.guild || (manageableGuilds.length === 1 ? manageableGuilds[0].id : null);
+  const selectedGuildId = searchParams.guild;
 
-  if (!selectedGuildId && manageableGuilds.length > 1) {
-    return <AdminGuildSelector guilds={guildsWithBotInfo} />;
+  if (!selectedGuildId) {
+    redirect("/admin/select");
   }
 
   // Fallback to default guild if still null (for safety)
@@ -60,7 +60,7 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
             Command Center
             {(session?.user as any)?.isAdmin && (
               <a 
-                href="/admin"
+                href="/admin/select"
                 className="ml-4 px-4 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-black uppercase tracking-tighter hover:bg-primary/20 transition-all flex items-center gap-2"
               >
                 <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
