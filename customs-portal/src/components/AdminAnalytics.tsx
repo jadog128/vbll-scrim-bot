@@ -104,16 +104,16 @@ export function OutcomeChart({ data }: { data: AnalyticsData }) {
         </div>
         <h3 className="text-xl font-black text-on-surface tracking-tight">Outcome Distribution</h3>
       </div>
-      <div className="h-80 w-full flex flex-col items-center">
+      <div className="h-[400px] w-full flex flex-col items-center">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={pieData}
               cx="50%"
               cy="50%"
-              innerRadius={60}
-              outerRadius={100}
-              paddingAngle={8}
+              innerRadius={90}
+              outerRadius={140}
+              paddingAngle={5}
               dataKey="value"
             >
               {pieData.map((entry, index) => (
@@ -121,7 +121,7 @@ export function OutcomeChart({ data }: { data: AnalyticsData }) {
               ))}
             </Pie>
             <Tooltip />
-            <Legend verticalAlign="bottom" align="center" />
+            <Legend verticalAlign="bottom" align="center" wrapperStyle={{ paddingTop: '20px' }} />
           </PieChart>
         </ResponsiveContainer>
         <div className="grid grid-cols-2 gap-4 w-full mt-4">
