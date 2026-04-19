@@ -402,6 +402,45 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply({ content: '✅ Cleared all pending requests.', ephemeral: true });
     }
 
+    if (commandName === 'batch_mass_decline') {
+      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+      const startId = interaction.options.getInteger('start_id');
+      const reason = interaction.options.getString('reason') || 'No reason provided.';
+
+      await interaction.deferReply({ ephemeral: true });
+
+      // Find all pending requests <= startId
+      const pending = await all("SELECT * FROM batch_requests WHERE id <= ? AND status = 'pending'", [startId]);
+      if (!pending.length) return interaction.editReply(`📭 No pending requests found from #${startId} downwards.`);
+
+      let declinedCount = 0;
+      for (const req of pending) {
+        // Update DB
+        await run("UPDATE batch_requests SET status = 'declined' WHERE id = ?", [req.id]);
+        
+        // Notify User
+        try {
+          const user = await client.users.fetch(req.discord_id);
+          const embed = new EmbedBuilder()
+            .setTitle('❌ Request Declined')
+            .setDescription(`Your request for a **${req.type}** (ID #${req.id}) has been declined.`)
+            .addFields({ name: 'Reason', value: reason })
+            .setColor(0xff4d4d)
+            .setTimestamp();
+          await user.send({ embeds: [embed] });
+        } catch (e) {
+          console.warn(`[Mass Decline] Could not notify user ${req.discord_id}: ${e.message}`);
+        }
+
+        // Sync Message (Updates the embed in the review channel)
+        await syncRequestMessage(req.id);
+        declinedCount++;
+      }
+
+      await logStaffAction(interaction.user.id, interaction.user.username, 'MASS_DECLINE', startId, `Declined ${declinedCount} requests from #${startId} down. Reason: ${reason}`);
+      return interaction.editReply(`✅ Mass declined **${declinedCount}** requests from #${startId} down to #1.`);
+    }
+
     if (commandName === 'post-admin-batch-add') {
       const items = await all('SELECT name FROM batch_options LIMIT 25');
       if (!items.length) return interaction.reply({ content: '❌ No options configured.', ephemeral: true });

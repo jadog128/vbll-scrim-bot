@@ -58,6 +58,12 @@ const commands = [
     .setName('set-batch-review-channel')
     .setDescription('Set the channel where batch requests are reviewed [Staff Only]')
     .addChannelOption(o => o.setName('channel').setDescription('Select the staff review channel').setRequired(true)),
+  
+  new SlashCommandBuilder()
+    .setName('batch_mass_decline')
+    .setDescription('Mass decline all pending requests from a specific ID downwards [Staff Only]')
+    .addIntegerOption(o => o.setName('start_id').setDescription('The Request ID to start from (will decline from this to #1)').setRequired(true))
+    .addStringOption(o => o.setName('reason').setDescription('Optional reason for declining').setRequired(false)),
 
 ].map(c => c.toJSON());
 
