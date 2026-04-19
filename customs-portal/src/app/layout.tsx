@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 };
 
 import SupportWidget from "@/components/SupportWidget";
+import Footer from "@/components/Footer";
 
 export default function RootLayout({
   children,
@@ -27,9 +28,12 @@ export default function RootLayout({
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
       </head>
-      <body className={`${jakarta.variable} antialiased bg-surface text-on-surface`}>
+      <body className={`${jakarta.variable} antialiased bg-surface text-on-surface flex flex-col min-h-screen`}>
         <Providers>
-          {children}
+          <main className="flex-grow">
+            {children}
+          </main>
+          <Footer />
           <SupportWidget />
         </Providers>
         <Analytics />
