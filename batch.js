@@ -315,7 +315,7 @@ client.on('interactionCreate', async interaction => {
     if (commandName === 'batch_check') {
       const rows = await all("SELECT * FROM batch_requests WHERE status = 'pending' ORDER BY id ASC");
       if (!rows.length) return interaction.reply({ content: '📭 Queue empty.', ephemeral: true });
-      const embed = new EmbedBuilder().setTitle('📋 Batch Queue').setDescription(rows.map(r => `**#${r.id}** | <@${r.discord_id}> | ${r.type}`).join('\n')).setColor(0x5865f2);
+      const embed = new EmbedBuilder().setTitle('📋 Batch Queue').setDescription(rows.map(r => `**#${r.id}** | <@${r.discord_id}> (${r.username}) | ${r.type}`).join('\n')).setColor(0x5865f2);
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
@@ -903,7 +903,7 @@ async function createRequest(userId, username, vrfsId, type, details, proofUrl) 
     if (ch) {
       const embed = new EmbedBuilder()
         .setTitle(`🔍 Pre-Review: ${type.toUpperCase()} (#${id})`)
-        .setDescription(`**Player:** <@${userId}> \n**VRFS ID:** ${vrfsId} \n\n**Proof Link:** ${proofUrl || 'No link provided'}`)
+        .setDescription(`**Player:** <@${userId}> \n**Username:** ${username}\n**VRFS ID:** ${vrfsId} \n\n**Proof Link:** ${proofUrl || 'No link provided'}`)
         .setColor(0xFFA500);
       const btns = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`batch_pr_approve_${id}`).setLabel('Send to Batches').setStyle(ButtonStyle.Success),
