@@ -8,6 +8,6 @@ async function check() {
   });
   
   const r = await db.execute('PRAGMA table_info(batch_requests)');
-  console.log('Columns:', r.rows.map(r => r.name).join(', '));
+  console.log('Columns:', r.rows.map(r => r.name));
 }
 check();

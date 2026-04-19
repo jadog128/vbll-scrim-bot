@@ -17,7 +17,10 @@ export async function POST() {
     });
 
     if (res.ok) return NextResponse.json({ success: true });
-    else return NextResponse.json({ error: "Waterfall failed" }, { status: 500 });
+    else {
+      const data = await res.json().catch(() => ({ error: "Waterfall failed" }));
+      return NextResponse.json(data, { status: 500 });
+    }
 
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
