@@ -415,8 +415,8 @@ client.on('interactionCreate', async interaction => {
 
       let declinedCount = 0;
       for (const req of targetReqs) {
-        // Update DB: Set to declined
-        await run("UPDATE batch_requests SET status = 'declined' WHERE id = ?", [req.id]);
+        // Update DB: Set to REJECTED (Matches website logic)
+        await run("UPDATE batch_requests SET status = 'rejected' WHERE id = ?", [req.id]);
         
         // Notify User
         try {
@@ -445,9 +445,9 @@ client.on('interactionCreate', async interaction => {
 
       await interaction.deferReply({ ephemeral: true });
 
-      // Only delete messages for those that were NOT accepted (Sitting in review or already declined)
-      const rows = await all("SELECT id, msg_id, ch_id FROM batch_requests WHERE id <= ? AND msg_id IS NOT NULL AND status IN ('pre_review', 'declined')", [startId]);
-      if (!rows.length) return interaction.editReply(`📭 No eligible review messages (Pending Review or Declined) found for requests <= #${startId}.`);
+      // Only delete messages for those that were NOT accepted (Sitting in review or already rejected/declined)
+      const rows = await all("SELECT id, msg_id, ch_id FROM batch_requests WHERE id <= ? AND msg_id IS NOT NULL AND status IN ('pre_review', 'declined', 'rejected')", [startId]);
+      if (!rows.length) return interaction.editReply(`📭 No eligible review messages (Pending Review or Rejected) found for requests <= #${startId}.`);
 
       let deletedCount = 0;
       for (const r of rows) {
@@ -993,7 +993,7 @@ async function handleNewRequest(interaction, type, providedUser = null) {
     }
 
     // Duplicate Check
-    const existing = await get("SELECT id FROM batch_requests WHERE discord_id = ? AND type = ? AND status NOT IN ('completed', 'rejected')", [user.id, type]);
+    const existing = await get("SELECT id FROM batch_requests WHERE discord_id = ? AND type = ? AND status NOT IN ('completed', 'rejected', 'declined')", [user.id, type]);
     if (existing) {
        const msg = `❌ You already have an active request for a **${type}** (ID: #${existing.id}). Please wait for it to be completed or rejected before ordering another one.`;
        if (interaction) return interaction.reply({ content: msg, ephemeral: true });
