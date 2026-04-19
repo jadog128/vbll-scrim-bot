@@ -7,6 +7,7 @@ import AdminActions from "@/components/AdminActions";
 import Link from "next/link";
 import AdminExportTrigger from "@/components/AdminExportTrigger";
 import AdminAnalytics from "@/components/AdminAnalytics";
+import DraggableGrid from "@/components/DraggableGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -38,29 +39,8 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
     return { ...b, requests: items.rows };
   }));
 
-  return (
-    <div className="space-y-10 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h2 className="text-3xl font-bold text-on-surface tracking-tight mb-1 flex items-center gap-3">
-            <span className="material-symbols-outlined text-primary text-3xl">admin_panel_settings</span>
-            Command Center
-            {(session?.user as any)?.isAdmin && (
-              <a 
-                href="/admin/select"
-                className="ml-4 px-4 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-black uppercase tracking-tighter hover:bg-primary/20 transition-all flex items-center gap-2"
-              >
-                <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
-                Switch League
-              </a>
-            )}
-          </h2>
-          <p className="text-on-surface-variant text-sm font-medium">Global request oversight and batch deployment.</p>
-        </div>
-        <AdminActions guildId={finalGuildId} />
-      </div>
-
-      {/* Stats Bento */}
+  const components = {
+    stats: (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-primary/5 rounded-3xl p-6 border border-primary/10 group hover:border-primary/30 transition-all">
           <div className="flex items-center gap-3 mb-4">
@@ -99,11 +79,10 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
           </div>
         </div>
       </div>
-
-      <AdminAnalytics guildId={finalGuildId} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-4">
+    ),
+    analytics: <AdminAnalytics guildId={finalGuildId} />,
+    deployments: (
+      <div className="space-y-4">
           <h2 className="text-lg font-bold flex items-center gap-2 text-on-surface">
             <span className="material-symbols-outlined text-on-surface-variant text-[20px]">stacks</span>
             Recent Deployments
@@ -138,8 +117,9 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
             ))}
           </div>
         </div>
-
-        <div className="space-y-4">
+    ),
+    management: (
+      <div className="space-y-4">
           <h2 className="text-lg font-bold flex items-center gap-2 text-on-surface">
             <span className="material-symbols-outlined text-on-surface-variant text-[20px]">settings_suggest</span>
             Management Suite
@@ -192,7 +172,44 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
              <AdminExportTrigger />
           </div>
         </div>
+    )
+  };
+
+  return (
+    <div className="space-y-10 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h2 className="text-3xl font-bold text-on-surface tracking-tight mb-1 flex items-center gap-3">
+            <span className="material-symbols-outlined text-primary text-3xl">admin_panel_settings</span>
+            Command Center
+            {(session?.user as any)?.isAdmin && (
+              <a 
+                href="/admin/select"
+                className="ml-4 px-4 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-black uppercase tracking-tighter hover:bg-primary/20 transition-all flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
+                Switch League
+              </a>
+            )}
+          </h2>
+          <p className="text-on-surface-variant text-sm font-medium">Global request oversight and batch deployment.</p>
+        </div>
+        <AdminActions guildId={finalGuildId} />
       </div>
+
+      <div className="animate-in fade-in duration-1000">
+        {components.stats}
+      </div>
+      
+      <div className="animate-in fade-in duration-1000 delay-150">
+        {components.analytics}
+      </div>
+
+      <DraggableGrid 
+        guildId={finalGuildId}
+        leftContent={[{ id: 'deployments', content: components.deployments }]}
+        rightContent={[{ id: 'management', content: components.management }]}
+      />
     </div>
   );
 }
