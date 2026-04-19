@@ -35,7 +35,10 @@ export default function AdminBatchManager({ batch }: { batch: any }) {
       // I'll create /api/admin/batches/reorder for convenience
       const res = await fetch("/api/admin/batches/reorder", { method: "POST" });
       if (res.ok) window.location.reload();
-      else alert("Reorder failed");
+      else {
+        const data = await res.json().catch(() => ({}));
+        alert(`Reorder failed: ${data.error || "Bot unreachable. Check BOT_SERVER_IP env var."}`);
+      }
     } catch(e) { alert("Error"); }
     setLoading(false);
   };
