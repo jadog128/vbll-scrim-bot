@@ -1,13 +1,11 @@
 "use client";
- 
-export const dynamic = "force-dynamic";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { MessageSquare, CheckCircle } from "lucide-react";
 import AdminTicketRow from "@/components/AdminTicketRow";
 import { useSearchParams, useRouter } from "next/navigation";
 
-function TicketsContent() {
+export default function AdminTicketsPage() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
@@ -37,7 +35,7 @@ function TicketsContent() {
     fetchTickets();
     const inv = setInterval(fetchTickets, 10000);
     return () => clearInterval(inv);
-  }, [tickets.length]);
+  }, [tickets.length, guildId, router]);
 
   const handleStatus = async (id: number, status: string) => {
     try {
@@ -88,13 +86,5 @@ function TicketsContent() {
         )}
       </div>
     </div>
-  );
-}
-
-export default function AdminTicketsPage() {
-  return (
-    <Suspense fallback={<div className="h-screen flex items-center justify-center animate-pulse text-on-surface-variant">Synchronizing Secure Context...</div>}>
-      <TicketsContent />
-    </Suspense>
   );
 }
