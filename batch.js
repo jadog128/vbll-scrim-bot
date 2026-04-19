@@ -766,7 +766,7 @@ client.on('interactionCreate', async interaction => {
     if (customId.startsWith('batch_done_') || customId.startsWith('batch_deny_')) {
       if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
       const [, action, id] = customId.split('_');
-      const reqCheck = await get('SELECT status FROM batch_requests WHERE id = ?', [id]);
+      const reqCheck = await get('SELECT * FROM batch_requests WHERE id = ?', [id]);
       if (!reqCheck || reqCheck.status !== 'pending') return interaction.reply({ content: '⚠️ Already processed.', ephemeral: true });
 
       const status = action === 'done' ? 'completed' : 'rejected';
@@ -781,6 +781,12 @@ client.on('interactionCreate', async interaction => {
         }
         
         await run("UPDATE batch_requests SET batch_id = ? WHERE id = ?", [batch.id, id]);
+        
+        // Notify user they are in a batch
+        try {
+          const user = await client.users.fetch(reqCheck.discord_id);
+          await user.send({ embeds: [new EmbedBuilder().setTitle('📦 Batch Assigned!').setDescription(`Great news! Your request for a **${reqCheck.type}** has been verified and added to **Batch #${batch.id}**.`).setColor(0x5865f2)] });
+        } catch(e) {}
         
         // Check if full
         const countData = await get("SELECT COUNT(*) as cnt FROM batch_requests WHERE batch_id = ?", [batch.id]);
