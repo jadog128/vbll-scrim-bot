@@ -11,13 +11,21 @@ export async function POST(req: Request) {
   try {
     const { id, vrfs_id, status, batch_id } = await req.json();
 
-    // Get current info for notification
-    const currentRes = await execute("SELECT vrfs_id, discord_id, status FROM batch_requests WHERE id = ?", [id]);
+    // Get current info for notification and fallback
+    const currentRes = await execute("SELECT vrfs_id, discord_id, status, batch_id FROM batch_requests WHERE id = ?", [id]);
     const current = currentRes.rows[0] as any;
+    if (!current) return NextResponse.json({ error: "Request not found" }, { status: 404 });
+
+    // Use current values as fallback if not provided
+    const newVrfsId = vrfs_id !== undefined ? vrfs_id : current.vrfs_id;
+    const newStatus = status !== undefined ? status : current.status;
+    let newBatchId = current.batch_id;
+    if (batch_id === "") newBatchId = null;
+    else if (batch_id !== undefined) newBatchId = (parseInt(batch_id) || null);
 
     await execute(
       "UPDATE batch_requests SET vrfs_id = ?, status = ?, batch_id = ? WHERE id = ?", 
-      [vrfs_id, status, batch_id === "" ? null : (parseInt(batch_id) || null), id]
+      [newVrfsId, newStatus, newBatchId, id]
     );
 
     // Notify User if anything changed
