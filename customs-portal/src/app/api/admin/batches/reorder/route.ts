@@ -18,8 +18,13 @@ export async function POST() {
 
     if (res.ok) return NextResponse.json({ success: true });
     else {
-      const data = await res.json().catch(() => ({ error: "Waterfall failed" }));
-      return NextResponse.json(data, { status: 500 });
+      const text = await res.text().catch(() => "Waterfall failed");
+      try {
+        const data = JSON.parse(text);
+        return NextResponse.json(data, { status: 500 });
+      } catch (e) {
+        return NextResponse.json({ error: text }, { status: 500 });
+      }
     }
 
   } catch (err: any) {
