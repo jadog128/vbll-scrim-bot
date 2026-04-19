@@ -137,7 +137,7 @@ async function setSetting(key, value) {
 
 // --- 🌍 Bot API (for Web Portal & Hub) ---
 const PORT = process.env.PORT || 3000;
-const API_TOKEN = process.env.WEB_API_TOKEN || "vbll_batch_secret";
+const API_TOKEN = process.env.WEB_API_TOKEN || "vbll_batch_v2_secret_key";
 
 async function syncRequestMessage(requestId) {
   const req = await get("SELECT * FROM batch_requests WHERE id = ?", [requestId]);
