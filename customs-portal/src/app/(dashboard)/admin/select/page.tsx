@@ -25,7 +25,7 @@ export default async function AdminSelectorPage() {
 
   // 3. Process Partnered Guilds from DB first
   partneredIds.forEach(pid => {
-    const sg = sessionGuildMap.get(pid);
+    const sg = sessionGuildMap.get(pid) as any;
     finalGuilds.push({
       id: pid,
       name: sg?.name || `Server Placeholder (${pid})`,
