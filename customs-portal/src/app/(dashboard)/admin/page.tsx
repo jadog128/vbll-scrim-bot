@@ -10,6 +10,7 @@ import AdminExportTrigger from "@/components/AdminExportTrigger";
 export const dynamic = "force-dynamic";
 
 import AdminGuildSelector from "@/components/AdminGuildSelector";
+import AdminAnalytics from "@/components/AdminAnalytics";
 
 export default async function AdminPanel(props: { searchParams: Promise<{ guild?: string }> }) {
   const session = await getServerSession(authOptions);
@@ -112,6 +113,8 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
           </div>
         </div>
       </div>
+      {/* Analytics Section */}
+      <AdminAnalytics guildId={finalGuildId} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-4">
