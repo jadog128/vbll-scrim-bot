@@ -7,15 +7,34 @@ export const authOptions: NextAuthOptions = {
     DiscordProvider({
       clientId: "1491103459942989905",
       clientSecret: "d67TEmOW3O2GcsF6MwHJhsFMNmM0u6J2",
-      authorization: { params: { scope: "identify email" } },
+      authorization: { params: { scope: "identify email guilds" } },
     }),
   ],
   callbacks: {
-    async jwt({ token, profile }) {
+    async jwt({ token, account, profile }) {
       if (profile) {
         token.id = (profile as any).id;
         token.username = (profile as any).username;
-        token.isAdmin = await isMemberAdmin(token.id as string);
+      }
+      if (account?.access_token) {
+        try {
+          const res = await fetch("https://discord.com/api/users/@me/guilds", {
+            headers: { Authorization: `Bearer ${account.access_token}` },
+          });
+          if (res.ok) {
+            const guilds = await res.json();
+            // Filter guilds where user has Administrator permission (0x8)
+            const manageable = guilds.filter((g: any) => (parseInt(g.permissions) & 0x8) === 0x8);
+            token.manageableGuilds = manageable.map((g: any) => ({
+              id: g.id,
+              name: g.name,
+              icon: g.icon
+            }));
+            token.isAdmin = manageable.length > 0;
+          }
+        } catch (e) {
+          console.error("Failed to fetch guilds:", e);
+        }
       }
       return token;
     },
@@ -24,6 +43,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id;
         (session.user as any).username = token.username;
         (session.user as any).isAdmin = token.isAdmin;
+        (session.user as any).manageableGuilds = token.manageableGuilds;
       }
       return session;
     },

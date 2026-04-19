@@ -4,23 +4,23 @@ import { useState, useEffect } from "react";
 import GlassButton from "./ui/GlassButton";
 import { Play, Pause, Send } from "lucide-react";
 
-export default function AdminActions() {
+export default function AdminActions({ guildId }: { guildId: string }) {
   const [loading, setLoading] = useState(false);
   const [halted, setHalted] = useState(false);
 
   useEffect(() => {
-    fetch("/api/admin/config")
+    fetch(`/api/admin/config?guild=${guildId}`)
       .then(res => res.json())
       .then(data => {
         const isHalted = data.find((s: any) => s.key === 'halted')?.value === 'true';
         setHalted(isHalted);
       });
-  }, []);
+  }, [guildId]);
 
   async function toggleHalt() {
     setLoading(true);
     try {
-        const res = await fetch("/api/admin/config", { 
+        const res = await fetch(`/api/admin/config?guild=${guildId}`, { 
             method: "POST", 
             body: JSON.stringify({ key: 'halted', value: 'toggle' }),
             headers: { 'Content-Type': 'application/json' }

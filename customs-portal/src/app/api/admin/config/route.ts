@@ -9,6 +9,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const guildId = searchParams.get('guild') || process.env.BATCH_GUILD_ID || "1286206719847960670";
   const { key, value } = await req.json();
 
   if (!key) {
@@ -17,23 +19,25 @@ export async function POST(req: Request) {
 
   try {
     if (value === 'toggle') {
-        const current = await execute("SELECT value FROM batch_settings WHERE key = ?", [key]);
+        const current = await execute("SELECT value FROM guild_settings WHERE guild_id = ? AND key = ?", [guildId, key]);
         const currentValue = current.rows.length > 0 ? (current.rows[0] as any).value : 'false';
         const newValue = currentValue === 'true' ? 'false' : 'true';
-        await execute("INSERT OR REPLACE INTO batch_settings (key, value) VALUES (?, ?)", [key, newValue]);
+        await execute("INSERT OR REPLACE INTO guild_settings (guild_id, key, value) VALUES (?, ?, ?)", [guildId, key, newValue]);
         return NextResponse.json({ success: true, newValue });
     }
 
-    await execute("INSERT OR REPLACE INTO batch_settings (key, value) VALUES (?, ?)", [key, value]);
+    await execute("INSERT OR REPLACE INTO guild_settings (guild_id, key, value) VALUES (?, ?, ?)", [guildId, key, value]);
     return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
-        const settings = await execute("SELECT * FROM batch_settings");
+        const { searchParams } = new URL(req.url);
+        const guildId = searchParams.get('guild') || process.env.BATCH_GUILD_ID || "1286206719847960670";
+        const settings = await execute("SELECT key, value FROM guild_settings WHERE guild_id = ?", [guildId]);
         return NextResponse.json(settings.rows);
     } catch (e) {
         return NextResponse.json([]);

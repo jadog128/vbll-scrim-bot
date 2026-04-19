@@ -15,7 +15,8 @@ export default async function Dashboard() {
   // Fetch user's requests with batch info
   const requestsRes = await execute(
     `SELECT br.*, b.status as batch_status, b.released_at as batch_released_at,
-     (SELECT COUNT(*) FROM batch_requests WHERE batch_id = br.batch_id) as batch_count
+     (SELECT COUNT(*) FROM batch_requests WHERE batch_id = br.batch_id) as batch_count,
+     (SELECT value FROM guild_settings WHERE guild_id = br.guild_id AND key = 'league_name') as league_name
      FROM batch_requests br 
      LEFT JOIN batches b ON br.batch_id = b.id 
      WHERE br.discord_id = ? 
@@ -134,7 +135,10 @@ export default async function Dashboard() {
               ) : null}
 
               <div className="space-y-1 mb-6">
-                <h4 className="text-lg font-bold text-on-surface group-hover:text-primary transition-colors">{req.type}</h4>
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="text-lg font-bold text-on-surface group-hover:text-primary transition-colors">{req.type}</h4>
+                  <span className="text-[10px] font-black text-primary/40 uppercase tracking-widest">{req.league_name || 'Legacy'}</span>
+                </div>
                 <div className="flex items-center gap-2 mb-2">
                    <div className="flex-1 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
                       <div 

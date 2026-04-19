@@ -8,7 +8,8 @@ require('dotenv').config({ path: '.env.batch' }); // Load local override
 const { 
   Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, 
   ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle,
-  REST, Routes, SlashCommandBuilder, Partials, PermissionFlagsBits, AttachmentBuilder
+  REST, Routes, SlashCommandBuilder, Partials, PermissionFlagsBits, AttachmentBuilder,
+  ChannelType
 } = require('discord.js');
 const { createClient } = require('@libsql/client');
 const http = require('http');
@@ -35,8 +36,15 @@ async function all(sql, params = []) { const r = await getDB().execute({ sql, ar
 
 async function initDB() {
   await run(`CREATE TABLE IF NOT EXISTS batch_settings (key TEXT PRIMARY KEY, value TEXT)`);
+  await run(`CREATE TABLE IF NOT EXISTS guild_settings (
+    guild_id TEXT,
+    key TEXT,
+    value TEXT,
+    PRIMARY KEY (guild_id, key)
+  )`);
   await run(`CREATE TABLE IF NOT EXISTS batch_requests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT,
     discord_id TEXT,
     username TEXT,
     vrfs_id TEXT,
@@ -51,14 +59,18 @@ async function initDB() {
   )`);
   await run(`CREATE TABLE IF NOT EXISTS batches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT,
     status TEXT DEFAULT 'open',
     released_at TIMESTAMP
   )`);
   await run(`CREATE TABLE IF NOT EXISTS batch_options (
-    name TEXT PRIMARY KEY
+    guild_id TEXT,
+    name TEXT,
+    PRIMARY KEY (guild_id, name)
   )`);
   await run(`CREATE TABLE IF NOT EXISTS batch_tickets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT,
     discord_id TEXT,
     username TEXT,
     issue TEXT,
@@ -67,6 +79,7 @@ async function initDB() {
   )`);
   await run(`CREATE TABLE IF NOT EXISTS staff_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT,
     staff_id TEXT,
     staff_name TEXT,
     action TEXT,
@@ -74,15 +87,52 @@ async function initDB() {
     details TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
+
+  // --- 🪄 Migration Logic: Add guild_id to old data ---
+  const tables = ['batch_requests', 'batches', 'batch_options', 'batch_tickets', 'staff_logs'];
+  const defaultGuild = process.env.BATCH_GUILD_ID || "1286206719847960670";
+
+  for (const table of tables) {
+    try { await run(`ALTER TABLE ${table} ADD COLUMN guild_id TEXT`); } catch(_) {}
+    // Tag any data that doesn't have a guild_id yet
+    await run(`UPDATE ${table} SET guild_id = ? WHERE guild_id IS NULL`, [defaultGuild]);
+  }
+  
   try { await run(`ALTER TABLE batch_requests ADD COLUMN batch_id INTEGER`); } catch(_) {}
   
   // Add a seed log if empty
   const logCheck = await get("SELECT COUNT(*) as cnt FROM staff_logs");
   if (logCheck.cnt === 0) {
-    await run("INSERT INTO staff_logs (staff_id, staff_name, action, target_id, details) VALUES (?,?,?,?,?)", ['SYSTEM', 'SYSTEM', 'INITIALIZED', '0', 'Audit logging system successfully activated.']);
+    await run("INSERT INTO staff_logs (guild_id, staff_id, staff_name, action, target_id, details) VALUES (?,?,?,?,?,?)", [defaultGuild, 'SYSTEM', 'SYSTEM', 'INITIALIZED', '0', 'Audit logging system successfully activated.']);
   }
 
-  console.log('✅ Batch Database Ready.');
+  // Migrate old settings to guild-specific settings if they exist
+  const oldSettings = await all("SELECT key, value FROM batch_settings");
+  for (const s of oldSettings) {
+    if (['last_heartbeat'].includes(s.key)) continue; // Keep global
+    await run("INSERT OR IGNORE INTO guild_settings (guild_id, key, value) VALUES (?,?,?)", [defaultGuild, s.key, s.value]);
+  }
+
+  console.log('✅ Multi-Guild Database Initialized.');
+}
+
+let settingsCache = {}; // guild_id -> { key: value }
+
+async function loadSettings(guildId) {
+  if (!guildId) return;
+  const rows = await all('SELECT key, value FROM guild_settings WHERE guild_id = ?', [guildId]);
+  settingsCache[guildId] = Object.fromEntries(rows.map(r => [r.key, r.value]));
+}
+
+function getSetting(guildId, key) { 
+  return settingsCache[guildId]?.[key]; 
+}
+
+async function setSetting(guildId, key, value) {
+  if (!guildId) return;
+  await run('INSERT OR REPLACE INTO guild_settings (guild_id, key, value) VALUES (?,?,?)', [guildId, key, value]);
+  if (!settingsCache[guildId]) settingsCache[guildId] = {};
+  settingsCache[guildId][key] = value;
 }
 
 let preReviewQueue = [];
@@ -97,7 +147,7 @@ async function processPreReviewQueue() {
     await sendToPreReview(item);
     preReviewQueue.shift();
 
-    const delay = parseInt(getSetting('slowdown_seconds') || '0');
+    const delay = parseInt(getSetting(item.guild_id, 'slowdown_seconds') || '0');
     if (delay > 0 && preReviewQueue.length > 0) {
       await new Promise(r => setTimeout(r, delay * 1000));
     }
@@ -107,8 +157,9 @@ async function processPreReviewQueue() {
 
 async function sendToPreReview(req) {
   try {
-    await loadSettings();
-    const preId = getSetting('pre_review_channel');
+    const gid = req.guild_id;
+    await loadSettings(gid);
+    const preId = getSetting(gid, 'pre_review_channel');
     if (!preId) return;
     const ch = await client.channels.fetch(preId).catch(() => null);
     if (!ch) return;
@@ -128,9 +179,9 @@ async function sendToPreReview(req) {
   }
 }
 
-async function logStaffAction(staffId, staffName, action, targetId, details) {
+async function logStaffAction(guildId, staffId, staffName, action, targetId, details) {
   try {
-    await run("INSERT INTO staff_logs (staff_id, staff_name, action, target_id, details) VALUES (?,?,?,?,?)", [staffId, staffName, action, targetId, details]);
+    await run("INSERT INTO staff_logs (guild_id, staff_id, staff_name, action, target_id, details) VALUES (?,?,?,?,?,?)", [guildId, staffId, staffName, action, targetId, details]);
   } catch (e) {
     console.error('[Log Error]', e.message);
   }
@@ -166,17 +217,7 @@ async function checkMilestoneRoles(userId) {
   }
 }
 
-// --- ⚙️ Settings Cache ---
-let settingsCache = {};
-async function loadSettings() {
-  const rows = await all('SELECT key, value FROM batch_settings');
-  settingsCache = Object.fromEntries(rows.map(r => [r.key, r.value]));
-}
-function getSetting(key) { return settingsCache[key]; }
-async function setSetting(key, value) {
-  await run('INSERT OR REPLACE INTO batch_settings (key, value) VALUES (?,?)', [key, value]);
-  settingsCache[key] = value;
-}
+// Redundant settings block removed
 
 // --- 🌍 Bot API (for Web Portal & Hub) ---
 const PORT = process.env.PORT || 3000;
@@ -184,7 +225,7 @@ const API_TOKEN = process.env.WEB_API_TOKEN || "vbll_batch_v2_secret_key";
 
 async function syncRequestMessage(requestId) {
   const req = await get("SELECT * FROM batch_requests WHERE id = ?", [requestId]);
-  if (!req || !req.msg_id || !req.ch_id) return;
+  if (!req || !req.msg_id || !req.ch_id || !req.guild_id) return;
   try {
     const ch = await client.channels.fetch(req.ch_id).catch(() => null);
     if (!ch) return;
@@ -202,18 +243,19 @@ async function syncRequestMessage(requestId) {
   } catch(e) {}
 }
 
-async function waterfallBatches() {
-  const openBatches = await all("SELECT * FROM batches WHERE status = 'open' ORDER BY id ASC");
+async function waterfallBatches(guildId) {
+  if (!guildId) return;
+  const openBatches = await all("SELECT * FROM batches WHERE status = 'open' AND guild_id = ? ORDER BY id ASC", [guildId]);
   for (const b of openBatches) {
     const countData = await get("SELECT COUNT(*) as cnt FROM batch_requests WHERE batch_id = ?", [b.id]);
     let count = countData.cnt;
     while (count < 8) {
        // Try pulling from future batches first
-       let next = await get(`SELECT id, discord_id, type FROM batch_requests WHERE batch_id IN (SELECT id FROM batches WHERE status = 'open' AND id > ?) ORDER BY batch_id ASC, created_at ASC LIMIT 1`, [b.id]);
+       let next = await get(`SELECT id, discord_id, type FROM batch_requests WHERE guild_id = ? AND batch_id IN (SELECT id FROM batches WHERE status = 'open' AND guild_id = ? AND id > ?) ORDER BY batch_id ASC, created_at ASC LIMIT 1`, [guildId, guildId, b.id]);
        
        // If no future batches, pull from pending queue
        if (!next) {
-          next = await get("SELECT id, discord_id, type FROM batch_requests WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1");
+          next = await get("SELECT id, discord_id, type FROM batch_requests WHERE guild_id = ? AND status = 'pending' ORDER BY created_at ASC LIMIT 1", [guildId]);
           if (next) {
              await run("UPDATE batch_requests SET status = 'completed', verified_at = CURRENT_TIMESTAMP WHERE id = ?", [next.id]);
           }
@@ -325,85 +367,109 @@ client.on('interactionCreate', async interaction => {
       const { commandName } = interaction;
 
     // Security Gate
-    if (['post-batch-request', 'batch_check', 'batch_add', 'batch_remove', 'batch_clear', 'set-batch-review-channel', 'set-batch-pre-review-channel', 'post-admin-batch-add'].includes(commandName)) {
+    if (['post-batch-request', 'batch_check', 'batch_add', 'batch_remove', 'batch_clear', 'set-batch-review-channel', 'set-batch-pre-review-channel', 'post-admin-batch-add', 'batch_slowdown', 'batch_halt', 'batch_sent', 'release_batch'].includes(commandName)) {
       if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Access Denied.', ephemeral: true });
+    }
+
+    if (commandName === 'setup') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return interaction.reply({ content: '❌ Administrator permissions required for setup.', ephemeral: true });
+      await interaction.deferReply({ ephemeral: true });
+      const gid = interaction.guildId;
+
+      try {
+        const category = await interaction.guild.channels.create({ name: '📦 Batch System', type: ChannelType.GuildCategory });
+        const preReview = await interaction.guild.channels.create({ name: '🔍-pre-review', parent: category.id });
+        const queue = await interaction.guild.channels.create({ name: '📋-batch-queue', parent: category.id });
+        const release = await interaction.guild.channels.create({ name: '🚀-batch-releases', parent: category.id });
+        const role = await interaction.guild.roles.create({ name: 'Batch Staff', color: 0x5865f2, reason: 'Batch System Setup' });
+
+        await setSetting(gid, 'league_name', interaction.guild.name);
+        await setSetting(gid, 'pre_review_channel', preReview.id);
+        await setSetting(gid, 'review_channel', queue.id);
+        await setSetting(gid, 'release_channel', release.id);
+        await setSetting(gid, 'staff_role', role.id);
+
+        return interaction.editReply(`✅ **Setup Complete!**\n\nCreated category **${category.name}** with all required channels.\nCreated role **<@&${role.id}>**. Give this role to your staff!`);
+      } catch (e) {
+        return interaction.editReply(`❌ Setup failed: ${e.message}`);
+      }
     }
 
     if (commandName === 'set-batch-pre-review-channel') {
       const ch = interaction.options.getChannel('channel');
-      await setSetting('pre_review_channel', ch.id);
+      await setSetting(interaction.guildId, 'pre_review_channel', ch.id);
       return interaction.reply({ content: `✅ Pre-Review channel set to <#${ch.id}>`, ephemeral: true });
     }
 
     if (commandName === 'set-batch-review-channel') {
       const ch = interaction.options.getChannel('channel');
-      await setSetting('review_channel', ch.id); 
+      await setSetting(interaction.guildId, 'review_channel', ch.id); 
       return interaction.reply({ content: `✅ Batch Queue channel set to <#${ch.id}>`, ephemeral: true });
     }
 
     if (commandName === 'set-batch-release-channel') {
       const ch = interaction.options.getChannel('channel');
-      await setSetting('release_channel', ch.id); 
+      await setSetting(interaction.guildId, 'release_channel', ch.id); 
       return interaction.reply({ content: `✅ Batch Release channel set to <#${ch.id}>`, ephemeral: true });
     }
 
     if (commandName === 'set-ticket-channel') {
       const ch = interaction.options.getChannel('channel');
-      await setSetting('ticket_channel', ch.id);
+      await setSetting(interaction.guildId, 'ticket_channel', ch.id);
       return interaction.reply({ content: `✅ Ticket alerts channel set to <#${ch.id}>`, ephemeral: true });
     }
 
     if (commandName === 'set-web-support-channel') {
       const ch = interaction.options.getChannel('channel');
-      await setSetting('web_support_channel', ch.id);
+      await setSetting(interaction.guildId, 'web_support_channel', ch.id);
       return interaction.reply({ content: `✅ Website chat alerts channel set to <#${ch.id}>`, ephemeral: true });
     }
 
     if (commandName === 'set-ticket-role') {
       const role = interaction.options.getRole('role');
-      await setSetting('ticket_role', role.id);
+      await setSetting(interaction.guildId, 'ticket_role', role.id);
       return interaction.reply({ content: `✅ Ticket staff role set to <@&${role.id}>`, ephemeral: true });
     }
 
     if (commandName === 'set-ticket-category') {
       const cat = interaction.options.getChannel('category');
       if (cat.type !== 4) return interaction.reply({ content: '❌ Please select a Category channel.', ephemeral: true });
-      await setSetting('ticket_category', cat.id);
+      await setSetting(interaction.guildId, 'ticket_category', cat.id);
       return interaction.reply({ content: `✅ Ticket category set to **${cat.name}**`, ephemeral: true });
     }
 
     if (commandName === 'close-ticket') {
       if (!interaction.channel.name.startsWith('ticket-')) return interaction.reply({ content: '❌ This can only be used in ticket channels.', ephemeral: true });
       const id = interaction.channel.name.split('-')[1];
-      await run("UPDATE batch_tickets SET status = 'closed' WHERE id = ?", [id]);
+      await run("UPDATE batch_tickets SET status = 'closed' WHERE id = ? AND guild_id = ?", [id, interaction.guildId]);
       await interaction.reply({ content: '🔒 Ticket marked as closed. Deleting channel in 5 seconds...' });
       setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
       return;
     }
 
     if (commandName === 'batch_option') {
-      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
       const sub = interaction.options.getSubcommand();
       const name = interaction.options.getString('name');
+      const gid = interaction.guildId;
 
       if (sub === 'add') {
-        await run("INSERT OR IGNORE INTO batch_options (name) VALUES (?)", [name]);
+        await run("INSERT OR IGNORE INTO batch_options (guild_id, name) VALUES (?,?)", [gid, name]);
         await registerCommands(); 
-        return interaction.reply({ content: `✅ Added **${name}** to batch options. Commands will update shortly.`, ephemeral: true });
+        return interaction.reply({ content: `✅ Added **${name}** to batch options for this server.`, ephemeral: true });
       } else if (sub === 'remove') {
-        await run("DELETE FROM batch_options WHERE name = ?", [name]);
+        await run("DELETE FROM batch_options WHERE name = ? AND guild_id = ?", [name, gid]);
         await registerCommands();
         return interaction.reply({ content: `✅ Removed **${name}** from batch options.`, ephemeral: true });
       } else if (sub === 'list') {
-        const rows = await all("SELECT name FROM batch_options");
+        const rows = await all("SELECT name FROM batch_options WHERE guild_id = ?", [gid]);
         const list = rows.map(r => `• ${r.name}`).join('\n') || 'None.';
         return interaction.reply({ content: `📋 **Current Batch Options:**\n${list}`, ephemeral: true });
       }
     }
 
     if (commandName === 'post-batch-request') {
-      const items = await all('SELECT name FROM batch_options LIMIT 25');
-      if (!items.length) return interaction.reply({ content: '❌ No batch options configured. Use `/batch_option add` first.', ephemeral: true });
+      const items = await all('SELECT name FROM batch_options WHERE guild_id = ? LIMIT 25', [interaction.guildId]);
+      if (!items.length) return interaction.reply({ content: '❌ No options configured. Use `/batch_option add` first.', ephemeral: true });
       const embed = new EmbedBuilder().setTitle('👕 Request Custom Item').setDescription('Select an item below to start your request.').setColor(0x5865f2);
       const rows = [];
       for (let i = 0; i < items.length; i += 5) {
@@ -415,7 +481,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (commandName === 'batch_check') {
-      const rows = await all("SELECT * FROM batch_requests WHERE status = 'pending' ORDER BY id ASC");
+      const rows = await all("SELECT * FROM batch_requests WHERE guild_id = ? AND status = 'pending' ORDER BY id ASC", [interaction.guildId]);
       if (!rows.length) return interaction.reply({ content: '📭 Queue empty.', ephemeral: true });
       const embed = new EmbedBuilder().setTitle('📋 Batch Queue').setDescription(rows.map(r => `**#${r.id}** | <@${r.discord_id}> (${r.username}) | ${r.type}`).join('\n')).setColor(0x5865f2);
       return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -430,67 +496,61 @@ client.on('interactionCreate', async interaction => {
       const player = interaction.options.getUser('player');
       const vrfsId = interaction.options.getString('vrfs_id');
       const type = interaction.options.getString('type');
-      await run('INSERT INTO batch_requests (discord_id, username, vrfs_id, type, details, status) VALUES (?,?,?,?,?,?)', [player.id, player.username, vrfsId, type, 'Manual Add', 'pending']);
+      await run('INSERT INTO batch_requests (guild_id, discord_id, username, vrfs_id, type, details, status) VALUES (?,?,?,?,?,?,?)', [interaction.guildId, player.id, player.username, vrfsId, type, 'Manual Add', 'pending']);
       return interaction.reply({ content: `✅ Manually added **${type}** for <@${player.id}>.`, ephemeral: true });
     }
 
     if (commandName === 'batch_remove') {
       const id = interaction.options.getInteger('id');
-      await run('DELETE FROM batch_requests WHERE id = ?', [id]);
+      await run('DELETE FROM batch_requests WHERE id = ? AND guild_id = ?', [id, interaction.guildId]);
       return interaction.reply({ content: `✅ Removed request #${id}.`, ephemeral: true });
     }
 
     if (commandName === 'batch_clear') {
-      await run("DELETE FROM batch_requests WHERE status = 'pending'");
-      return interaction.reply({ content: '✅ Cleared all pending requests.', ephemeral: true });
+      await run("DELETE FROM batch_requests WHERE status = 'pending' AND guild_id = ?", [interaction.guildId]);
+      return interaction.reply({ content: '✅ Cleared all pending requests for this server.', ephemeral: true });
     }
 
     if (commandName === 'batch_mass_decline') {
-      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
       const startId = interaction.options.getInteger('start_id');
       const reason = interaction.options.getString('reason') || 'No reason provided.';
+      const gid = interaction.guildId;
 
       await interaction.deferReply({ ephemeral: true });
 
       // Find all PRE-REVIEW requests <= startId (Ignores accepted ones)
-      const targetReqs = await all("SELECT * FROM batch_requests WHERE id <= ? AND status = 'pre_review'", [startId]);
+      const targetReqs = await all("SELECT * FROM batch_requests WHERE id <= ? AND guild_id = ? AND status = 'pre_review'", [startId, gid]);
       if (!targetReqs.length) return interaction.editReply(`📭 No requests in 'Pending Review' found from #${startId} downwards.`);
 
       let declinedCount = 0;
       for (const req of targetReqs) {
-        // Update DB: Set to REJECTED (Matches website logic)
         await run("UPDATE batch_requests SET status = 'rejected' WHERE id = ?", [req.id]);
-        
-        // Notify User
         try {
           const user = await client.users.fetch(req.discord_id);
           const embed = new EmbedBuilder()
             .setTitle('❌ Request Declined')
-            .setDescription(`Your request for a **${req.type}** (ID #${req.id}) was not approved by staff.`)
+            .setDescription(`Your request for a **${req.type}** (ID #${req.id} in ${interaction.guild.name}) was not approved by staff.`)
             .addFields({ name: 'Reason', value: reason })
             .setColor(0xff4d4d)
             .setTimestamp();
           await user.send({ embeds: [embed] });
         } catch (e) {}
-
-        // Sync Message (Updates the embed in the review channel to 'Declined')
         await syncRequestMessage(req.id);
         declinedCount++;
       }
 
-      await logStaffAction(interaction.user.id, interaction.user.username, 'MASS_DECLINE_REVIEW', startId, `Declined ${declinedCount} pre-review requests. Reason: ${reason}`);
-      return interaction.editReply(`✅ Mass declined **${declinedCount}** requests that were in 'Pending Review'. Accepted items were not touched.`);
+      await logStaffAction(gid, interaction.user.id, interaction.user.username, 'MASS_DECLINE_REVIEW', startId, `Declined ${declinedCount} pre-review requests.`);
+      return interaction.editReply(`✅ Mass declined **${declinedCount}** requests.`);
     }
 
     if (commandName === 'batch_mass_delete_messages') {
-      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
       const startId = interaction.options.getInteger('start_id');
+      const gid = interaction.guildId;
 
       await interaction.deferReply({ ephemeral: true });
 
-      // Only delete messages for those that were NOT accepted (Sitting in review or already rejected/declined)
-      const rows = await all("SELECT id, msg_id, ch_id FROM batch_requests WHERE id <= ? AND msg_id IS NOT NULL AND status IN ('pre_review', 'declined', 'rejected')", [startId]);
-      if (!rows.length) return interaction.editReply(`📭 No eligible review messages (Pending Review or Rejected) found for requests <= #${startId}.`);
+      const rows = await all("SELECT id, msg_id, ch_id FROM batch_requests WHERE id <= ? AND guild_id = ? AND msg_id IS NOT NULL AND status IN ('pre_review', 'declined', 'rejected')", [startId, gid]);
+      if (!rows.length) return interaction.editReply(`📭 No eligible review messages found.`);
 
       let deletedCount = 0;
       for (const r of rows) {
@@ -498,27 +558,19 @@ client.on('interactionCreate', async interaction => {
           const channel = await client.channels.fetch(r.ch_id).catch(() => null);
           if (channel) {
             const msg = await channel.messages.fetch(r.msg_id).catch(() => null);
-            if (msg) {
-              await msg.delete();
-              deletedCount++;
-            }
+            if (msg) { await msg.delete(); deletedCount++; }
           }
-        } catch (e) {
-          console.warn(`[Mass Delete] Could not delete msg ${r.msg_id} for req #${r.id}: ${e.message}`);
-        }
-        
-        // Clear message IDs from DB so we don't try again
+        } catch (e) {}
         await run("UPDATE batch_requests SET msg_id = NULL, ch_id = NULL WHERE id = ?", [r.id]);
       }
 
-      return interaction.editReply(`✅ Successfully deleted **${deletedCount}** review messages from ID #${startId} down.`);
+      return interaction.editReply(`✅ Successfully deleted **${deletedCount}** review messages.`);
     }
 
     if (commandName === 'batch_slowdown') {
-      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
       const seconds = interaction.options.getInteger('seconds');
-      await setSetting('slowdown_seconds', seconds.toString());
-      return interaction.reply({ content: `✅ Slowdown set to **${seconds} seconds** between messages in the staff channel.`, ephemeral: true });
+      await setSetting(interaction.guildId, 'slowdown_seconds', seconds.toString());
+      return interaction.reply({ content: `✅ Slowdown set to **${seconds} seconds**.`, ephemeral: true });
     }
 
     if (commandName === 'post-admin-batch-add') {
@@ -535,174 +587,93 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (commandName === 'view-batches') {
-      const rows = await all("SELECT * FROM batches ORDER BY id DESC LIMIT 8");
+      const rows = await all("SELECT * FROM batches WHERE guild_id = ? ORDER BY id DESC LIMIT 8", [interaction.guildId]);
       if (!rows.length) return interaction.reply({ content: '📭 No batches created yet.', ephemeral: true });
-      
-      const embed = new EmbedBuilder()
-        .setTitle('📦 Recent Batches')
-        .setDescription('Only showing latest 8 batches. Full list available on the [Admin Portal](https://customs-portal.vercel.app/admin/requests).')
-        .setColor(0x5865f2);
-        
+      const embed = new EmbedBuilder().setTitle('📦 Recent Batches').setColor(0x5865f2);
       for (const b of rows) {
         const reqs = await all("SELECT username, vrfs_id FROM batch_requests WHERE batch_id = ? LIMIT 8", [b.id]);
         const list = reqs.map(r => `• **${r.username}** (\`${r.vrfs_id}\`)`).join('\n') || '*Empty*';
-        
-        // Truncate list if too long for a field
-        const displayList = list.length > 1000 ? list.substring(0, 997) + '...' : list;
-        
-        embed.addFields({ name: `Batch #${b.id} [${b.status.toUpperCase()}]`, value: displayList });
+        embed.addFields({ name: `Batch #${b.id} [${b.status.toUpperCase()}]`, value: list });
       }
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
     if (commandName === 'release_batch') {
-      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
-      const batch = await get("SELECT * FROM batches WHERE status = 'open' LIMIT 1");
+      const gid = interaction.guildId;
+      const batch = await get("SELECT * FROM batches WHERE guild_id = ? AND status = 'open' LIMIT 1", [gid]);
       if (!batch) return interaction.reply({ content: '❌ No open batch found.', ephemeral: true });
 
       const reqs = await all("SELECT username, vrfs_id, type, proof_url FROM batch_requests WHERE batch_id = ?", [batch.id]);
       if (!reqs.length) return interaction.reply({ content: '❌ This batch is empty.', ephemeral: true });
-      await loadSettings();
-      const relId = getSetting('release_channel');
-      if (!relId) return interaction.reply({ content: '❌ Release channel not set. Use `/set-batch-release-channel`', ephemeral: true });
+      await loadSettings(gid);
+      const relId = getSetting(gid, 'release_channel');
+      if (!relId) return interaction.reply({ content: '❌ Release channel not set.', ephemeral: true });
 
       const relCh = await client.channels.fetch(relId).catch(() => null);
       if (!relCh) return interaction.reply({ content: '❌ Cannot find release channel.', ephemeral: true });
 
       await run("UPDATE batches SET status = 'released', released_at = CURRENT_TIMESTAMP WHERE id = ?", [batch.id]);
-      
       const list = reqs.map((r, i) => `**${i+1}.** ${r.username} — ID: \`${r.vrfs_id}\` (${r.type}) [Proof](${r.proof_url})`).join('\n');
-      const embed = new EmbedBuilder()
-        .setTitle(`🚀 Batch #${batch.id} RELEASED (Manual)`)
-        .setDescription(`The following requests are ready for processing:\n\n${list}`)
-        .setColor(0x00f5a0)
-        .setTimestamp();
-      
+      const embed = new EmbedBuilder().setTitle(`🚀 Batch #${batch.id} RELEASED`).setDescription(list).setColor(0x00f5a0).setTimestamp();
       await relCh.send({ embeds: [embed] });
-      return interaction.reply({ content: `✅ Batch #${batch.id} released to <#${relId}>`, ephemeral: true });
+      return interaction.reply({ content: `✅ Batch #${batch.id} released.`, ephemeral: true });
     }
 
     if (commandName === 'export_batches') {
       const owners = ['1139955783384187031', '1145402830786678884'];
       if (!owners.includes(interaction.user.id)) return interaction.reply({ content: '❌ Access Denied.', ephemeral: true });
 
-      const allBatches = await all("SELECT * FROM batches ORDER BY id ASC");
+      const allBatches = await all("SELECT * FROM batches WHERE guild_id = ? ORDER BY id ASC", [interaction.guildId]);
       if (!allBatches.length) return interaction.reply({ content: '📭 No batches to export.', ephemeral: true });
 
-      let output = `VBLL BATCH EXPORT - ${new Date().toLocaleString()}\n`;
-      output += "=".repeat(40) + "\n\n";
-
+      let output = `BATCH EXPORT - ${interaction.guild.name}\n`;
       for (const b of allBatches) {
         const reqs = await all("SELECT * FROM batch_requests WHERE batch_id = ?", [b.id]);
-        output += `[BATCH #${b.id}] — Status: ${b.status.toUpperCase()}\n`;
-        output += `Released At: ${b.released_at || 'Not Released'}\n`;
-        output += "-".repeat(20) + "\n";
-        
-        if (reqs.length) {
-          reqs.forEach(r => {
-            output += `${r.vrfs_id}|${r.username} | ${r.type} | ${r.proof_url}\n`;
-          });
-        } else {
-          output += "* No requests in this batch.\n";
-        }
-        output += "\n";
+        output += `[BATCH #${b.id}] ${b.status}\n` + reqs.map(r => `${r.vrfs_id}|${r.username}`).join('\n') + '\n\n';
       }
-
-      const buffer = Buffer.from(output, 'utf-8');
-      const attachment = new AttachmentBuilder(buffer, { name: 'vbll_batches_export.txt' });
-
-      try {
-        await interaction.user.send({ content: '📦 Here is the full export of all batches:', files: [attachment] });
-        return interaction.reply({ content: '✅ Export sent to your DMs!', ephemeral: true });
-      } catch (e) {
-        return interaction.reply({ content: '❌ Failed to send DM. Make sure your DMs are open!', ephemeral: true });
-      }
+      const attachment = new AttachmentBuilder(Buffer.from(output), { name: 'batches.txt' });
+      await interaction.user.send({ files: [attachment] });
+      return interaction.reply({ content: '✅ Export sent to DMs.', ephemeral: true });
     }
 
     if (commandName === 'batch_halt') {
-      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
       const active = interaction.options.getBoolean('active');
-      const reason = interaction.options.getString('reason') || 'No reason provided.';
-      
-      await setSetting('halted', active ? 'true' : 'false');
-      await setSetting('halt_reason', reason);
-      
-      return interaction.reply({ content: `✅ Batch requests are now **${active ? 'HALTED' : 'OPEN'}**.\nReason: *${reason}*`, ephemeral: true });
+      const reason = interaction.options.getString('reason') || 'Paused.';
+      await setSetting(interaction.guildId, 'halted', active ? 'true' : 'false');
+      await setSetting(interaction.guildId, 'halt_reason', reason);
+      return interaction.reply({ content: `✅ Requests **${active ? 'HALTED' : 'OPEN'}**.`, ephemeral: true });
     }
 
     if (commandName === 'batch_sent') {
-      if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
       const batchId = interaction.options.getInteger('batch_id');
-      const reqs = await all("SELECT discord_id, type FROM batch_requests WHERE batch_id = ?", [batchId]);
-      
-      if (!reqs.length) return interaction.reply({ content: `❌ No requests found for Batch #${batchId}.`, ephemeral: true });
+      const gid = interaction.guildId;
+      const reqs = await all("SELECT discord_id, type FROM batch_requests WHERE batch_id = ? AND guild_id = ?", [batchId, gid]);
+      if (!reqs.length) return interaction.reply({ content: `❌ No requests for Batch #${batchId}.`, ephemeral: true });
 
       await interaction.deferReply({ ephemeral: true });
       let sentCount = 0;
       for (const r of reqs) {
         try {
           const user = await client.users.fetch(r.discord_id);
-          const embed = new EmbedBuilder()
-            .setTitle('🚚 Batch Sent!')
-            .setDescription(`Your request for a **${r.type}** (from Batch #${batchId}) has been confirmed sent to the developers!`)
-            .setColor(0x00f5a0)
-            .setTimestamp();
+          const embed = new EmbedBuilder().setTitle('🚚 Batch Sent!').setDescription(`Your **${r.type}** (Batch #${batchId} in ${interaction.guild.name}) is sent!`).setColor(0x00f5a0);
           await user.send({ embeds: [embed] });
           sentCount++;
         } catch (e) {}
       }
-
       await run("UPDATE batches SET status = 'sent', sent_at = CURRENT_TIMESTAMP WHERE id = ?", [batchId]);
-      await logStaffAction(interaction.user.id, interaction.user.username, 'BATCH_SENT', batchId, `Notified ${sentCount} players`);
-
-      return interaction.editReply(`✅ Batch #${batchId} confirmation sent to ${sentCount} players AND batch marked as SENT.`);
+      await logStaffAction(gid, interaction.user.id, interaction.user.username, 'BATCH_SENT', batchId, `Notified ${sentCount}`);
+      return interaction.editReply(`✅ Batch #${batchId} confirmed and marked sent.`);
     }
 
     if (commandName === 'my_request') {
-      const req = await get("SELECT * FROM batch_requests WHERE discord_id = ? ORDER BY id DESC LIMIT 1", [interaction.user.id]);
-      if (!req) return interaction.reply({ content: '📭 You currently have no requests in the system.', ephemeral: true });
+      const rows = await all("SELECT * FROM batch_requests WHERE discord_id = ? ORDER BY id DESC LIMIT 5", [interaction.user.id]);
+      if (!rows.length) return interaction.reply({ content: '📭 You currently have no requests.', ephemeral: true });
 
-      // Calculate ETA
-      const stats = await (async () => {
-        const last5R = await all("SELECT created_at, verified_at FROM batch_requests WHERE verified_at IS NOT NULL ORDER BY id DESC LIMIT 5");
-        const last5B = await all("SELECT released_at, sent_at FROM batches WHERE sent_at IS NOT NULL ORDER BY id DESC LIMIT 5");
-        let v_avg = 8 * 3600 * 1000; 
-        let s_avg = 2 * 24 * 3600 * 1000;
-        if (last5R.length) v_avg = last5R.reduce((acc, r) => acc + (new Date(r.verified_at).getTime() - new Date(r.created_at).getTime()), 0) / last5R.length;
-        if (last5B.length) s_avg = last5B.reduce((acc, b) => acc + (new Date(b.sent_at).getTime() - new Date(b.released_at).getTime()), 0) / last5B.length;
-        return { v_avg, s_avg };
-      })();
-
-      let eta = "Unknown";
-      if (req.status === 'pre_review') {
-        const timeSoFar = Date.now() - new Date(req.created_at).getTime();
-        const remain = Math.max(0, stats.v_avg - timeSoFar);
-        eta = remain > 3600000 ? `~${Math.round(remain/3600000)} hours` : `~${Math.round(remain/60000)} mins`;
-      } else if (req.status === 'pending') {
-        eta = "Waiting for Batch to fill";
-      } else if (req.status === 'completed') {
-        const b = await get("SELECT released_at, sent_at, status FROM batches WHERE id = ?", [req.batch_id]);
-        if (b?.status === 'released') {
-          const timeSoFar = Date.now() - new Date(b.released_at).getTime();
-          const remain = Math.max(0, stats.s_avg - timeSoFar);
-          eta = `~${Math.round(remain / (24 * 3600000))} days`;
-        } else if (b?.status === 'sent') {
-          eta = "Delivered!";
-        }
+      const embed = new EmbedBuilder().setTitle('📂 Your Hub: Active Requests').setColor(0x5865f2);
+      for (const req of rows) {
+        const guild = client.guilds.cache.get(req.guild_id);
+        embed.addFields({ name: `${req.type} (#${req.id})`, value: `**Server:** ${guild?.name || 'Unknown'}\n**Status:** ${req.status.toUpperCase()}\n**Batch:** ${req.batch_id ? `#${req.batch_id}` : 'None'}` });
       }
-
-      const embed = new EmbedBuilder()
-        .setTitle('📂 Your Request Status')
-        .addFields(
-          { name: 'Item', value: req.type, inline: true },
-          { name: 'Status', value: req.status.toUpperCase(), inline: true },
-          { name: 'ETA', value: eta, inline: true },
-          { name: 'Current Batch', value: req.batch_id ? `#${req.batch_id}` : 'Pending Assignment', inline: true }
-        )
-        .setColor(req.status === 'completed' ? 0x00f5a0 : 0x5865f2)
-        .setFooter({ text: 'ETA is based on historical averages' })
-        .setTimestamp();
-
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
@@ -731,24 +702,22 @@ client.on('interactionCreate', async interaction => {
       const id = interaction.options.getInteger('request_id');
       const vrfs = interaction.options.getString('vrfs_id');
       const action = interaction.options.getString('action');
+      const gid = interaction.guildId;
 
       if (action === 'remove') {
-          await run("UPDATE batch_requests SET batch_id = NULL, status = 'pending' WHERE id = ?", [id]);
-          return interaction.reply({ content: `✅ Request #${id} removed from its batch and reset to pending.` });
+          await run("UPDATE batch_requests SET batch_id = NULL, status = 'pending' WHERE id = ? AND guild_id = ?", [id, gid]);
+          return interaction.reply({ content: `✅ Request #${id} reset.` });
       }
 
       if (vrfs) {
-          const old = await get("SELECT vrfs_id, discord_id FROM batch_requests WHERE id = ?", [id]);
-          await run("UPDATE batch_requests SET vrfs_id = ? WHERE id = ?", [vrfs, id]);
-          await logStaffAction(interaction.user.id, interaction.user.username, 'EDITED_VRFS', id, `Changed to ${vrfs}`);
-          
-          // Notify User
+          const old = await get("SELECT vrfs_id, discord_id FROM batch_requests WHERE id = ? AND guild_id = ?", [id, gid]);
+          await run("UPDATE batch_requests SET vrfs_id = ? WHERE id = ? AND guild_id = ?", [vrfs, id, gid]);
+          await logStaffAction(gid, interaction.user.id, interaction.user.username, 'EDITED_VRFS', id, `Changed to ${vrfs}`);
           try {
             const user = await client.users.fetch(old.discord_id);
-            await user.send({ embeds: [new EmbedBuilder().setTitle('📝 Info Updated').setDescription(`A staff member has updated your VRFS ID for request #${id} to \`${vrfs}\`.`).setColor(0x5865f2)] });
+            await user.send({ embeds: [new EmbedBuilder().setTitle('📝 Updated').setDescription(`ID #${id} in ${interaction.guild.name} changed to \`${vrfs}\`.`).setColor(0x5865f2)] });
           } catch(e){}
-
-          return interaction.reply({ content: `✅ VRFS ID for request #${id} updated to \`${vrfs}\`.` });
+          return interaction.reply({ content: `✅ VRFS ID updated.` });
       }
     }
 
@@ -764,7 +733,7 @@ client.on('interactionCreate', async interaction => {
 
     if (commandName === 'view-logs') {
        if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
-       const logs = await all("SELECT * FROM staff_logs ORDER BY id DESC LIMIT 15");
+       const logs = await all("SELECT * FROM staff_logs WHERE guild_id = ? ORDER BY id DESC LIMIT 15", [interaction.guildId]);
        if (!logs.length) return interaction.reply({ content: '📭 No logs found.', ephemeral: true });
 
        const embed = new EmbedBuilder().setTitle('🛡️ Recent Staff Activity').setColor(0xffa500);
@@ -776,8 +745,8 @@ client.on('interactionCreate', async interaction => {
 
     if (commandName === 'lookup-batch-info') {
       const batchId = interaction.options.getInteger('batch_id');
-      const batch = await get("SELECT * FROM batches WHERE id = ?", [batchId]);
-      if (!batch) return interaction.reply({ content: '❌ Batch not found.', ephemeral: true });
+      const batch = await get("SELECT * FROM batches WHERE id = ? AND guild_id = ?", [batchId, interaction.guildId]);
+      if (!batch) return interaction.reply({ content: '❌ Batch not found in this server.', ephemeral: true });
 
       const reqs = await all("SELECT COUNT(*) as cnt FROM batch_requests WHERE batch_id = ?", [batchId]);
       const count = reqs[0].cnt;
@@ -844,21 +813,20 @@ client.on('interactionCreate', async interaction => {
 
       if (action === 'approve') {
         try {
+          const gid = req.guild_id;
           await run("UPDATE batch_requests SET status = 'pending', verified_at = CURRENT_TIMESTAMP WHERE id = ?", [id]);
           await interaction.message.delete().catch(() => {});
-          // DM User
           try {
             const user = await client.users.fetch(req.discord_id);
-            await user.send({ embeds: [new EmbedBuilder().setTitle('✅ Verified!').setDescription(`Your **${req.type}** is now in the queue (#${id}).`).setColor(0x00f5a0)] });
+            await user.send({ embeds: [new EmbedBuilder().setTitle('✅ Verified!').setDescription(`Your **${req.type}** in ${interaction.guild.name} is in the queue.`).setColor(0x00f5a0)] });
           } catch (e) {}
-          // Send to Queue
-          await loadSettings();
-          const qId = getSetting('review_channel');
+          await loadSettings(gid);
+          const qId = getSetting(gid, 'review_channel');
           if (qId) {
             const ch = await client.channels.fetch(qId).catch(() => null);
             if (ch) {
               const embed = new EmbedBuilder().setTitle(`📥 Queue: ${req.type} (#${id})`)
-                .setDescription(`**Player:** <@${req.discord_id}> \n**Username:** ${req.username}\n**VRFS ID:** ${req.vrfs_id}\n**Proof:** [Message Link](${req.proof_url})`)
+                .setDescription(`**Player:** <@${req.discord_id}>\n**VRFS ID:** ${req.vrfs_id}\n**Proof:** [Message Link](${req.proof_url})`)
                 .setColor(0x5865f2).setTimestamp();
               const buttons = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId(`batch_done_${id}`).setLabel('Fulfil').setStyle(ButtonStyle.Success),
@@ -868,19 +836,18 @@ client.on('interactionCreate', async interaction => {
               await run("UPDATE batch_requests SET msg_id = ?, ch_id = ? WHERE id = ?", [msg.id, ch.id, id]);
             }
           }
-          await logStaffAction(interaction.user.id, interaction.user.username, 'APPROVED_PRE_REVIEW', id, `Type: ${req.type}`);
-          return interaction.reply({ content: '✅ Approved and added to queue.', ephemeral: true });
+          await logStaffAction(gid, interaction.user.id, interaction.user.username, 'APPROVED_PRE_REVIEW', id, `Type: ${req.type}`);
+          return interaction.reply({ content: '✅ Approved.', ephemeral: true });
         } catch (err) {
-          console.error('[Approval Error]', err);
-          return interaction.reply({ content: `❌ Error during approval: ${err.message}`, ephemeral: true });
+          return interaction.reply({ content: `❌ Error: ${err.message}`, ephemeral: true });
         }
       } else {
         await run("UPDATE batch_requests SET status = 'rejected' WHERE id = ?", [id]);
-        await logStaffAction(interaction.user.id, interaction.user.username, 'REJECTED_PRE_REVIEW', id, `Type: ${req.type}`);
+        await logStaffAction(req.guild_id, interaction.user.id, interaction.user.username, 'REJECTED_PRE_REVIEW', id, `Type: ${req.type}`);
         await interaction.message.delete().catch(() => {});
         try {
           const user = await client.users.fetch(req.discord_id);
-          await user.send({ embeds: [new EmbedBuilder().setTitle('❌ Rejected').setDescription(`Your request (#${id}) was rejected.`).setColor(0xff4d4d)] });
+          await user.send({ embeds: [new EmbedBuilder().setTitle('❌ Rejected').setDescription(`Your request (#${id}) was rejected in ${interaction.guild.name}.`).setColor(0xff4d4d)] });
         } catch (e) {}
         return interaction.reply({ content: '❌ Rejected.', ephemeral: true });
       }
@@ -894,66 +861,48 @@ client.on('interactionCreate', async interaction => {
       if (!reqCheck || reqCheck.status !== 'pending') return interaction.reply({ content: '⚠️ Already processed.', ephemeral: true });
 
       const status = action === 'done' ? 'completed' : 'rejected';
+      const gid = reqCheck.guild_id;
       await run('UPDATE batch_requests SET status = ?, staff_id = ? WHERE id = ?', [status, interaction.user.id, id]);
       
       if (action === 'done') {
-        // --- 📦 Batch Logic ---
-        let batch = await get("SELECT * FROM batches WHERE status = 'open' ORDER BY id ASC LIMIT 1");
+        let batch = await get("SELECT * FROM batches WHERE status = 'open' AND guild_id = ? ORDER BY id ASC LIMIT 1", [gid]);
         if (!batch) {
-          await run("INSERT INTO batches (status) VALUES ('open')");
-          batch = await get("SELECT * FROM batches WHERE status = 'open' ORDER BY id ASC LIMIT 1");
+          await run("INSERT INTO batches (status, guild_id) VALUES ('open', ?)", [gid]);
+          batch = await get("SELECT * FROM batches WHERE status = 'open' AND guild_id = ? ORDER BY id ASC LIMIT 1", [gid]);
         }
-        
         await run("UPDATE batch_requests SET batch_id = ? WHERE id = ?", [batch.id, id]);
         
-        // Notify user they are in a batch
         try {
           const user = await client.users.fetch(reqCheck.discord_id);
-          await user.send({ embeds: [new EmbedBuilder().setTitle('📦 Batch Assigned!').setDescription(`Great news! Your request for a **${reqCheck.type}** has been verified and added to **Batch #${batch.id}**.`).setColor(0x5865f2)] });
+          await user.send({ embeds: [new EmbedBuilder().setTitle('📦 Batch Assigned!').setDescription(`Your **${reqCheck.type}** in ${interaction.guild.name} is in **Batch #${batch.id}**.`).setColor(0x5865f2)] });
         } catch(e) {}
         
-        // Check if full
         const countData = await get("SELECT COUNT(*) as cnt FROM batch_requests WHERE batch_id = ?", [batch.id]);
-        const count = countData.cnt;
-
-        if (count >= 8) {
+        if (countData.cnt >= 8) {
           await run("UPDATE batches SET status = 'released', released_at = CURRENT_TIMESTAMP WHERE id = ?", [batch.id]);
-          
-          await loadSettings();
-          const relId = getSetting('release_channel');
+          await loadSettings(gid);
+          const relId = getSetting(gid, 'release_channel');
           if (relId) {
             const relCh = await client.channels.fetch(relId).catch(() => null);
             if (relCh) {
-              const reqs = await all("SELECT username, vrfs_id, type, proof_url FROM batch_requests WHERE batch_id = ?", [batch.id]);
-              const list = reqs.map((r, i) => `**${i+1}.** ${r.username} — ID: \`${r.vrfs_id}\` (${r.type}) [Proof](${r.proof_url})`).join('\n');
-              const embed = new EmbedBuilder()
-                .setTitle(`🚀 Batch #${batch.id} FULL & RELEASED`)
-                .setDescription(`The following 8 requests are ready for processing:\n\n${list}`)
-                .setColor(0x00f5a0)
-                .setTimestamp();
+              const reqs = await all("SELECT username, vrfs_id, type FROM batch_requests WHERE batch_id = ?", [batch.id]);
+              const list = reqs.map((r, i) => `**${i+1}.** ${r.username} — ID: \`${r.vrfs_id}\` (${r.type})`).join('\n');
+              const embed = new EmbedBuilder().setTitle(`🚀 Batch #${batch.id} RELEASED`).setDescription(list).setColor(0x00f5a0);
               await relCh.send({ embeds: [embed] });
             }
           }
         }
       }
 
-      const req = await get('SELECT * FROM batch_requests WHERE id = ?', [id]);
-      if (req) {
-        try {
-          const user = await client.users.fetch(req.discord_id);
-          await user.send({ embeds: [new EmbedBuilder().setTitle(`🆕 Update: #${id}`).setDescription(`Your **${req.type}** is **${status}**.`).setColor(status === 'completed' ? 0x00f5a0 : 0xff4d4d)] });
-          if (status === 'completed') await checkMilestoneRoles(req.discord_id);
-        } catch (e) {}
-      }
+      await logStaffAction(gid, interaction.user.id, interaction.user.username, status === 'completed' ? 'FULFILLED' : 'REJECTED', id, `Item: ${reqCheck.type}`);
       const embed = EmbedBuilder.from(interaction.message.embeds[0]).setTitle(`${status.toUpperCase()} | ${interaction.message.embeds[0].title}`).setColor(status === 'completed' ? 0x00f5a0 : 0xff4d4d);
-      await logStaffAction(interaction.user.id, interaction.user.username, status === 'completed' ? 'FULFILLED' : 'REJECTED', id, `Item: ${req.type}`);
       return interaction.update({ embeds: [embed], components: [] });
     }
     
     if (customId.startsWith('batch_ticket_close_')) {
       const id = customId.split('_').pop();
-      await run("UPDATE batch_tickets SET status = 'closed' WHERE id = ?", [id]);
-      await interaction.reply({ content: '🔒 Ticket closed. This channel will be removed in 5 seconds.' });
+      await run("UPDATE batch_tickets SET status = 'closed' WHERE id = ? AND guild_id = ?", [id, interaction.guildId]);
+      await interaction.reply({ content: '🔒 Ticket closed.' });
       setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
       return;
     }
@@ -962,14 +911,14 @@ client.on('interactionCreate', async interaction => {
   if (interaction.isModalSubmit()) {
     if (interaction.customId === 'batch_ticket_modal') {
       const issue = interaction.fields.getTextInputValue('issue_text');
-      await run("INSERT INTO batch_tickets (discord_id, username, issue) VALUES (?,?,?)", [interaction.user.id, interaction.user.username, issue]);
-      const res = await get("SELECT id FROM batch_tickets WHERE discord_id = ? ORDER BY id DESC LIMIT 1", [interaction.user.id]);
+      const gid = interaction.guildId;
+      await run("INSERT INTO batch_tickets (guild_id, discord_id, username, issue) VALUES (?,?,?,?)", [gid, interaction.user.id, interaction.user.username, issue]);
+      const res = await get("SELECT id FROM batch_tickets WHERE discord_id = ? AND guild_id = ? ORDER BY id DESC LIMIT 1", [interaction.user.id, gid]);
       
-      // Notify Staff & Create Channel
       try {
-        await loadSettings();
-        const tCatId = getSetting('ticket_category');
-        const tRoleId = getSetting('ticket_role');
+        await loadSettings(gid);
+        const tCatId = getSetting(gid, 'ticket_category');
+        const tRoleId = getSetting(gid, 'ticket_role');
         const devRole = '1456425209237209281'; // As requested by user
 
         if (tCatId) {
@@ -1033,18 +982,19 @@ client.on('interactionCreate', async interaction => {
 async function handleNewRequest(interaction, type, providedUser = null) {
   try {
     const user = providedUser || interaction.user;
-    await loadSettings();
-    if (getSetting('halted') === 'true') {
-      const reason = getSetting('halt_reason') || 'System is currently paused.';
-      const embed = new EmbedBuilder().setTitle('⏸️ Requests Halted').setDescription(`Custom requests are currently paused.\n\n**Reason:** ${reason}`).setColor(0xffa500);
+    const gid = interaction?.guildId || process.env.BATCH_GUILD_ID;
+    await loadSettings(gid);
+    if (getSetting(gid, 'halted') === 'true') {
+      const reason = getSetting(gid, 'halt_reason') || 'Paused.';
+      const embed = new EmbedBuilder().setTitle('⏸️ Requests Halted').setDescription(reason).setColor(0xffa500);
       if (interaction) return interaction.reply({ embeds: [embed], ephemeral: true });
       else return user.send({ embeds: [embed] }).catch(() => {});
     }
 
     // Duplicate Check
-    const existing = await get("SELECT id FROM batch_requests WHERE discord_id = ? AND type = ? AND status NOT IN ('completed', 'rejected', 'declined')", [user.id, type]);
+    const existing = await get("SELECT id FROM batch_requests WHERE discord_id = ? AND guild_id = ? AND type = ? AND status NOT IN ('completed', 'rejected', 'declined')", [user.id, gid, type]);
     if (existing) {
-       const msg = `❌ You already have an active request for a **${type}** (ID: #${existing.id}). Please wait for it to be completed or rejected before ordering another one.`;
+       const msg = `❌ You already have an active request for a **${type}** in this server.`;
        if (interaction) return interaction.reply({ content: msg, ephemeral: true });
        return user.send(msg).catch(() => {});
     }
@@ -1071,7 +1021,7 @@ async function handleNewRequest(interaction, type, providedUser = null) {
     const proofUrl = proofMsg.content.trim();
 
     await dm.send('⏳ **Sent for Verification.** Staff will review your proof shortly.');
-    await createRequest(user.id, user.username, vrfsId, type, 'Pending Pre-Review', proofUrl);
+    await createRequest(gid, user.id, user.username, vrfsId, type, 'Pending Pre-Review', proofUrl);
 
   } catch (e) {
     if (e.message?.includes('time')) {
@@ -1080,11 +1030,9 @@ async function handleNewRequest(interaction, type, providedUser = null) {
   }
 }
 
-async function createRequest(userId, username, vrfsId, type, details, proofUrl) {
-  await run('INSERT INTO batch_requests (discord_id, username, vrfs_id, type, details, proof_url, status) VALUES (?,?,?,?,?,?,?)', [userId, username, vrfsId, type, details, proofUrl, 'pre_review']);
-  const req = await get('SELECT id, discord_id, username, vrfs_id, type, proof_url FROM batch_requests WHERE discord_id = ? ORDER BY id DESC LIMIT 1', [userId]);
-  
-  // Push to the slowdown queue instead of posting immediately
+async function createRequest(guildId, userId, username, vrfsId, type, details, proofUrl) {
+  await run('INSERT INTO batch_requests (guild_id, discord_id, username, vrfs_id, type, details, proof_url, status) VALUES (?,?,?,?,?,?,?,?)', [guildId, userId, username, vrfsId, type, details, proofUrl, 'pre_review']);
+  const req = await get('SELECT id, guild_id, discord_id, username, vrfs_id, type, proof_url FROM batch_requests WHERE discord_id = ? AND guild_id = ? ORDER BY id DESC LIMIT 1', [userId, guildId]);
   preReviewQueue.push(req);
   processPreReviewQueue();
 }

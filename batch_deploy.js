@@ -4,6 +4,11 @@ const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 const commands = [
   // ── User Commands ──────────────────────────────────────────────────────────
   new SlashCommandBuilder()
+    .setName('setup')
+    .setDescription('Auto-setup all channels and roles required for the Batch system [Admin Only]')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
     .setName('batch_request')
     .setDescription('Submit a request for a custom VRDL item')
     .addStringOption(o => 
