@@ -59,13 +59,13 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
             <span className="material-symbols-outlined text-primary text-3xl">admin_panel_settings</span>
             Command Center
             {(session?.user as any)?.isAdmin && (
-              <Link 
+              <a 
                 href="/admin"
                 className="ml-4 px-4 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-black uppercase tracking-tighter hover:bg-primary/20 transition-all flex items-center gap-2"
               >
                 <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
                 Switch League
-              </Link>
+              </a>
             )}
           </h2>
           <p className="text-on-surface-variant text-sm font-medium">Global request oversight and batch deployment.</p>

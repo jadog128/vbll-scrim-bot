@@ -51,8 +51,11 @@ export default function Sidebar() {
           // Check if exactly this path or if it's a subpath of admin
           const isActive = pathname === link.href || (link.href === '/admin' && pathname.startsWith('/admin'));
           
+          const isSwitchLink = link.name === "Switch League";
+          const Component = isSwitchLink ? "a" : Link;
+          
           return (
-            <Link 
+            <Component 
               key={link.name} 
               href={link.href}
               className={`p-4 mx-2 flex items-center gap-4 rounded-3xl transition-all duration-300 group ${
@@ -69,7 +72,7 @@ export default function Sidebar() {
               <span className={`text-sm tracking-tight ${isActive ? "font-black" : "font-semibold"}`}>
                 {link.name}
               </span>
-            </Link>
+            </Component>
           );
         })}
       </div>
