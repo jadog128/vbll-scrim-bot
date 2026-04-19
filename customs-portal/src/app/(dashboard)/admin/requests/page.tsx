@@ -18,40 +18,34 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
   const idMatch = query.match(/^#?(\d+)$/);
   const searchId = idMatch ? parseInt(idMatch[1]) : null;
 
-  // Fetch active requests
-  let activeRequestsSql = "SELECT * FROM batch_requests WHERE status != 'completed' AND status != 'rejected'";
-  const activeParams: any[] = [];
-
+  // 1. Fetch search results (if searching) - Search ALL statuses
+  let searchResults: any[] = [];
   if (query) {
+    let searchSql = "SELECT * FROM batch_requests WHERE (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?)";
+    const params: any[] = [`%${query}%`, `%${query}%`];
     if (searchId) {
-      activeRequestsSql += " AND (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?) OR id = ?)";
-      activeParams.push(`%${query}%`, `%${query}%`, searchId);
-    } else {
-      activeRequestsSql += " AND (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?))";
-      activeParams.push(`%${query}%`, `%${query}%`);
+      searchSql += " OR id = ?";
+      params.push(searchId);
     }
+    searchSql += ") ORDER BY created_at DESC LIMIT 100";
+    const res = await execute(searchSql, params);
+    searchResults = res.rows;
+  }
+
+  // 2. Fetch Active Queue (Only if NOT searching, or as secondary)
+  let activeRequestsSql = "SELECT * FROM batch_requests WHERE status NOT IN ('completed', 'rejected')";
+  const activeParams: any[] = [];
+  if (query) {
+    // If searching, we already have results in searchResults, but lets keep filters for sub-lists if needed
+    // Actually, lets just use SearchResults as the main view when searching.
   }
   activeRequestsSql += " ORDER BY created_at DESC";
-
   const activeRequests = await execute(activeRequestsSql, activeParams);
 
-  // Fetch recently completed for history
-  let historySql = "SELECT * FROM batch_requests WHERE (status = 'completed' OR status = 'rejected')";
-  const historyParams: any[] = [];
-  
-  if (query) {
-    if (searchId) {
-       historySql += " AND (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?) OR id = ?)";
-       historyParams.push(`%${query}%`, `%${query}%`, searchId);
-    } else {
-       historySql += " AND (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?))";
-       historyParams.push(`%${query}%`, `%${query}%`);
-    }
-  }
-  historySql += " ORDER BY created_at DESC";
-  if (!query) historySql += " LIMIT 25";
-  
-  const history = await execute(historySql, historyParams);
+  // 3. Fetch History
+  let historySql = "SELECT * FROM batch_requests WHERE status IN ('completed', 'rejected')";
+  historySql += " ORDER BY created_at DESC LIMIT 50";
+  const history = await execute(historySql, []);
 
   return (
     <div className="space-y-10 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -70,26 +64,37 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
-        {/* Active Queue */}
+        {/* Active Queue / Search Results */}
         <div className="xl:col-span-2 space-y-6">
            <div className="flex items-center justify-between px-2">
               <h3 className="text-lg font-bold text-on-surface flex items-center gap-3">
-                 <ShieldAlert className="w-5 h-5 text-primary" />
-                 Active Submissions
+                 {query ? (
+                    <>
+                      <Search className="w-5 h-5 text-primary" />
+                      Global Search Results
+                    </>
+                 ) : (
+                    <>
+                      <ShieldAlert className="w-5 h-5 text-primary" />
+                      Active Submissions
+                    </>
+                 )}
               </h3>
               <div className="flex items-center gap-2 text-[10px] font-black uppercase text-on-surface-variant/40">
                  <ListFilter className="w-3 h-3" />
-                 All Categories
+                 {query ? 'Global Filter' : 'Active Only'}
               </div>
            </div>
 
            <div className="space-y-3">
-              {activeRequests.rows.map((req: any) => (
+              {(query ? searchResults : activeRequests.rows).map((req: any) => (
                 <AdminRequestRow key={req.id} request={req} />
               ))}
-              {activeRequests.rows.length === 0 && (
+              {(query ? searchResults : activeRequests.rows).length === 0 && (
                 <div className="py-20 text-center bg-surface-container-low/30 rounded-3xl border border-dashed border-outline-variant/10">
-                   <p className="text-on-surface-variant font-medium">No active submissions in queue.</p>
+                   <p className="text-on-surface-variant font-medium">
+                      {query ? "No requests found matching your search." : "No active submissions in queue."}
+                   </p>
                 </div>
               )}
            </div>
