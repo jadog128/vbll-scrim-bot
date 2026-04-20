@@ -109,9 +109,8 @@ export async function POST(req: Request) {
       let batchId;
 
       if (batchRes.rows.length === 0) {
-        await execute("INSERT INTO batches (status) VALUES ('open')");
-        const newBatch = await execute("SELECT last_insert_rowid() as id");
-        batchId = (newBatch.rows[0] as any).id;
+        const insertRes = await execute("INSERT INTO batches (status) VALUES ('open')");
+        batchId = Number(insertRes.lastInsertRowid);
       } else {
         batchId = (batchRes.rows[0] as any).id;
       }

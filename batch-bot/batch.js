@@ -321,7 +321,8 @@ async function handleNewRequest(interaction, type) {
     await dm.send(`✅ **Step 2/2**: Enter **Proof Link**:`);
     const proof = (await dm.awaitMessages({ max: 1, time: 30000 })).first().content.trim();
 
-    await run('INSERT INTO batch_requests (discord_id, username, vrfs_id, type, details, proof_url, status) VALUES (?,?,?,?,?,?,?)', [user.id, user.username, vrfs, type, 'Manual', proof, 'pre_review']);
+    const guildId = interaction.guildId || "1286206719847960670";
+    await run('INSERT INTO batch_requests (discord_id, username, vrfs_id, type, details, proof_url, status, guild_id) VALUES (?,?,?,?,?,?,?,?)', [user.id, user.username, vrfs, type, 'Manual', proof, 'pre_review', guildId]);
     const req = await get('SELECT id FROM batch_requests WHERE discord_id = ? ORDER BY id DESC LIMIT 1', [user.id]);
     
     const preCh = await client.channels.fetch(getSetting('pre_review_channel')).catch(() => null);
