@@ -982,7 +982,7 @@ client.on('interactionCreate', async interaction => {
 async function handleNewRequest(interaction, type, providedUser = null) {
   try {
     const user = providedUser || interaction.user;
-    const gid = interaction?.guildId || process.env.BATCH_GUILD_ID;
+    const gid = interaction?.guildId || process.env.BATCH_GUILD_ID || "1286206719847960670";
     await loadSettings(gid);
     if (getSetting(gid, 'halted') === 'true') {
       const reason = getSetting(gid, 'halt_reason') || 'Paused.';
