@@ -9,7 +9,7 @@ const ADMIN_ROLE_ID = process.env.VBLL_ADMIN_ROLE_ID || process.env.ADMIN_ROLE_I
 export async function sendDiscordDM(userId: string, content: any) {
   if (!BOT_TOKEN) return;
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), 8000);
+  const id = setTimeout(() => controller.abort(), 3000);
   try {
     const dmRes = await fetch(`https://discord.com/api/v10/users/@me/channels`, {
       method: "POST",

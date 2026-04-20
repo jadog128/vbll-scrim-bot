@@ -149,6 +149,7 @@ export default function AdminRequestRow({ request, rejectPresets = [] }: { reque
                     {(rejectPresets.length > 0 ? rejectPresets : ["Missing Proof", "Invalid ID", "Duplicate", "Incorrect Channel"]).map((preset, idx) => (
                       <button 
                         key={idx}
+                        type="button"
                         onClick={() => handleAction("deny", preset)}
                         disabled={loading}
                         className="px-4 py-2 bg-error/5 text-error border border-error/10 rounded-xl text-[10px] font-bold hover:bg-error hover:text-white hover:scale-105 transition-all shadow-sm active:scale-95"
@@ -161,6 +162,7 @@ export default function AdminRequestRow({ request, rejectPresets = [] }: { reque
 
               <div className="pt-2">
                 <button 
+                  type="button"
                   onClick={() => handleAction("deny", rejectReason)}
                   disabled={loading || !rejectReason}
                   className="w-full py-4 bg-error text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:shadow-lg hover:shadow-error/20 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
@@ -222,6 +224,7 @@ export default function AdminRequestRow({ request, rejectPresets = [] }: { reque
              {request.status === 'pre_review' && (
                <div className="flex gap-2">
                   <button 
+                    type="button"
                     onClick={() => handleAction("approve")}
                     disabled={loading}
                     className="flex-1 py-3 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20"
@@ -230,6 +233,7 @@ export default function AdminRequestRow({ request, rejectPresets = [] }: { reque
                     Approve
                   </button>
                   <button 
+                    type="button"
                     onClick={() => setIsRejecting(true)}
                     disabled={loading}
                     className="px-4 py-3 bg-surface-container-high text-error rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-error hover:text-white transition-all flex items-center gap-2"
