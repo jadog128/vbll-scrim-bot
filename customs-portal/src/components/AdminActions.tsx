@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import GlassButton from "./ui/GlassButton";
 import { Play, Pause, Send } from "lucide-react";
+import AdminConfigModal from "./AdminConfigModal";
 
 export default function AdminActions({ guildId }: { guildId: string }) {
   const [loading, setLoading] = useState(false);
@@ -33,6 +34,7 @@ export default function AdminActions({ guildId }: { guildId: string }) {
 
   return (
     <div className="flex gap-3">
+      <AdminConfigModal guildId={guildId} />
       <GlassButton onClick={toggleHalt} disabled={loading} variant="secondary" size="sm" className="gap-2">
         {halted ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
         {halted ? 'Resume Requests' : 'Halt All Requests'}

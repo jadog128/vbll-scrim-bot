@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { requestId, action } = await req.json();
+  const { requestId, action, reason } = await req.json();
 
   if (!requestId || !action) {
     return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
           await sendDiscordDM(currentReq.discord_id, {
             embeds: [{
                 title: "❌ Rejected",
-                description: `Your custom request (#${requestId}) was rejected by staff.`,
+                description: `Your custom request (#${requestId}) was rejected by staff.${reason ? `\n\n**Reason:** ${reason}` : ""}`,
                 color: 0xff4d4d
             }]
           });

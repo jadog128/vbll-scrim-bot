@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from 'react';
-import { Package, ExternalLink, Edit2, Check, X, Trash2 } from 'lucide-react';
+import { Package, ExternalLink, Edit2, Check, X, Trash2, ShieldAlert, Ban } from 'lucide-react';
 
-export default function AdminRequestRow({ request }: { request: any }) {
+export default function AdminRequestRow({ request, rejectPresets = [] }: { request: any, rejectPresets?: string[] }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
   const [formData, setFormData] = useState({
     vrfs_id: request.vrfs_id,
     status: request.status,
@@ -28,6 +30,26 @@ export default function AdminRequestRow({ request }: { request: any }) {
       }
     } catch (e: any) {
       alert(`Update error: ${e.message}`);
+    }
+    setLoading(false);
+  };
+
+  const handleAction = async (action: string, reason?: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/requests/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: request.id, action, reason })
+      });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`Action failed: ${data.error || "Unknown error"}`);
+      }
+    } catch (e: any) {
+      alert(`Action error: ${e.message}`);
     }
     setLoading(false);
   };
@@ -104,6 +126,45 @@ export default function AdminRequestRow({ request }: { request: any }) {
               />
           </div>
         </div>
+      ) : isRejecting ? (
+        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+           <div className="flex items-center justify-between">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-error">Reject with Reason</h4>
+              <button onClick={() => setIsRejecting(false)} className="p-1.5 bg-surface-container-high rounded-lg">
+                <X className="w-3.5 h-3.5" />
+              </button>
+           </div>
+           
+           <div className="space-y-2">
+              <textarea 
+                placeholder="Enter rejection reason..."
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                className="w-full p-4 bg-surface-container-low rounded-2xl text-xs font-medium border border-outline-variant/10 focus:ring-1 focus:ring-error/20 outline-none min-h-[80px]"
+              />
+              
+              <div className="flex flex-wrap gap-2">
+                 {rejectPresets.map((preset, idx) => (
+                   <button 
+                     key={idx}
+                     onClick={() => handleAction("deny", preset)}
+                     disabled={loading}
+                     className="px-3 py-1.5 bg-error/5 text-error border border-error/10 rounded-full text-[10px] font-bold hover:bg-error hover:text-white transition-all"
+                   >
+                     {preset}
+                   </button>
+                 ))}
+              </div>
+
+              <button 
+                onClick={() => handleAction("deny", rejectReason)}
+                disabled={loading || !rejectReason}
+                className="w-full py-3 bg-error text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+              >
+                Confirm Rejection
+              </button>
+           </div>
+        </div>
       ) : (
         <>
           <div className="flex items-start justify-between mb-6">
@@ -152,6 +213,38 @@ export default function AdminRequestRow({ request }: { request: any }) {
                 <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant opacity-40">VRFS ID</span>
                 <span className="text-xs font-black text-on-surface tracking-tighter">{request.vrfs_id}</span>
              </div>
+
+             {request.status === 'pre_review' && (
+               <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleAction("approve")}
+                    disabled={loading}
+                    className="flex-1 py-3 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    Approve
+                  </button>
+                  <button 
+                    onClick={() => setIsRejecting(true)}
+                    disabled={loading}
+                    className="px-4 py-3 bg-surface-container-high text-error rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-error hover:text-white transition-all flex items-center gap-2"
+                  >
+                    <Ban className="w-3.5 h-3.5" />
+                    Reject
+                  </button>
+               </div>
+             )}
+
+             {request.status === 'pending' && (
+               <button 
+                onClick={() => handleAction("fulfill")}
+                disabled={loading}
+                className="w-full py-3 bg-secondary text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-secondary/20"
+              >
+                <Package className="w-3.5 h-3.5" />
+                Mark Completed
+              </button>
+             )}
 
              <div className="flex justify-between items-center px-1">
                 <div className="flex items-center gap-2">

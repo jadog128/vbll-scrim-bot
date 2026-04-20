@@ -46,6 +46,10 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
   historySql += " ORDER BY created_at DESC LIMIT 50";
   const history = await execute(historySql, [selectedGuildId]);
 
+  // 4. Fetch Reject Presets
+  const presetsRes = await execute("SELECT value FROM guild_settings WHERE guild_id = ? AND key = 'reject_presets'", [selectedGuildId]);
+  const rejectPresets = presetsRes.rows.length > 0 ? (presetsRes.rows[0] as any).value.split(',').map((s: string) => s.trim()) : [];
+
   return (
     <div className="space-y-10 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -78,13 +82,13 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
               <h3 className="text-lg font-bold text-on-surface flex items-center gap-3">
                  {query ? (
                     <>
-                      <Search className="w-5 h-5 text-primary" />
-                      Global Search Results
+                       <Search className="w-5 h-5 text-primary" />
+                       Global Search Results
                     </>
                  ) : (
                     <>
-                      <ShieldAlert className="w-5 h-5 text-primary" />
-                      Active Submissions
+                       <ShieldAlert className="w-5 h-5 text-primary" />
+                       Active Submissions
                     </>
                  )}
               </h3>
@@ -96,7 +100,7 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
 
            <div className="space-y-3">
               {(query ? searchResults : activeRequests.rows).map((req: any) => (
-                <AdminRequestRow key={req.id} request={req} />
+                <AdminRequestRow key={req.id} request={req} rejectPresets={rejectPresets} />
               ))}
               {(query ? searchResults : activeRequests.rows).length === 0 && (
                 <div className="py-20 text-center bg-surface-container-low/30 rounded-3xl border border-dashed border-outline-variant/10">
