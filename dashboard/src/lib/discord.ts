@@ -8,7 +8,7 @@ const GUILD_ID = process.env.BATCH_GUILD_ID || "1286206719847960670";
 export async function sendDiscordDM(userId: string, content: any) {
   if (!BOT_TOKEN) return;
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), 8000);
+  const id = setTimeout(() => controller.abort(), 3000);
   try {
     const dmRes = await fetch(`https://discord.com/api/v10/users/@me/channels`, {
       method: "POST",

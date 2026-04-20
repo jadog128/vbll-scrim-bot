@@ -1,6 +1,6 @@
 import { execute } from "./db";
 
-const BOT_TOKEN = process.env.VBLL_DISCORD_TOKEN || process.env.BATCH_DISCORD_TOKEN || process.env.SCRIM_DISCORD_TOKEN || process.env.DISCORD_TOKEN;
+const BOT_TOKEN = process.env.BATCH_DISCORD_TOKEN || process.env.VBLL_DISCORD_TOKEN || process.env.SCRIM_DISCORD_TOKEN || process.env.DISCORD_TOKEN;
 if (!BOT_TOKEN) console.warn("⚠️ [DISCORD] BOT_TOKEN is missing in current environment.");
 
 const GUILD_ID = process.env.VBLL_DISCORD_GUILD_ID || process.env.DISCORD_GUILD_ID || process.env.BATCH_GUILD_ID || process.env.SCRIM_GUILD_ID || "1286206719847960670";
