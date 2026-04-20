@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       );
     }
 
-    await execute("DELETE FROM batch_requests WHERE id = ?", [id]);
+    await execute("UPDATE batch_requests SET hidden_from_admin = 1 WHERE id = ?", [id]);
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

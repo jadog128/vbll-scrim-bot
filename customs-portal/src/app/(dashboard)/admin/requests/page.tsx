@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { execute } from "@/lib/db";
 import { History, ShieldAlert, ListFilter, Search, Settings2 } from "lucide-react";
 import AdminRequestRow from "@/components/AdminRequestRow";
+import AdminBulkRequests from "@/components/AdminBulkRequests";
 import AdminSearchBar from "@/components/AdminSearchBar";
 import Link from "next/link";
 
@@ -24,10 +25,10 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
   // 1. Fetch search results (if searching) - Search ALL statuses
   let searchResults: any[] = [];
   if (query) {
-    let searchSql = "SELECT * FROM batch_requests WHERE (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?)) AND guild_id = ?";
+    let searchSql = "SELECT * FROM batch_requests WHERE (LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?)) AND guild_id = ? AND hidden_from_admin = 0";
     const params: any[] = [`%${query}%`, `%${query}%`, selectedGuildId];
     if (searchId) {
-      searchSql = "SELECT * FROM batch_requests WHERE (id = ? OR LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?)) AND guild_id = ?";
+      searchSql = "SELECT * FROM batch_requests WHERE (id = ? OR LOWER(username) LIKE LOWER(?) OR LOWER(vrfs_id) LIKE LOWER(?)) AND guild_id = ? AND hidden_from_admin = 0";
       params.unshift(searchId);
     }
     searchSql += " ORDER BY created_at DESC LIMIT 100";
@@ -36,13 +37,13 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
   }
 
   // 2. Fetch Active Queue (Only if NOT searching, or as secondary)
-  let activeRequestsSql = "SELECT * FROM batch_requests WHERE status NOT IN ('completed', 'rejected') AND guild_id = ?";
+  let activeRequestsSql = "SELECT * FROM batch_requests WHERE status NOT IN ('completed', 'rejected') AND guild_id = ? AND hidden_from_admin = 0";
   const activeParams: any[] = [selectedGuildId];
   activeRequestsSql += " ORDER BY created_at DESC";
   const activeRequests = await execute(activeRequestsSql, activeParams);
 
   // 3. Fetch History
-  let historySql = "SELECT * FROM batch_requests WHERE status IN ('completed', 'rejected') AND guild_id = ?";
+  let historySql = "SELECT * FROM batch_requests WHERE status IN ('completed', 'rejected') AND guild_id = ? AND hidden_from_admin = 0";
   historySql += " ORDER BY created_at DESC LIMIT 50";
   const history = await execute(historySql, [selectedGuildId]);
 
@@ -99,16 +100,10 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
            </div>
 
            <div className="space-y-3">
-              {(query ? searchResults : activeRequests.rows).map((req: any) => (
-                <AdminRequestRow key={req.id} request={req} rejectPresets={rejectPresets} />
-              ))}
-              {(query ? searchResults : activeRequests.rows).length === 0 && (
-                <div className="py-20 text-center bg-surface-container-low/30 rounded-3xl border border-dashed border-outline-variant/10">
-                   <p className="text-on-surface-variant font-medium">
-                      {query ? "No requests found matching your search." : "No active submissions in queue."}
-                   </p>
-                </div>
-              )}
+              <AdminBulkRequests 
+                requests={query ? searchResults : activeRequests.rows} 
+                rejectPresets={rejectPresets} 
+              />
            </div>
         </div>
 
