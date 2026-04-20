@@ -16,6 +16,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
   }
 
+  // Debug Trace
+  try { await execute("INSERT INTO staff_logs (action, target_id, details) VALUES (?,?,?)", ["WEB_TRACE", requestId.toString(), `Action: ${action}`]); } catch(e) {}
+
   try {
     // 0. Fetch current request info for Discord sync
     const currentReqRes = await execute("SELECT * FROM batch_requests WHERE id = ?", [requestId]);
