@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, Trash2, Ban, Layers, MousePointer2 } from "lucide-react";
+import { Check, X, Trash2, Ban, Layers, MousePointer } from "lucide-react";
 import AdminRequestRow from "./AdminRequestRow";
 
 export default function AdminBulkRequests({ 
@@ -62,7 +62,7 @@ export default function AdminBulkRequests({
              isBulkMode ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
            }`}
          >
-           {isBulkMode ? <MousePointer2 className="w-3.5 h-3.5" /> : <Layers className="w-3.5 h-3.5" />}
+           {isBulkMode ? <MousePointer className="w-3.5 h-3.5" /> : <Layers className="w-3.5 h-3.5" />}
            {isBulkMode ? 'Exit Selection' : 'Bulk Selection'}
          </button>
       </div>
