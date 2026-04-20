@@ -7,37 +7,63 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface UserDashboardLayoutProps {
     statsSection: React.ReactNode;
-    timelineSection: React.ReactNode;
+    timelineSection: (requests: any[], isEditMode: boolean) => React.ReactNode;
+    requests: any[];
     userId: string;
 }
 
-export default function UserDashboardLayout({ statsSection, timelineSection, userId }: UserDashboardLayoutProps) {
+export default function UserDashboardLayout({ statsSection, timelineSection, requests: initialRequests, userId }: UserDashboardLayoutProps) {
     const [isEditMode, setIsEditMode] = useState(false);
     const [layout, setLayout] = useState<string[]>(['stats', 'timeline']);
+    const [requests, setRequests] = useState<any[]>(initialRequests);
 
     useEffect(() => {
-        const saved = localStorage.getItem(`user_layout_${userId}`);
-        if (saved) {
+        const savedLayout = localStorage.getItem(`user_layout_${userId}`);
+        const savedOrder = localStorage.getItem(`user_order_${userId}`);
+        
+        if (savedLayout) {
             try {
-                const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    setLayout(parsed);
-                }
+                const parsed = JSON.parse(savedLayout);
+                if (Array.isArray(parsed) && parsed.length > 0) setLayout(parsed);
             } catch (e) {}
         }
-    }, [userId]);
+
+        if (savedOrder && initialRequests.length > 0) {
+            try {
+                const orderIds = JSON.parse(savedOrder);
+                const ordered = [...initialRequests].sort((a, b) => {
+                    const idxA = orderIds.indexOf(a.id);
+                    const idxB = orderIds.indexOf(b.id);
+                    return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+                });
+                setRequests(ordered);
+            } catch (e) {}
+        } else {
+            setRequests(initialRequests);
+        }
+    }, [userId, initialRequests]);
 
     const handleSave = () => {
         localStorage.setItem(`user_layout_${userId}`, JSON.stringify(layout));
+        localStorage.setItem(`user_order_${userId}`, JSON.stringify(requests.map(r => r.id)));
         setIsEditMode(false);
     };
 
     const onDragEnd = (result: any) => {
         if (!result.destination) return;
-        const items = Array.from(layout);
-        const [reorderedItem] = items.splice(result.source.index, 1);
-        items.splice(result.destination.index, 0, reorderedItem);
-        setLayout(items);
+        const { source, destination, droppableId } = result;
+
+        if (droppableId === 'dashboard-sections') {
+            const items = Array.from(layout);
+            const [reorderedItem] = items.splice(source.index, 1);
+            items.splice(destination.index, 0, reorderedItem);
+            setLayout(items);
+        } else if (droppableId === 'request-grid') {
+            const items = Array.from(requests);
+            const [reorderedItem] = items.splice(source.index, 1);
+            items.splice(destination.index, 0, reorderedItem);
+            setRequests(items);
+        }
     };
 
     const renderSection = (id: string) => {
@@ -46,11 +72,11 @@ export default function UserDashboardLayout({ statsSection, timelineSection, use
                 return (
                     <div className="relative group">
                         {isEditMode && (
-                             <div className="absolute -top-3 -right-3 z-30 bg-primary text-white p-2 rounded-xl shadow-xl animate-bounce">
-                                <Move className="w-4 h-4" />
+                             <div className="absolute top-4 right-4 z-40 bg-primary text-white p-2 rounded-xl shadow-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                                <Move className="w-3.5 h-3.5" /> Move Section
                              </div>
                         )}
-                        <div className={isEditMode ? "ring-2 ring-primary/20 rounded-[2.5rem] p-4 bg-surface-container-low/20 transition-all border-2 border-dashed border-primary/10" : ""}>
+                        <div className={isEditMode ? "ring-2 ring-primary/20 rounded-[3rem] p-6 bg-surface-container-low/20 transition-all border-2 border-dashed border-primary/10" : ""}>
                             {statsSection}
                         </div>
                     </div>
@@ -59,12 +85,12 @@ export default function UserDashboardLayout({ statsSection, timelineSection, use
                 return (
                     <div className="relative group">
                         {isEditMode && (
-                             <div className="absolute -top-3 -right-3 z-30 bg-primary text-white p-2 rounded-xl shadow-xl animate-bounce">
-                                <Move className="w-4 h-4" />
+                             <div className="absolute top-4 right-4 z-40 bg-secondary text-white p-2 rounded-xl shadow-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                                <Move className="w-3.5 h-3.5" /> Move Section
                              </div>
                         )}
-                        <div className={isEditMode ? "ring-2 ring-primary/20 rounded-[2.5rem] p-4 bg-surface-container-low/20 transition-all border-2 border-dashed border-primary/10" : ""}>
-                            {timelineSection}
+                        <div className={isEditMode ? "ring-2 ring-secondary/20 rounded-[3rem] p-6 bg-surface-container-low/20 transition-all border-2 border-dashed border-secondary/10" : ""}>
+                            {timelineSection(requests, isEditMode)}
                         </div>
                     </div>
                 );
@@ -79,7 +105,7 @@ export default function UserDashboardLayout({ statsSection, timelineSection, use
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black text-on-surface tracking-tighter">Command Center</h1>
                     <p className="text-sm font-medium text-on-surface-variant flex items-center gap-2">
-                        Welcome back! Manage your active customs and track status in real-time.
+                        Welcome back! Reorder items or widgets to suit your workflow.
                     </p>
                 </div>
 
@@ -94,7 +120,7 @@ export default function UserDashboardLayout({ statsSection, timelineSection, use
                                 className="px-5 py-3 bg-surface-container-high rounded-2xl hover:bg-surface-container-highest transition-all text-xs font-black uppercase tracking-widest flex items-center gap-2 group"
                             >
                                 <Settings2 className="w-4 h-4 group-hover:rotate-90 transition-transform duration-500" />
-                                Edit Dashboard
+                                Customize Layout
                             </motion.button>
                         ) : (
                             <motion.div 
@@ -115,7 +141,7 @@ export default function UserDashboardLayout({ statsSection, timelineSection, use
                                     className="px-5 py-3 bg-primary text-white rounded-2xl shadow-lg shadow-primary/20 text-xs font-black uppercase tracking-widest flex items-center gap-2"
                                 >
                                     <Save className="w-4 h-4" />
-                                    Save Layout
+                                    Finish Editing
                                 </button>
                             </motion.div>
                         )}
