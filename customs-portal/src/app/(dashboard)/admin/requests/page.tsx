@@ -9,6 +9,7 @@ import AdminSearchBar from "@/components/AdminSearchBar";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function AdminRequests(props: { searchParams: Promise<{ q?: string; guild?: string }> }) {
   const searchParams = await props.searchParams;
