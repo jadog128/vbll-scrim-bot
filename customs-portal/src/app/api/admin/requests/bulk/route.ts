@@ -17,17 +17,14 @@ export async function POST(req: Request) {
     }
 
     if (action === 'delete') {
-      // Soft delete: hide from portal
       const sql = `UPDATE batch_requests SET hidden_from_admin = 1 WHERE id IN (${requestIds.map(() => '?').join(',')})`;
       await execute(sql, requestIds);
       return NextResponse.json({ success: true, count: requestIds.length });
     }
 
     if (action === 'approve') {
-       const sql = `UPDATE batch_requests SET status = 'pending' WHERE id IN (${requestIds.map(() => '?').join(',')}) AND status = 'pre_review'`;
+       const sql = `UPDATE batch_requests SET status = 'pending' WHERE id IN (${requestIds.map(() => '?').join(',')})`;
        await execute(sql, requestIds);
-       // Logic for DMs in bulk would be heavy here, ideally we trigger them asynchronously
-       // For now, we update the DB. User specifically asked for "mass delete/accept/reject"
        return NextResponse.json({ success: true, count: requestIds.length });
     }
 
