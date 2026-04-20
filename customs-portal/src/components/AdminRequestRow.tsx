@@ -135,34 +135,39 @@ export default function AdminRequestRow({ request, rejectPresets = [] }: { reque
               </button>
            </div>
            
-           <div className="space-y-2">
+           <div className="space-y-4">
               <textarea 
                 placeholder="Enter rejection reason..."
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                className="w-full p-4 bg-surface-container-low rounded-2xl text-xs font-medium border border-outline-variant/10 focus:ring-1 focus:ring-error/20 outline-none min-h-[80px]"
+                className="w-full p-4 bg-surface-container-low rounded-2xl text-xs font-medium border border-outline-variant/10 focus:ring-1 focus:ring-error/20 outline-none min-h-[100px] shadow-inner"
               />
               
-              <div className="flex flex-wrap gap-2">
-                 {rejectPresets.map((preset, idx) => (
-                   <button 
-                     key={idx}
-                     onClick={() => handleAction("deny", preset)}
-                     disabled={loading}
-                     className="px-3 py-1.5 bg-error/5 text-error border border-error/10 rounded-full text-[10px] font-bold hover:bg-error hover:text-white transition-all"
-                   >
-                     {preset}
-                   </button>
-                 ))}
+              <div className="space-y-2">
+                 <p className="text-[9px] font-black uppercase text-on-surface-variant/40 ml-1">Quick Actions</p>
+                 <div className="flex flex-wrap gap-2">
+                    {(rejectPresets.length > 0 ? rejectPresets : ["Missing Proof", "Invalid ID", "Duplicate", "Incorrect Channel"]).map((preset, idx) => (
+                      <button 
+                        key={idx}
+                        onClick={() => handleAction("deny", preset)}
+                        disabled={loading}
+                        className="px-4 py-2 bg-error/5 text-error border border-error/10 rounded-xl text-[10px] font-bold hover:bg-error hover:text-white hover:scale-105 transition-all shadow-sm active:scale-95"
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                 </div>
               </div>
 
-              <button 
-                onClick={() => handleAction("deny", rejectReason)}
-                disabled={loading || !rejectReason}
-                className="w-full py-3 bg-error text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
-              >
-                Confirm Rejection
-              </button>
+              <div className="pt-2">
+                <button 
+                  onClick={() => handleAction("deny", rejectReason)}
+                  disabled={loading || !rejectReason}
+                  className="w-full py-4 bg-error text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:shadow-lg hover:shadow-error/20 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+                >
+                  {loading ? 'Processing...' : 'Confirm Customs Rejection'}
+                </button>
+              </div>
            </div>
         </div>
       ) : (
