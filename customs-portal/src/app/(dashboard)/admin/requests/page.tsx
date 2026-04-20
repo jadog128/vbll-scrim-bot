@@ -102,8 +102,8 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
 
                <div className="space-y-3">
                   <AdminBulkRequests 
-                    requests={query ? searchResults : activeRequests.rows} 
-                    rejectPresets={rejectPresets} 
+                    requests={JSON.parse(JSON.stringify(query ? searchResults : activeRequests.rows || []))} 
+                    rejectPresets={JSON.parse(JSON.stringify(rejectPresets || []))} 
                   />
                </div>
             </div>
@@ -115,7 +115,7 @@ export default async function AdminRequests(props: { searchParams: Promise<{ q?:
                   Recent History
                </h3>
                <div className="bg-surface-container-low rounded-[2rem] p-6 border border-outline-variant/10 space-y-4">
-                  {history.rows.map((req: any) => (
+                  {JSON.parse(JSON.stringify(history.rows || [])).map((req: any) => (
                     <div key={req.id} className="flex items-center justify-between gap-4 py-2 border-b border-outline-variant/5 last:border-0">
                       <div className="truncate">
                         <div className="text-sm font-bold text-on-surface truncate">{req.username}</div>
