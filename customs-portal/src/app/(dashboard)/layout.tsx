@@ -28,8 +28,11 @@ export default function DashboardLayout({
 
         {/* Mobile Bottom Nav */}
         <div className="lg:hidden">
-          <MobileNav />
+          <Suspense fallback={<div className="h-20 w-full bg-white animate-pulse" />}>
+             <MobileNav />
+          </Suspense>
         </div>
+
       </div>
     </div>
   );
