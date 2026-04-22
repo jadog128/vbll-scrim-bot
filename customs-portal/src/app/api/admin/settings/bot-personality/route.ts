@@ -7,12 +7,25 @@ export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!(session?.user as any)?.isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const url = new URL(req.url);
+  const guildId = url.searchParams.get("guild");
+  if (!guildId) return NextResponse.json({ error: "Guild ID required" }, { status: 400 });
+
   try {
-    const res = await execute("SELECT * FROM batch_settings WHERE key LIKE 'bot_template_%' OR key = 'bot_core_config'");
+    const res = await execute(
+        "SELECT * FROM batch_settings WHERE key LIKE ? OR key = ?", 
+        [`bot_template_${guildId}_%`, `bot_core_config_${guildId}`]
+    );
     const data: Record<string, any> = {};
     res.rows.forEach((row: any) => {
       let key = row.key;
-      if (key.startsWith("bot_template_")) key = key.replace("bot_template_", "");
+      // Strip guild-specific prefix for frontend consumption
+      if (key.startsWith(`bot_template_${guildId}_`)) {
+          key = key.replace(`bot_template_${guildId}_`, "");
+      } else if (key === `bot_core_config_${guildId}`) {
+          key = "bot_core_config";
+      }
+
       try {
         data[key] = JSON.parse(row.value);
       } catch {
@@ -30,17 +43,16 @@ export async function POST(req: Request) {
   if (!(session?.user as any)?.isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { type, category, config } = await req.json();
+    const { type, category, config, guild } = await req.json();
+    if (!guild) return NextResponse.json({ error: "Guild required" }, { status: 400 });
     
     let key = "";
-    let value = "";
+    let value = JSON.stringify(config);
 
     if (type === 'core') {
-        key = "bot_core_config";
-        value = JSON.stringify(config);
+        key = `bot_core_config_${guild}`;
     } else {
-        key = `bot_template_${category}`;
-        value = JSON.stringify(config);
+        key = `bot_template_${guild}_${category}`;
     }
 
     await execute(
@@ -53,4 +65,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
 

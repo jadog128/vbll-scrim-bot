@@ -1,12 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { MessageSquare, Save, RotateCcw, Variable, Smartphone, Monitor, Info, CheckCircle2, AlertTriangle, Code, Palette, Zap, Settings2 } from "lucide-react";
+
 import { motion, AnimatePresence } from "framer-motion";
 
 import DiscordEmbedPreview from "@/components/DiscordEmbedPreview";
 import { toast } from "sonner";
 import useSWR from "swr";
+
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -84,32 +88,44 @@ const CORE_SETTINGS = {
 };
 
 export default function BotEditorPage() {
-    const { data: savedTemplates, mutate } = useSWR('/api/admin/settings/bot-personality', fetcher);
+    const { data: session } = useSession();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const guildId = searchParams.get("guild");
+    
+    useEffect(() => {
+        if (!guildId) {
+            router.push("/admin/select");
+        }
+    }, [guildId, router]);
+
+    const { data: savedTemplates, mutate } = useSWR(guildId ? `/api/admin/settings/bot-personality?guild=${guildId}` : null, fetcher);
+
     const [viewMode, setViewMode] = useState<"embeds" | "core">("embeds");
     const [activeTab, setActiveTab] = useState<keyof typeof BOT_TEMPLATES>("approval");
     const [config, setConfig] = useState(BOT_TEMPLATES[activeTab]);
     const [coreConfigs, setCoreConfigs] = useState(CORE_SETTINGS);
     const [isSaving, setIsSaving] = useState(false);
 
-    // Fetch core settings from existing generic settings API if possible, or use defaults
+    // Fetch correctly scoped settings when tab or guild changes
     useEffect(() => {
-        if (savedTemplates) {
-            if (viewMode === "embeds" && savedTemplates[activeTab]) {
-                setConfig(savedTemplates[activeTab]);
-            }
-            if (savedTemplates.bot_core_config) {
-                setCoreConfigs(savedTemplates.bot_core_config);
-            }
+        if (viewMode === "embeds") {
+            const saved = savedTemplates?.[activeTab];
+            // Fix: Fallback to default template if no saved config exists for THIS tab
+            setConfig(saved || BOT_TEMPLATES[activeTab]);
+        }
+        if (savedTemplates?.bot_core_config) {
+            setCoreConfigs(savedTemplates.bot_core_config);
         }
     }, [activeTab, savedTemplates, viewMode]);
 
-
     const handleSave = async () => {
+        if (!guildId) return;
         setIsSaving(true);
         try {
             const body = viewMode === "embeds" 
-                ? { category: activeTab, config, type: 'template' }
-                : { config: coreConfigs, type: 'core' };
+                ? { category: activeTab, config, type: 'template', guild: guildId }
+                : { config: coreConfigs, type: 'core', guild: guildId };
 
             const res = await fetch('/api/admin/settings/bot-personality', {
                 method: 'POST',
@@ -126,6 +142,7 @@ export default function BotEditorPage() {
             setIsSaving(false);
         }
     };
+
 
     const updateField = (path: string, value: any) => {
         setConfig(prev => ({ ...prev, [path]: value }));
