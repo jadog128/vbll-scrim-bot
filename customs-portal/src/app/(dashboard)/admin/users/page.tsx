@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { Users, Search, AlertCircle, Loader2, ArrowLeft, MoreVertical, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import useSWR from "swr";
@@ -8,7 +8,16 @@ import useSWR from "swr";
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export default function UserManagementPage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-center animate-pulse">Loading Directory...</div>}>
+            <UserManagementContent />
+        </Suspense>
+    );
+}
+
+function UserManagementContent() {
     const [query, setQuery] = useState("");
+
     
     // Auto-fetch when query changes, only if > 2 chars
     const { data, isValidating } = useSWR(

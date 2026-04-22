@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { Megaphone, AlertCircle, CheckCircle, Info, Send, Trash2, Loader2, Plus, ArrowLeft } from "lucide-react";
 import useSWR from "swr";
 import { toast } from "sonner";
@@ -10,6 +10,14 @@ import { useRouter } from "next/navigation";
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export default function BroadcastsAdminPage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-center animate-pulse">Loading Dashboard...</div>}>
+            <BroadcastsAdminContent />
+        </Suspense>
+    );
+}
+
+function BroadcastsAdminContent() {
     const { data, mutate } = useSWR('/api/broadcasts', fetcher);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [title, setTitle] = useState("");
