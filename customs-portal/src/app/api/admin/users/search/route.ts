@@ -14,26 +14,27 @@ export async function GET(req: Request) {
     const query = searchParams.get('q');
     
     if (!query || query.length < 3) {
-       return NextResponse.json({ users: [] }); // Require 3 chars
+       return NextResponse.json({ users: [] }); 
     }
 
-    // Since we don't have a concrete `users` table globally, we aggregate from `batch_requests`
-    // Which holds `discord_id` and `username`.
     const searchString = `%${query}%`;
     const result = await execute(
       `
       SELECT 
         discord_id, 
         MAX(username) as username, 
-        MAX(avatar) as avatar,
-        COUNT(id) as total_requests,
-        MAX(created_at) as last_request_date
-      FROM batch_requests
-      WHERE discord_id LIKE ? OR username LIKE ?
+        SUM(count) as total_requests,
+        MAX(last_active) as last_request_date
+      FROM (
+        SELECT discord_id, username, COUNT(*) as count, created_at as last_active FROM batch_requests WHERE discord_id LIKE ? OR username LIKE ? GROUP BY discord_id
+        UNION ALL
+        SELECT discord_id, username, COUNT(*) as count, created_at as last_active FROM scrim_requests WHERE discord_id LIKE ? OR username LIKE ? GROUP BY discord_id
+      )
       GROUP BY discord_id
-      LIMIT 20
+      ORDER BY last_request_date DESC
+      LIMIT 30
       `,
-      [searchString, searchString]
+      [searchString, searchString, searchString, searchString]
     );
 
     return NextResponse.json({ users: result.rows });
@@ -42,3 +43,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

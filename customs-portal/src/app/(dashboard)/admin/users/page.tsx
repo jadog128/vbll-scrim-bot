@@ -20,9 +20,10 @@ function UserManagementContent() {
 
     
     // Auto-fetch when query changes, only if > 2 chars
-    const { data, isValidating } = useSWR(
+    const { data, isValidating, error } = useSWR(
         query.length > 2 ? `/api/admin/users/search?q=${encodeURIComponent(query)}` : null, 
-        fetcher
+        fetcher,
+        { revalidateOnFocus: false }
     );
 
     return (
@@ -57,22 +58,32 @@ function UserManagementContent() {
 
             <div className="space-y-4">
                 {query.length > 0 && query.length < 3 && (
-                    <p className="text-on-surface-variant font-medium text-center py-10">Type at least 3 characters to search...</p>
+                    <p className="text-on-surface-variant font-medium text-center py-10 tracking-widest uppercase text-[10px]">Type at least 3 characters to search</p>
                 )}
 
                 {isValidating && (
-                    <div className="flex justify-center py-10">
-                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                    <div className="flex flex-col items-center justify-center py-20 animate-pulse space-y-4">
+                        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Scanning Database...</p>
                     </div>
                 )}
 
-                {data && !isValidating && data.users?.length === 0 && (
+                {error && (
+                    <div className="bg-error/10 rounded-[2.5rem] border-2 border-dashed border-error/20 p-16 text-center space-y-4">
+                         <AlertCircle className="w-12 h-12 text-error mx-auto" />
+                         <h3 className="text-xl font-black text-error">Search Error</h3>
+                         <p className="text-sm text-on-surface-variant font-medium">{error.message || "Failed to query the user database"}</p>
+                    </div>
+                )}
+
+                {data && !isValidating && !error && data.users?.length === 0 && (
                     <div className="bg-surface-container-low/20 rounded-[2.5rem] border-2 border-dashed border-outline-variant/10 p-16 text-center space-y-4">
                         <AlertCircle className="w-12 h-12 text-on-surface-variant/30 mx-auto" />
                         <h3 className="text-xl font-black text-on-surface-variant">No users found</h3>
                         <p className="text-sm text-on-surface-variant/70 font-medium tracking-widest uppercase">Try a different search term</p>
                     </div>
                 )}
+
 
                 {data && data.users?.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -83,14 +94,11 @@ function UserManagementContent() {
                                         <h3 className="text-xl font-black tracking-tight text-on-surface break-words">{user.username}</h3>
                                         <p className="text-[10px] font-black uppercase text-on-surface-variant/60 tracking-widest">ID: {user.discord_id}</p>
                                     </div>
-                                    {user.avatar ? (
-                                        <img src={`https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png`} className="w-12 h-12 rounded-full border-2 border-surface-container" />
-                                    ) : (
-                                        <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant font-bold text-lg">
-                                            {user.username.charAt(0).toUpperCase()}
-                                        </div>
-                                    )}
+                                    <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant font-bold text-lg border-2 border-surface-container">
+                                        {user.username ? user.username.charAt(0).toUpperCase() : "?"}
+                                    </div>
                                 </div>
+
                                 
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-2 gap-2">
