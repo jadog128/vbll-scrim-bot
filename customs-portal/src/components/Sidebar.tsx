@@ -32,7 +32,8 @@ export default function Sidebar() {
   }
 
   return (
-    <nav className="bg-[#f8f9f8] text-[#0b4633] w-72 h-full py-8 flex flex-col border-r border-outline-variant/10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+    <nav className="bg-[#f8f9f8] text-[#0b4633] w-72 h-full py-8 flex flex-col border-r border-outline-variant/10 shadow-[4px_0_24px_rgba(0,0,0,0.02)] overflow-y-auto no-scrollbar">
+
       {/* Header */}
       <div className="px-8 mb-10 flex items-center gap-4">
         <div className="w-11 h-11 rounded-2xl bg-primary flex items-center justify-center text-white shadow-ambient transition-transform hover:scale-105 active:scale-95">
