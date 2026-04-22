@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSession } from "next-auth/react";
-import { MessageSquare, Save, RotateCcw, Variable, Smartphone, Monitor, Info, CheckCircle2, AlertTriangle, Code, Palette, Zap, Settings2 } from "lucide-react";
+import { MessageSquare, Save, RotateCcw, Variable, Smartphone, Monitor, Info, CheckCircle2, AlertTriangle, Code, Palette, Zap, Settings2, Globe } from "lucide-react";
+
 import { motion, AnimatePresence } from "framer-motion";
 
 import DiscordEmbedPreview from "@/components/DiscordEmbedPreview";
@@ -99,7 +100,10 @@ function BotEditorContent() {
 
     const { data: savedTemplates, mutate } = useSWR(guildId ? `/api/admin/settings/bot-personality?guild=${guildId}` : null, fetcher);
 
+    const activeGuild = (session?.user as any)?.manageableGuilds?.find((g: any) => g.id === guildId);
+
     const [viewMode, setViewMode] = useState<"embeds" | "core">("embeds");
+
     const [activeTab, setActiveTab] = useState<keyof typeof BOT_TEMPLATES>("approval");
     const [config, setConfig] = useState(BOT_TEMPLATES[activeTab]);
     const [coreConfigs, setCoreConfigs] = useState(CORE_SETTINGS);
@@ -155,7 +159,19 @@ function BotEditorContent() {
                         </div>
                         Bot Command Designer
                     </h1>
-                    <p className="text-on-surface-variant font-medium opacity-60">Architect your bot's personality and templates without code.</p>
+                    <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-2 px-3 py-1 bg-surface-container-high rounded-full border border-primary/10">
+                            {activeGuild?.icon ? (
+                                <img src={`https://cdn.discordapp.com/icons/${activeGuild.id}/${activeGuild.icon}.png`} className="w-4 h-4 rounded-full" alt="" />
+                            ) : (
+                                <Globe className="w-3 h-3 text-primary" />
+                            )}
+                            <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                                Editing: {activeGuild?.name || "Global Instance"}
+                            </span>
+                        </div>
+                        <p className="text-on-surface-variant text-[11px] font-medium opacity-40">Architect your bot's personality and templates without code.</p>
+                    </div>
                 </div>
                 
                 <div className="flex items-center gap-3">
