@@ -1,6 +1,7 @@
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import MobileNav from "@/components/MobileNav";
+import { Suspense } from "react";
 
 export default function DashboardLayout({
   children,
@@ -11,7 +12,9 @@ export default function DashboardLayout({
     <div className="flex h-screen overflow-hidden">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
-        <Sidebar />
+        <Suspense fallback={<div className="w-64 h-full bg-surface-container-low" />}>
+           <Sidebar />
+        </Suspense>
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 bg-surface relative">
