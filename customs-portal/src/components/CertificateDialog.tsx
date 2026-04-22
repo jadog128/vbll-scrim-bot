@@ -89,6 +89,7 @@ export default function CertificateDialog({ isOpen, onClose, request }: Certific
                     style={{ 
                         boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), inset 0 0 0 4px rgba(0,0,0,0.8), 0 25px 50px -12px rgba(0,0,0,0.8)',
                         padding: '1.5rem',
+                        minHeight: '450px',
                         // Outer acrylic thick border effect
                         border: '4px solid #1a1a1a',
                         borderRightColor: '#333',
@@ -100,19 +101,20 @@ export default function CertificateDialog({ isOpen, onClose, request }: Certific
                     <div className="absolute -top-32 -right-32 w-64 h-64 bg-white/10 rounded-full blur-[60px] pointer-events-none z-50 mix-blend-overlay" />
 
                     {/* PSA Style Header Plate */}
-                    <div className="w-full flex justify-center mb-4 relative z-40" style={{ transform: "translateZ(20px)" }}>
-                        <div className="bg-[#111] border border-white/10 px-8 py-2 rounded-md shadow-inner flex flex-col items-center text-center relative overflow-hidden bg-gradient-to-b from-[#222] to-[#0a0a0a]">
+                    <div className="w-full flex justify-center mb-6 relative z-40" style={{ transform: "translateZ(20px)" }}>
+                        <div className="bg-[#111] border border-white/10 px-8 py-3 rounded-md shadow-inner flex flex-col items-center text-center relative overflow-hidden bg-gradient-to-b from-[#222] to-[#0a0a0a] min-w-[200px]">
                             <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/brushed-alum.png')] mix-blend-overlay" />
-                            <div className="flex items-center gap-2 mb-0.5 relative z-10">
+                            <div className="flex items-center gap-2 mb-1 relative z-10">
                                 <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                                <span className="text-[10px] font-black uppercase text-white tracking-[0.3em]">VBLL Grading</span>
+                                <span className="text-[11px] font-black uppercase text-white tracking-[0.3em]">VBLL Grading</span>
                             </div>
-                            <div className="text-[10px] font-bold text-white/60 tracking-widest relative z-10 uppercase">Authentic / Mint 10</div>
+                            <div className="text-[10px] font-bold text-white/50 tracking-widest relative z-10 uppercase">Authentic / Mint 10</div>
                         </div>
                     </div>
 
                     {/* Inner Trading Card */}
-                    <div className="relative flex-1 bg-[#050505] rounded-xl overflow-hidden shadow-[inset_0_0_20px_rgba(0,0,0,1)] border-[3px] border-[#222] flex flex-col" style={{ aspectRatio: '3/4', transform: "translateZ(10px)" }}>
+                    <div className="relative w-full aspect-[3/4] bg-[#050505] rounded-xl overflow-hidden shadow-[inset_0_0_20px_rgba(0,0,0,1)] border-[3px] border-[#222] flex flex-col" style={{ transform: "translateZ(10px)" }}>
+
                         
                         {/* Holographic Inner Background & Vignette */}
                         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-secondary/30 mix-blend-screen" />
