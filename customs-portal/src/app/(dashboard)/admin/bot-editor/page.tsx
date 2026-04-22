@@ -1,15 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { MessageSquare, Save, RotateCcw, Variable, Smartphone, Monitor, Info, CheckCircle2, AlertTriangle, Code, Palette, Zap, Settings2 } from "lucide-react";
-
 import { motion, AnimatePresence } from "framer-motion";
 
 import DiscordEmbedPreview from "@/components/DiscordEmbedPreview";
 import { toast } from "sonner";
 import useSWR from "swr";
-
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -87,7 +85,7 @@ const CORE_SETTINGS = {
     scrim_cooldown: "3600"
 };
 
-export default function BotEditorPage() {
+function BotEditorContent() {
     const { data: session } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -142,7 +140,6 @@ export default function BotEditorPage() {
             setIsSaving(false);
         }
     };
-
 
     const updateField = (path: string, value: any) => {
         setConfig(prev => ({ ...prev, [path]: value }));
@@ -380,5 +377,17 @@ export default function BotEditorPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function BotEditorPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+        }>
+            <BotEditorContent />
+        </Suspense>
     );
 }
