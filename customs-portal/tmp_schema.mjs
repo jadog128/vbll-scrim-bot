@@ -5,9 +5,10 @@ const db = createClient({
     url: process.env.VBLL_TURSO_URL || process.env.TURSO_URL || "", 
     authToken: process.env.VBLL_TURSO_TOKEN || process.env.TURSO_TOKEN || "" 
 });
-db.execute("SELECT sql FROM sqlite_master WHERE name IN ('batch_tickets', 'ticket_messages');").then(res => {
+db.execute("SELECT sql FROM sqlite_master WHERE name = 'batch_settings';").then(res => {
     console.log(res.rows);
 }).catch(console.error);
+
 
 
 

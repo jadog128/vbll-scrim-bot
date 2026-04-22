@@ -27,7 +27,9 @@ export default function Sidebar() {
       links.push({ name: "Switch League", href: "/admin/select", icon: "swap_horiz" }); // Point to dedicated selector
     }
     
+    links.push({ name: "Bot Designer", href: "/admin/bot-editor", icon: "robot_2" });
     links.push({ name: "Staff Logs", href: "/admin/logs", icon: "shield_person" });
+
     links.push({ name: "Batch Archive", href: "/admin/archive", icon: "history" });
   }
 
