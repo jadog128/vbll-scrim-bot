@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { Layout, Save, X, Move, Package, Send, Settings2, Zap, HelpCircle, CheckCircle2, Clock, History as HistoryIcon, RefreshCw, BarChart3 } from "lucide-react";
+import { Layout, Save, X, Move, Package, Send, Settings2, Zap, HelpCircle, CheckCircle2, Clock, History as HistoryIcon, RefreshCw, BarChart3, Award } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import BroadcastBanner from "./BroadcastBanner";
+import CertificateDialog from "./CertificateDialog";
 
 interface UserDashboardLayoutProps {
     statsSection: React.ReactNode;
@@ -16,6 +17,7 @@ export default function UserDashboardLayout({ statsSection, requests: initialReq
     const [isEditMode, setIsEditMode] = useState(false);
     const [layout, setLayout] = useState<string[]>(['stats', 'timeline']);
     const [requests, setRequests] = useState<any[]>(initialRequests);
+    const [selectedCert, setSelectedCert] = useState<any>(null);
 
 
     useEffect(() => {
@@ -168,6 +170,15 @@ export default function UserDashboardLayout({ statsSection, requests: initialReq
                                                     <span className="text-[11px] font-black uppercase tracking-tighter text-on-surface">{req.status}</span>
                                                 </div>
                                             </div>
+                                            {req.status === 'completed' && !isEditMode && (
+                                                <button
+                                                    onClick={() => setSelectedCert(req)}
+                                                    className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-primary to-secondary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-md shadow-primary/20"
+                                                >
+                                                    <Award className="w-3.5 h-3.5" />
+                                                    Get Certificate
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -191,6 +202,7 @@ export default function UserDashboardLayout({ statsSection, requests: initialReq
             </Droppable>
         </div>
     );
+
 
     const renderSection = (id: string) => {
         switch (id) {
@@ -295,6 +307,13 @@ export default function UserDashboardLayout({ statsSection, requests: initialReq
                     )}
                 </Droppable>
             </DragDropContext>
+
+            <CertificateDialog 
+                isOpen={!!selectedCert}
+                onClose={() => setSelectedCert(null)}
+                request={selectedCert}
+            />
         </div>
     );
 }
+
