@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { MessageSquare, Save, RotateCcw, Variable, Smartphone, Monitor, Info, CheckCircle2, AlertTriangle, Code, Palette, Zap, Settings2, Globe } from "lucide-react";
-
 import { motion, AnimatePresence } from "framer-motion";
 
 import DiscordEmbedPreview from "@/components/DiscordEmbedPreview";
@@ -17,8 +16,8 @@ const BOT_TEMPLATES = {
     approval: {
         id: "approval",
         label: "Approval Message",
-        title: "✅ Request Approved!",
-        description: "Your batch request **{request_id}** has been processed by **{staff_name}**.\n\nYou have been granted access to the scrim channel.",
+        title: "✅ Batch Approved!",
+        description: "Your batch request **{request_id}** has been processed by **{staff_name}**.\n\nYou have been granted access to the batch channel.",
         color: "#2ecc71",
         footerText: "VBLL Operations",
         timestamp: true,
@@ -27,8 +26,8 @@ const BOT_TEMPLATES = {
     rejection: {
         id: "rejection",
         label: "Rejection Message",
-        title: "❌ Request Denied",
-        description: "Sorry {user_name}, your request **{request_id}** was rejected.\n\n**Reason:** {reason}\n\nPlease update your proof and re-submit.",
+        title: "❌ Batch Denied",
+        description: "Sorry {user_name}, your batch request **{request_id}** was rejected.\n\n**Reason:** {reason}\n\nPlease update your data and re-submit.",
         color: "#e74c3c",
         footerText: "VBLL Appeals",
         timestamp: true,
@@ -49,7 +48,7 @@ const BOT_TEMPLATES = {
         id: "welcome",
         label: "Welcome Msg",
         title: "👋 Welcome to the League!",
-        description: "Hey {user_name}, welcome to the pride of VBLL.\n\nUse `/scrim` to start your first session or check out <#12345> for rules.",
+        description: "Hey {user_name}, welcome to the pride of VBLL.\n\nUse `/batch` to start your first submission or check out <#12345> for rules.",
         color: "#00f5a0",
         footerText: "Lucid Management",
         timestamp: false,
@@ -58,8 +57,8 @@ const BOT_TEMPLATES = {
     help: {
         id: "help",
         label: "Help Menu",
-        title: "🛠️ Bot Support & commands",
-        description: "Here is your quick guide to using the portal and bot:\n\n**/scrim** - Submit a session\n**/profile** - View your stats\n**/shop** - Redeem your points",
+        title: "🛠️ Batch Bot Help",
+        description: "Here is your quick guide to using the portal and bot:\n\n**/batch** - Submit a batch\n**/profile** - View your stats\n**/shop** - Redeem your points",
         color: "#3498db",
         footerText: "Powered by Lucid Portal",
         timestamp: true,
@@ -78,12 +77,12 @@ const BOT_TEMPLATES = {
 };
 
 const CORE_SETTINGS = {
-    bot_nickname: "Lucid Operations Bot",
-    status_text: "Managing Scrims for VBLL",
+    bot_nickname: "Lucid Batch Bot",
+    status_text: "Managing Batches for VBLL",
     maintenance_mode: "false",
     audit_log_verbose: "true",
     auto_approve_verified: "false",
-    scrim_cooldown: "3600"
+    batch_cooldown: "3600"
 };
 
 function BotEditorContent() {
@@ -103,7 +102,6 @@ function BotEditorContent() {
     const activeGuild = (session?.user as any)?.manageableGuilds?.find((g: any) => g.id === guildId);
 
     const [viewMode, setViewMode] = useState<"embeds" | "core">("embeds");
-
     const [activeTab, setActiveTab] = useState<keyof typeof BOT_TEMPLATES>("approval");
     const [config, setConfig] = useState(BOT_TEMPLATES[activeTab]);
     const [coreConfigs, setCoreConfigs] = useState(CORE_SETTINGS);
@@ -113,7 +111,6 @@ function BotEditorContent() {
     useEffect(() => {
         if (viewMode === "embeds") {
             const saved = savedTemplates?.[activeTab];
-            // Fix: Fallback to default template if no saved config exists for THIS tab
             setConfig(saved || BOT_TEMPLATES[activeTab]);
         }
         if (savedTemplates?.bot_core_config) {
@@ -157,7 +154,7 @@ function BotEditorContent() {
                         <div className="p-3 bg-primary text-white rounded-2xl shadow-glow">
                              <Zap className="w-8 h-8" />
                         </div>
-                        Bot Command Designer
+                        Batch Bot Designer
                     </h1>
                     <div className="flex items-center gap-2 mt-2">
                         <div className="flex items-center gap-2 px-3 py-1 bg-surface-container-high rounded-full border border-primary/10">
@@ -170,7 +167,7 @@ function BotEditorContent() {
                                 Editing: {activeGuild?.name || "Global Instance"}
                             </span>
                         </div>
-                        <p className="text-on-surface-variant text-[11px] font-medium opacity-40">Architect your bot's personality and templates without code.</p>
+                        <p className="text-on-surface-variant text-[11px] font-medium opacity-40">Architect your batch bot's personality and logic without code.</p>
                     </div>
                 </div>
                 
