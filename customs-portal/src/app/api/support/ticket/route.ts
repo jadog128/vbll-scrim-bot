@@ -24,14 +24,18 @@ export async function POST(req: Request) {
 
   const { issue } = await req.json();
 
+  // Try to find a guild_id from env or default
+  const guildId = process.env.VBLL_DISCORD_GUILD_ID || "1286206719847960670";
+
   try {
     await execute(
-      "INSERT INTO batch_tickets (discord_id, username, issue, status, source) VALUES (?, ?, ?, ?, ?)",
-      [(session.user as any).id, session.user.name, issue, 'open', 'web']
+      "INSERT INTO batch_tickets (discord_id, username, issue, status, source, guild_id) VALUES (?, ?, ?, ?, ?, ?)",
+      [(session.user as any).id, session.user.name, issue, 'open', 'web', guildId]
     );
     const newTicket = await execute("SELECT last_insert_rowid() as id");
     return NextResponse.json({ success: true, id: (newTicket.rows[0] as any).id });
   } catch (err: any) {
+
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -14,7 +14,9 @@ export default function Sidebar() {
   const links = [
     { name: "My Requests", href: "/dashboard", icon: "receipt_long" },
     { name: "Inventory", href: "/inventory", icon: "inventory_2" },
+    { name: "Support Vault", href: "/support", icon: "shield" },
   ];
+
 
   if ((session?.user as any)?.isAdmin) {
     links.unshift({ name: "Admin Dashboard", href: "/admin", icon: "dashboard_customize" });
