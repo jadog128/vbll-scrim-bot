@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Layout, Save, X, Move, Package, Send, Settings2, Zap, HelpCircle, CheckCircle2, Clock, History as HistoryIcon, RefreshCw, BarChart3 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import BroadcastBanner from "./BroadcastBanner";
 
 interface UserDashboardLayoutProps {
     statsSection: React.ReactNode;
@@ -15,6 +16,7 @@ export default function UserDashboardLayout({ statsSection, requests: initialReq
     const [isEditMode, setIsEditMode] = useState(false);
     const [layout, setLayout] = useState<string[]>(['stats', 'timeline']);
     const [requests, setRequests] = useState<any[]>(initialRequests);
+
 
     useEffect(() => {
         const savedLayout = localStorage.getItem(`user_layout_${userId}`);
@@ -225,6 +227,7 @@ export default function UserDashboardLayout({ statsSection, requests: initialReq
 
     return (
         <div className="space-y-8">
+            <BroadcastBanner />
             <div className="flex items-center justify-between">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-black text-on-surface tracking-tighter">Command Center</h1>
@@ -232,6 +235,7 @@ export default function UserDashboardLayout({ statsSection, requests: initialReq
                         Welcome back! Reorder items or widgets to suit your workflow.
                     </p>
                 </div>
+
 
                 <div className="flex items-center gap-3">
                     <AnimatePresence mode="wait">

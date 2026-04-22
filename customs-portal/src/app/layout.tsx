@@ -17,6 +17,8 @@ export const metadata: Metadata = {
 
 import SupportWidget from "@/components/SupportWidget";
 
+import { Toaster } from "sonner";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -33,9 +35,11 @@ export default function RootLayout({
             {children}
           </main>
           <SupportWidget />
+          <Toaster position="bottom-right" richColors theme="light" />
         </Providers>
         <Analytics />
       </body>
+
     </html>
   );
 }

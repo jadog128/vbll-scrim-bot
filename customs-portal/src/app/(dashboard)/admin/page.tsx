@@ -122,7 +122,22 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
             <span className="material-symbols-outlined text-on-surface-variant text-[20px]">settings_suggest</span>
             Management Suite
           </h2>
-          <div className="bg-surface-container-lowest rounded-3xl p-2 shadow-ambient border border-white grid grid-cols-1 gap-1">
+           <div className="bg-surface-container-lowest rounded-3xl p-2 shadow-ambient border border-white grid grid-cols-1 gap-1">
+              <Link href={`/admin/broadcasts`}>
+                <button className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-surface-container-high transition-colors group text-left">
+                   <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary relative">
+                         <span className="material-symbols-outlined text-[20px]">campaign</span>
+                      </div>
+                      <div className="">
+                         <div className="text-sm font-bold">Global Broadcasts</div>
+                         <div className="text-[10px] text-on-surface-variant font-medium">Send real-time alerts to users</div>
+                      </div>
+                   </div>
+                   <span className="material-symbols-outlined text-on-surface-variant opacity-20 group-hover:opacity-100 transition-opacity">arrow_forward_ios</span>
+                </button>
+             </Link>
+
               <Link href={`/admin/requests?guild=${finalGuildId}`}>
                 <button className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-surface-container-high transition-colors group text-left">
                    <div className="flex items-center gap-3">
