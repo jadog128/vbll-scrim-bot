@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MessageSquare, Save, RotateCcw, Variable, Smartphone, Monitor, Info, CheckCircle2, AlertTriangle, Code, Palette, Zap } from "lucide-react";
+import { MessageSquare, Save, RotateCcw, Variable, Smartphone, Monitor, Info, CheckCircle2, AlertTriangle, Code, Palette, Zap, Settings2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
 import DiscordEmbedPreview from "@/components/DiscordEmbedPreview";
 import { toast } from "sonner";
 import useSWR from "swr";
@@ -11,6 +12,8 @@ const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 const BOT_TEMPLATES = {
     approval: {
+        id: "approval",
+        label: "Approval Message",
         title: "✅ Request Approved!",
         description: "Your batch request **{request_id}** has been processed by **{staff_name}**.\n\nYou have been granted access to the scrim channel.",
         color: "#2ecc71",
@@ -19,6 +22,8 @@ const BOT_TEMPLATES = {
         fields: [{ name: "League", value: "{league_id}", inline: true }, { name: "Batch ID", value: "{batch_id}", inline: true }]
     },
     rejection: {
+        id: "rejection",
+        label: "Rejection Message",
         title: "❌ Request Denied",
         description: "Sorry {user_name}, your request **{request_id}** was rejected.\n\n**Reason:** {reason}\n\nPlease update your proof and re-submit.",
         color: "#e74c3c",
@@ -27,6 +32,8 @@ const BOT_TEMPLATES = {
         fields: []
     },
     broadcast: {
+        id: "broadcast",
+        label: "Global Broadcast",
         title: "📢 Global Announcement",
         description: "{message}",
         color: "#5865f2",
@@ -34,34 +41,83 @@ const BOT_TEMPLATES = {
         footerText: "Broadcasting to all servers",
         timestamp: true,
         fields: []
+    },
+    welcome: {
+        id: "welcome",
+        label: "Welcome Msg",
+        title: "👋 Welcome to the League!",
+        description: "Hey {user_name}, welcome to the pride of VBLL.\n\nUse `/scrim` to start your first session or check out <#12345> for rules.",
+        color: "#00f5a0",
+        footerText: "Lucid Management",
+        timestamp: false,
+        fields: []
+    },
+    help: {
+        id: "help",
+        label: "Help Menu",
+        title: "🛠️ Bot Support & commands",
+        description: "Here is your quick guide to using the portal and bot:\n\n**/scrim** - Submit a session\n**/profile** - View your stats\n**/shop** - Redeem your points",
+        color: "#3498db",
+        footerText: "Powered by Lucid Portal",
+        timestamp: true,
+        fields: []
+    },
+    profile: {
+        id: "profile",
+        label: "Profile View",
+        title: "👤 {user_name}'s Professional Profile",
+        description: "Viewing identity data for {user_id}.\n\n**Status:** {verified_status}\n**League Points:** {points} ⭐",
+        color: "#9b59b6",
+        footerText: "VRFS Statistics",
+        timestamp: false,
+        fields: []
     }
+};
+
+const CORE_SETTINGS = {
+    bot_nickname: "Lucid Operations Bot",
+    status_text: "Managing Scrims for VBLL",
+    maintenance_mode: "false",
+    audit_log_verbose: "true",
+    auto_approve_verified: "false",
+    scrim_cooldown: "3600"
 };
 
 export default function BotEditorPage() {
     const { data: savedTemplates, mutate } = useSWR('/api/admin/settings/bot-personality', fetcher);
+    const [viewMode, setViewMode] = useState<"embeds" | "core">("embeds");
     const [activeTab, setActiveTab] = useState<keyof typeof BOT_TEMPLATES>("approval");
     const [config, setConfig] = useState(BOT_TEMPLATES[activeTab]);
+    const [coreConfigs, setCoreConfigs] = useState(CORE_SETTINGS);
     const [isSaving, setIsSaving] = useState(false);
 
-    // Load from DB if exists, else use defaults
+    // Fetch core settings from existing generic settings API if possible, or use defaults
     useEffect(() => {
-        if (savedTemplates && savedTemplates[activeTab]) {
-            setConfig(savedTemplates[activeTab]);
-        } else {
-            setConfig(BOT_TEMPLATES[activeTab]);
+        if (savedTemplates) {
+            if (viewMode === "embeds" && savedTemplates[activeTab]) {
+                setConfig(savedTemplates[activeTab]);
+            }
+            if (savedTemplates.bot_core_config) {
+                setCoreConfigs(savedTemplates.bot_core_config);
+            }
         }
-    }, [activeTab, savedTemplates]);
+    }, [activeTab, savedTemplates, viewMode]);
+
 
     const handleSave = async () => {
         setIsSaving(true);
         try {
+            const body = viewMode === "embeds" 
+                ? { category: activeTab, config, type: 'template' }
+                : { config: coreConfigs, type: 'core' };
+
             const res = await fetch('/api/admin/settings/bot-personality', {
                 method: 'POST',
-                body: JSON.stringify({ category: activeTab, config }),
+                body: JSON.stringify(body),
                 headers: { 'Content-Type': 'application/json' }
             });
             if (res.ok) {
-                toast.success(`Successfully deployed ${activeTab} personality!`);
+                toast.success(`Successfully deployed ${viewMode === "embeds" ? activeTab : "Core"} personality!`);
                 mutate();
             }
         } catch (err) {
@@ -70,7 +126,6 @@ export default function BotEditorPage() {
             setIsSaving(false);
         }
     };
-
 
     const updateField = (path: string, value: any) => {
         setConfig(prev => ({ ...prev, [path]: value }));
@@ -105,98 +160,177 @@ export default function BotEditorPage() {
                 </div>
             </div>
 
+            <div className="bg-white/40 backdrop-blur-md rounded-[2.5rem] p-3 border border-outline-variant/10 shadow-sm flex gap-2 w-fit mx-auto">
+                <button 
+                    onClick={() => setViewMode("embeds")}
+                    className={`py-3 px-8 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+                        viewMode === "embeds" ? "bg-black text-white shadow-lg" : "text-on-surface-variant/40 hover:bg-white/50"
+                    }`}
+                >
+                    <Smartphone className="w-4 h-4" />
+                    Embed Designer
+                </button>
+                <button 
+                    onClick={() => setViewMode("core")}
+                    className={`py-3 px-8 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+                        viewMode === "core" ? "bg-black text-white shadow-lg" : "text-on-surface-variant/40 hover:bg-white/50"
+                    }`}
+                >
+                    <Settings2 className="w-4 h-4" />
+                    Core System Config
+                </button>
+            </div>
+
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
-                {/* Editor Side */}
                 <div className="xl:col-span-7 space-y-8">
-                    {/* Category Selection */}
-                    <div className="bg-white rounded-[2.5rem] p-3 border border-outline-variant/10 shadow-sm flex gap-2">
-                        {Object.keys(BOT_TEMPLATES).map((cat) => (
-                            <button 
-                                key={cat}
-                                onClick={() => setActiveTab(cat as any)}
-                                className={`flex-1 py-4 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                    activeTab === cat 
-                                        ? "bg-primary text-black shadow-ambient" 
-                                        : "text-on-surface-variant/40 hover:bg-surface-container"
-                                }`}
-                            >
-                                {cat} Template
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="bg-white rounded-[3rem] border border-outline-variant/10 shadow-massive p-10 space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant flex items-center gap-2">
-                                    <MessageSquare className="w-3 h-3" />
-                                    Embed Title
-                                </label>
-                                <input 
-                                    className="w-full bg-surface-container rounded-2xl p-5 text-sm font-bold text-on-surface focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all border border-outline-variant/5"
-                                    value={config.title}
-                                    onChange={(e) => updateField('title', e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant flex items-center gap-2">
-                                    <Palette className="w-3 h-3" />
-                                    Brand Color
-                                </label>
-                                <div className="flex gap-4">
-                                    <input 
-                                        type="color"
-                                        className="w-16 h-[60px] rounded-2xl cursor-pointer border-4 border-white shadow-ambient"
-                                        value={config.color}
-                                        onChange={(e) => updateField('color', e.target.value)}
-                                    />
-                                    <input 
-                                        className="flex-1 bg-surface-container rounded-2xl p-5 text-sm font-mono font-bold text-on-surface focus:outline-none border border-outline-variant/5 uppercase"
-                                        value={config.color}
-                                        readOnly
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <div className="flex justify-between items-center">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant flex items-center gap-2">
-                                    <Code className="w-3 h-3" />
-                                    Main Description
-                                </label>
-                                <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[8px] font-black tracking-widest uppercase">
-                                    Variables Supported
-                                </div>
-                            </div>
-                            <textarea 
-                                className="w-full bg-surface-container rounded-[2rem] p-6 text-sm font-bold text-on-surface focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all border border-outline-variant/5 min-h-[160px] leading-relaxed"
-                                value={config.description}
-                                onChange={(e) => updateField('description', e.target.value)}
-                            />
-                        </div>
-
-                        <div className="p-6 bg-surface-container-low rounded-[2rem] border border-outline-variant/10">
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 mb-4 flex items-center gap-2">
-                                <Variable className="w-3 h-3" />
-                                Dynamic Placeholders
-                            </h4>
-                            <div className="flex flex-wrap gap-2">
-                                {["{user_name}", "{user_id}", "{request_id}", "{staff_name}", "{reason}", "{league_id}"].map(v => (
+                    {viewMode === "embeds" ? (
+                        <>
+                            <div className="bg-white rounded-[2rem] p-3 border border-outline-variant/10 shadow-sm flex flex-wrap gap-2">
+                                {Object.values(BOT_TEMPLATES).map((cat) => (
                                     <button 
-                                        key={v}
-                                        onClick={() => updateField('description', config.description + " " + v)}
-                                        className="px-3 py-1.5 bg-white rounded-xl text-[10px] font-bold text-on-surface-variant shadow-sm border border-outline-variant/10 hover:border-primary/40 hover:text-primary transition-all active:scale-95"
+                                        key={cat.id}
+                                        onClick={() => setActiveTab(cat.id as any)}
+                                        className={`py-3 px-5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                                            activeTab === cat.id 
+                                                ? "bg-primary text-black shadow-ambient" 
+                                                : "text-on-surface-variant/40 hover:bg-surface-container"
+                                        }`}
                                     >
-                                        {v}
+                                        {cat.label}
                                     </button>
                                 ))}
                             </div>
+
+                            <div className="bg-white rounded-[3rem] border border-outline-variant/10 shadow-massive p-10 space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant flex items-center gap-2">
+                                            <MessageSquare className="w-3 h-3" />
+                                            Embed Title
+                                        </label>
+                                        <input 
+                                            className="w-full bg-surface-container rounded-2xl p-5 text-sm font-bold text-on-surface focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all border border-outline-variant/5"
+                                            value={config.title}
+                                            onChange={(e) => updateField('title', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant flex items-center gap-2">
+                                            <Palette className="w-3 h-3" />
+                                            Brand Color
+                                        </label>
+                                        <div className="flex gap-4">
+                                            <input 
+                                                type="color"
+                                                className="w-16 h-[60px] rounded-2xl cursor-pointer border-4 border-white shadow-ambient"
+                                                value={config.color}
+                                                onChange={(e) => updateField('color', e.target.value)}
+                                            />
+                                            <input 
+                                                className="flex-1 bg-surface-container rounded-2xl p-5 text-sm font-mono font-bold text-on-surface focus:outline-none border border-outline-variant/5 uppercase"
+                                                value={config.color}
+                                                readOnly
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant flex items-center gap-2">
+                                            <Code className="w-3 h-3" />
+                                            Main Description
+                                        </label>
+                                        <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[8px] font-black tracking-widest uppercase">
+                                            Variables Supported
+                                        </div>
+                                    </div>
+                                    <textarea 
+                                        className="w-full bg-surface-container rounded-[2rem] p-6 text-sm font-bold text-on-surface focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all border border-outline-variant/5 min-h-[160px] leading-relaxed"
+                                        value={config.description}
+                                        onChange={(e) => updateField('description', e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="p-6 bg-surface-container-low rounded-[1.5rem] border border-outline-variant/10">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 mb-4 flex items-center gap-2">
+                                        <Variable className="w-3 h-3" />
+                                        Placeholders for {activeTab}
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {["{user_name}", "{user_id}", "{request_id}", "{staff_name}", "{reason}", "{league_id}", "{points}", "{verified_status}"].map(v => (
+                                            <button 
+                                                key={v}
+                                                onClick={() => updateField('description', config.description + " " + v)}
+                                                className="px-3 py-1.5 bg-white rounded-xl text-[9px] font-bold text-on-surface-variant shadow-sm border border-outline-variant/10 hover:border-primary/40 hover:text-primary transition-all active:scale-95"
+                                            >
+                                                {v}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="bg-white rounded-[3rem] border border-outline-variant/10 shadow-massive p-10 space-y-10">
+                            <div className="space-y-6">
+                                <h3 className="text-xl font-black text-on-surface tracking-tighter">Bot Identity & Hub</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Bot Nickname</label>
+                                        <input 
+                                            className="w-full bg-surface-container rounded-2xl p-5 text-sm font-bold text-on-surface border border-outline-variant/10" 
+                                            value={coreConfigs.bot_nickname}
+                                            onChange={(e) => setCoreConfigs({ ...coreConfigs, bot_nickname: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Status Text</label>
+                                        <input 
+                                            className="w-full bg-surface-container rounded-2xl p-5 text-sm font-bold text-on-surface border border-outline-variant/10" 
+                                            value={coreConfigs.status_text}
+                                            onChange={(e) => setCoreConfigs({ ...coreConfigs, status_text: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                <h3 className="text-xl font-black text-on-surface tracking-tighter">System Logic Toggles</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                   {[
+                                     { id: 'maintenance_mode', label: 'Maintenance Mode', desc: 'Disables all user requests instantly.' },
+                                     { id: 'audit_log_verbose', label: 'Detailed Logging', desc: 'Saves every single button click to logs.' },
+                                     { id: 'auto_approve_verified', label: 'Auto-Approve Syncs', desc: 'Instantly confirms verified-sync players.' }
+                                   ].map(toggle => (
+                                     <button 
+                                        key={toggle.id}
+                                        onClick={() => setCoreConfigs({ ...coreConfigs, [toggle.id]: (coreConfigs as any)[toggle.id] === 'true' ? 'false' : 'true' })}
+                                        className={`p-6 rounded-[2rem] border transition-all text-left flex justify-between items-center ${
+                                            (coreConfigs as any)[toggle.id] === 'true' 
+                                            ? "bg-primary/5 border-primary/20" 
+                                            : "bg-surface-container-low border-outline-variant/10 opacity-60"
+                                        }`}
+                                     >
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-black uppercase tracking-widest text-on-surface">{toggle.label}</p>
+                                            <p className="text-[10px] font-medium text-on-surface-variant">{toggle.desc}</p>
+                                        </div>
+                                        <div className={`w-12 h-6 rounded-full p-1 transition-all ${
+                                            (coreConfigs as any)[toggle.id] === 'true' ? "bg-primary" : "bg-outline-variant/40"
+                                        }`}>
+                                            <div className={`w-4 h-4 bg-white rounded-full transition-all ${
+                                                (coreConfigs as any)[toggle.id] === 'true' ? "translate-x-6" : "translate-x-0"
+                                            }`} />
+                                        </div>
+                                     </button>
+                                   ))}
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
-                {/* Preview Side */}
                 <div className="xl:col-span-5 relative">
                     <div className="sticky top-10 space-y-6">
                         <div className="flex items-center justify-between px-6">
@@ -218,9 +352,9 @@ export default function BotEditorPage() {
                                     <AlertTriangle className="text-amber-600 w-5 h-5" />
                                 </div>
                                 <div className="space-y-1">
-                                    <h4 className="text-sm font-black text-on-surface">Prerender Warning</h4>
+                                    <h4 className="text-sm font-black text-on-surface">Precision Note</h4>
                                     <p className="text-xs font-medium text-on-surface-variant opacity-70">
-                                        Some variables like <code className="bg-surface-container px-1 py-0.5 rounded text-amber-700">{"{reason}"}</code> will only display in the preview if you are editing the Rejection category.
+                                        The preview uses a mock "Bot Identity." Saving here will deploy the templates to your production instance immediately.
                                     </p>
                                 </div>
                             </div>

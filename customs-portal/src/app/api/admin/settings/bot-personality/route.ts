@@ -8,17 +8,18 @@ export async function GET(req: Request) {
   if (!(session?.user as any)?.isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const res = await execute("SELECT * FROM batch_settings WHERE key LIKE 'bot_template_%'");
-    const templates: Record<string, any> = {};
+    const res = await execute("SELECT * FROM batch_settings WHERE key LIKE 'bot_template_%' OR key = 'bot_core_config'");
+    const data: Record<string, any> = {};
     res.rows.forEach((row: any) => {
-      const key = row.key.replace("bot_template_", "");
+      let key = row.key;
+      if (key.startsWith("bot_template_")) key = key.replace("bot_template_", "");
       try {
-        templates[key] = JSON.parse(row.value);
+        data[key] = JSON.parse(row.value);
       } catch {
-        templates[key] = row.value;
+        data[key] = row.value;
       }
     });
-    return NextResponse.json(templates);
+    return NextResponse.json(data);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -29,11 +30,19 @@ export async function POST(req: Request) {
   if (!(session?.user as any)?.isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { category, config } = await req.json();
-    const key = `bot_template_${category}`;
-    const value = JSON.stringify(config);
+    const { type, category, config } = await req.json();
+    
+    let key = "";
+    let value = "";
 
-    // Upsert logic for Turso/SQLite
+    if (type === 'core') {
+        key = "bot_core_config";
+        value = JSON.stringify(config);
+    } else {
+        key = `bot_template_${category}`;
+        value = JSON.stringify(config);
+    }
+
     await execute(
       "INSERT INTO batch_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
       [key, value]
@@ -44,3 +53,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
