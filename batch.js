@@ -372,27 +372,41 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (commandName === 'setup') {
-      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return interaction.reply({ content: '❌ Administrator permissions required for setup.', ephemeral: true });
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return interaction.reply({ content: '❌ Access Denied: Administrator Only.', ephemeral: true });
       await interaction.deferReply({ ephemeral: true });
+      
       const gid = interaction.guildId;
+      await loadSettings(gid);
 
-      try {
-        const category = await interaction.guild.channels.create({ name: '📦 Batch System', type: ChannelType.GuildCategory });
-        const preReview = await interaction.guild.channels.create({ name: '🔍-pre-review', parent: category.id });
-        const queue = await interaction.guild.channels.create({ name: '📋-batch-queue', parent: category.id });
-        const release = await interaction.guild.channels.create({ name: '🚀-batch-releases', parent: category.id });
-        const role = await interaction.guild.roles.create({ name: 'Batch Staff', color: 0x5865f2, reason: 'Batch System Setup' });
+      const checklist = [
+        { key: 'pre_review_channel', label: 'Pre-Review Channel', cmd: '/set-batch-pre-review-channel', emoji: '🔍' },
+        { key: 'review_channel', label: 'Primary Queue Channel', cmd: '/set-batch-review-channel', emoji: '📋' },
+        { key: 'release_channel', label: 'Release Channel', cmd: '/set-batch-release-channel', emoji: '🚀' },
+        { key: 'ticket_category', label: 'Ticket Category', cmd: '/set-ticket-category', emoji: '🎫' },
+        { key: 'ticket_role', label: 'Staff/Ticket Role', cmd: '/set-ticket-role', emoji: '🛡️' }
+      ];
 
-        await setSetting(gid, 'league_name', interaction.guild.name);
-        await setSetting(gid, 'pre_review_channel', preReview.id);
-        await setSetting(gid, 'review_channel', queue.id);
-        await setSetting(gid, 'release_channel', release.id);
-        await setSetting(gid, 'staff_role', role.id);
+      const fields = checklist.map(item => {
+        const val = getSetting(gid, item.key);
+        const status = val ? '✅ **READY**' : '❌ **MISSING**';
+        const display = val ? (item.key.includes('role') ? `<@&${val}>` : (item.key.includes('category') ? `ID: \`${val}\`` : `<#${val}>`)) : `Action required: Use ${item.cmd}`;
+        return { name: `${item.emoji} ${item.label}`, value: `${status}\n${display}`, inline: false };
+      });
 
-        return interaction.editReply(`✅ **Setup Complete!**\n\nCreated category **${category.name}** with all required channels.\nCreated role **<@&${role.id}>**. Give this role to your staff!`);
-      } catch (e) {
-        return interaction.editReply(`❌ Setup failed: ${e.message}`);
-      }
+      const allSet = checklist.every(i => getSetting(gid, i.key));
+
+      const embed = new EmbedBuilder()
+        .setTitle('⚙️ Batch-Bot System Status & Guide')
+        .setDescription(allSet 
+            ? '🎉 **Your league is fully configured and operational!** All channels and roles are correctly mapped.' 
+            : '⚠️ **Configuration incomplete.** Some systems (requests, tickets, or releases) might not function. Please use the commands listed below to fix the missing items.')
+        .addFields(fields)
+        .setColor(allSet ? 0x00f5a0 : 0xFFA500)
+        .setThumbnail(interaction.guild.iconURL())
+        .setFooter({ text: 'Batch Management System Wizard' })
+        .setTimestamp();
+
+      return interaction.editReply({ embeds: [embed] });
     }
 
     if (commandName === 'set-batch-pre-review-channel') {
@@ -1046,6 +1060,7 @@ async function registerCommands() {
 
   const choices = batchItems.length > 0 ? batchItems.slice(0, 25) : [{ name: 'Other', value: 'other' }];
   const commands = [
+    new SlashCommandBuilder().setName('setup').setDescription('Show configuration status and guide [Admin Only]'),
     new SlashCommandBuilder().setName('batch_request').setDescription('Submit a request for a custom item').addStringOption(o => o.setName('type').setDescription('Type').setRequired(true).addChoices(...choices)),
     new SlashCommandBuilder().setName('post-batch-request').setDescription('Post request message [Staff]'),
     new SlashCommandBuilder().setName('set-batch-review-channel').setDescription('Set queue channel [Staff]').addChannelOption(o => o.setName('channel').setDescription('Channel').setRequired(true)),

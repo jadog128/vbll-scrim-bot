@@ -1,11 +1,12 @@
 require('dotenv').config({ path: '.env.batch' });
-const { REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { REST, Routes, SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+
 
 const commands = [
   // ── User Commands ──────────────────────────────────────────────────────────
   new SlashCommandBuilder()
     .setName('setup')
-    .setDescription('Auto-setup all channels and roles required for the Batch system [Admin Only]')
+    .setDescription('Show configuration status and guided setup for the Batch system [Admin Only]')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   new SlashCommandBuilder()

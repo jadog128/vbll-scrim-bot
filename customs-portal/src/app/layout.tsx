@@ -3,6 +3,10 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import { Analytics } from "@vercel/analytics/react";
+import SupportWidget from "@/components/SupportWidget";
+import CommandPalette from "@/components/CommandPalette";
+import StaffHeartbeat from "@/components/StaffHeartbeat";
+import { Toaster } from "sonner";
 
 const jakarta = Plus_Jakarta_Sans({ 
   subsets: ["latin"], 
@@ -14,10 +18,6 @@ export const metadata: Metadata = {
   title: "VBLL Portal - Request Management",
   description: "Manage your custom requests and batches",
 };
-
-import SupportWidget from "@/components/SupportWidget";
-
-import { Toaster } from "sonner";
 
 export default function RootLayout({
   children,
@@ -35,11 +35,12 @@ export default function RootLayout({
             {children}
           </main>
           <SupportWidget />
+          <CommandPalette />
+          <StaffHeartbeat />
           <Toaster position="bottom-right" richColors theme="light" />
         </Providers>
         <Analytics />
       </body>
-
     </html>
   );
 }

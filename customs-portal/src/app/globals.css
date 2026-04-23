@@ -30,7 +30,11 @@
 
   --shadow-ambient: 0 8px 32px -8px rgba(0, 46, 32, 0.06);
   --shadow-floating: 0 24px 64px -12px rgba(0, 46, 32, 0.08);
+  --shadow-massive: 0 64px 128px -24px rgba(0, 0, 0, 0.2);
+
+  --glow-primary: 0 0 24px -4px rgba(0, 245, 160, 0.5);
 }
+
 
 :root {
   --background: var(--color-surface);

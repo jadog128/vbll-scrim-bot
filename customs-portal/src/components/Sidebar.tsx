@@ -6,7 +6,9 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import SidebarProfileCard from "./SidebarProfileCard";
+import ActiveStaffList from "./ActiveStaffList";
 import { Settings2, ArrowUp, ArrowDown, Check } from "lucide-react";
+
 import { motion, Reorder, AnimatePresence } from "framer-motion";
 
 export default function Sidebar() {
@@ -141,7 +143,10 @@ export default function Sidebar() {
         </AnimatePresence>
       </div>
 
+      <ActiveStaffList />
+
       <div className="px-8 mt-auto pt-6 border-t border-primary/5 space-y-4">
+
         <button 
             onClick={() => setIsEditing(!isEditing)}
             className={`w-full py-3 rounded-2xl flex items-center justify-center gap-2 transition-all text-[10px] font-black uppercase tracking-widest ${
