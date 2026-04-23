@@ -8,6 +8,8 @@ import CommandPalette from "@/components/CommandPalette";
 import StaffHeartbeat from "@/components/StaffHeartbeat";
 import { Toaster } from "sonner";
 import { Suspense } from "react";
+import NextTopLoader from "nextjs-toploader";
+
 
 
 const jakarta = Plus_Jakarta_Sans({ 
@@ -32,7 +34,19 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
       </head>
       <body className={`${jakarta.variable} antialiased bg-surface text-on-surface flex flex-col min-h-screen`}>
+        <NextTopLoader 
+          color="#00f5a0"
+          initialPosition={0.08}
+          crawlSpeed={200}
+          height={4}
+          crawl={true}
+          showSpinner={false}
+          easing="ease"
+          speed={200}
+          shadow="0 0 10px #00f5a0,0 0 5px #00f5a0"
+        />
         <Providers>
+
           <main className="flex-grow">
             {children}
           </main>
