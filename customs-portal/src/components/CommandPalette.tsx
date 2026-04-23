@@ -26,12 +26,13 @@ export default function CommandPalette() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+            if (e.altKey && e.key.toLowerCase() === "k") {
                 e.preventDefault();
                 toggleOpen();
             }
             if (e.key === "Escape") setIsOpen(false);
         };
+
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [toggleOpen]);
@@ -135,6 +136,7 @@ export default function CommandPalette() {
 
                         <div className="p-4 bg-surface-container-low/50 border-t border-secondary/5 flex items-center justify-between text-[10px] font-black text-on-surface-variant/40 uppercase tracking-widest">
                             <div className="flex gap-4">
+                                <span className="flex items-center gap-1.5 font-black text-primary/60">ALT+K</span>
                                 <span className="flex items-center gap-1.5"><Command className="w-3 h-3" /> Select</span>
                                 <span className="flex items-center gap-1.5"><X className="w-3 h-3" /> Close</span>
                             </div>
