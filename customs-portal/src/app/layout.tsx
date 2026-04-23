@@ -7,6 +7,8 @@ import SupportWidget from "@/components/SupportWidget";
 import CommandPalette from "@/components/CommandPalette";
 import StaffHeartbeat from "@/components/StaffHeartbeat";
 import { Toaster } from "sonner";
+import { Suspense } from "react";
+
 
 const jakarta = Plus_Jakarta_Sans({ 
   subsets: ["latin"], 
@@ -35,9 +37,12 @@ export default function RootLayout({
             {children}
           </main>
           <SupportWidget />
-          <CommandPalette />
-          <StaffHeartbeat />
+          <Suspense fallback={null}>
+            <CommandPalette />
+            <StaffHeartbeat />
+          </Suspense>
           <Toaster position="bottom-right" richColors theme="light" />
+
         </Providers>
         <Analytics />
       </body>
