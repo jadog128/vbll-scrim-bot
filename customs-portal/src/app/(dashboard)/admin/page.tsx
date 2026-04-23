@@ -7,6 +7,8 @@ import AdminActions from "@/components/AdminActions";
 import Link from "next/link";
 import AdminExportTrigger from "@/components/AdminExportTrigger";
 import DashboardManager from "@/components/DashboardManager";
+import LiquidProgressBar from "@/components/ui/LiquidProgressBar";
+
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +27,17 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
   const batchesRes = await execute("SELECT COUNT(*) as count FROM batches WHERE guild_id = ?", [finalGuildId]);
   const requestsRes = await execute("SELECT COUNT(*) as count FROM batch_requests WHERE guild_id = ?", [finalGuildId]);
   
+  // Current Batch Progress
+  const currentBatchRes = await execute("SELECT id, (SELECT COUNT(*) FROM batch_requests WHERE batch_id = batches.id) as item_count FROM batches WHERE status = 'building' AND guild_id = ? ORDER BY id DESC LIMIT 1", [finalGuildId]);
+  const currentBatch = currentBatchRes.rows[0] as any;
+  const batchProgress = currentBatch ? Math.min((currentBatch.item_count / 8) * 100, 100) : 0;
+
   let ticketCount = 0;
   try {
     const res = await execute("SELECT COUNT(*) as count FROM batch_tickets WHERE status = 'open' AND guild_id = ?", [finalGuildId]);
     ticketCount = (res.rows[0] as any).count;
   } catch (e) {}
-  
+
   // Fetch Recent Batches with items (Filtered by Guild)
   const batches = await execute("SELECT * FROM batches WHERE guild_id = ? ORDER BY id DESC LIMIT 5", [finalGuildId]);
   const batchesWithItems = await Promise.all(batches.rows.map(async (b: any) => {
@@ -40,7 +47,7 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
 
   const components = {
     stats: (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-primary/5 rounded-3xl p-6 border border-primary/10 group hover:border-primary/30 transition-all">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white">
@@ -63,8 +70,16 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
           <p className="text-xs text-on-surface-variant mt-2 font-medium">Total registered requests</p>
         </div>
 
-        <div className="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 group hover:border-outline-variant/30 transition-all">
-          <div className="flex items-center gap-4 mb-4">
+        <div className="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 group hover:border-outline-variant/30 transition-all flex flex-col justify-center">
+            <LiquidProgressBar 
+                progress={batchProgress} 
+                label="Current Batch Load"
+                height="h-6"
+            />
+        </div>
+
+        <div className="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 group hover:border-outline-variant/30 transition-all flex items-center">
+          <div className="flex items-center gap-4">
              <div className="relative w-12 h-12 rounded-full border-4 border-surface-container-highest flex items-center justify-center">
                 <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
                    <path className="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="85, 100" stroke-width="4"></path>
