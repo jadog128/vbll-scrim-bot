@@ -21,22 +21,22 @@ export default async function AdminSelectorPage() {
   const sessionGuilds = (session?.user as any)?.manageableGuilds || [];
 
 
+  const sessionGuildMap = new Map(sessionGuilds.map((g: any) => [String(g.id), g]));
   const finalGuilds: any[] = [];
 
-  // 3. Only process guilds that are in the user's session AND in the database
-  sessionGuilds.forEach((sg: any) => {
-    if (partneredIds.has(String(sg.id))) {
-      finalGuilds.push({
-        id: sg.id,
-        name: sg.name,
-        icon: sg.icon,
-        hasBot: true,
-        isMember: true
-      });
-    }
+  // 3. Process all guilds from DB (ensures they show up even if session sync is slow)
+  partneredIds.forEach(pid => {
+    const sg = sessionGuildMap.get(pid) as any;
+    finalGuilds.push({
+      id: pid,
+      name: sg?.name || `League Instance: ${pid.substring(0, 5)}...`,
+      icon: sg?.icon || null,
+      hasBot: true,
+      isMember: !!sg
+    });
   });
 
-  // 4. Optionally add other manageable guilds that DON'T have the bot yet
+  // 4. Add manageable guilds that DON'T have the bot yet
   sessionGuilds.forEach((sg: any) => {
     if (!finalGuilds.find(fg => fg.id === String(sg.id))) {
       finalGuilds.push({
@@ -48,6 +48,7 @@ export default async function AdminSelectorPage() {
       });
     }
   });
+
 
 
   return (
