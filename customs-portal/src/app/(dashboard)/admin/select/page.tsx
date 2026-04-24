@@ -17,13 +17,9 @@ export default async function AdminSelectorPage() {
   const partneredRes = await execute("SELECT DISTINCT guild_id FROM guild_settings");
   const partneredIds = new Set(partneredRes.rows.map((r: any) => String(r.guild_id)));
 
-  // 2. Get manageable guilds from session to see which ones the user is actually in
-  const rawGuilds = (session?.user as any)?.manageableGuilds || [];
-  // Filter guilds where user has Administrator (0x8) OR Manage Server (0x20)
-  const sessionGuilds = rawGuilds.filter((g: any) => {
-    const p = BigInt(g.permissions);
-    return (p & BigInt(0x8)) === BigInt(0x8) || (p & BigInt(0x20)) === BigInt(0x20);
-  });
+  // 2. Get manageable guilds from session (already filtered in auth.ts)
+  const sessionGuilds = (session?.user as any)?.manageableGuilds || [];
+
 
   const finalGuilds: any[] = [];
 
