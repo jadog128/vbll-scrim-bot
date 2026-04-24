@@ -24,8 +24,12 @@ export const authOptions: NextAuthOptions = {
           });
           if (res.ok) {
             const guilds = await res.json();
-            // Filter guilds where user has Administrator permission (0x8)
-            const manageable = guilds.filter((g: any) => (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8));
+            // Filter guilds where user has Administrator (0x8) OR Manage Server (0x20)
+            const manageable = guilds.filter((g: any) => {
+              const p = BigInt(g.permissions);
+              return (p & BigInt(0x8)) === BigInt(0x8) || (p & BigInt(0x20)) === BigInt(0x20);
+            });
+
             
             // Fetch partnered guilds (where the bot is active) from DB
             const { rows: settings } = await execute("SELECT guild_id FROM guild_settings");

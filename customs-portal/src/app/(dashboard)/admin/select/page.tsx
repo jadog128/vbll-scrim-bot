@@ -15,27 +15,32 @@ export default async function AdminSelectorPage() {
 
   // 1. Fetch all distinct guild_ids from the DB
   const partneredRes = await execute("SELECT DISTINCT guild_id FROM guild_settings");
-  const partneredIds = partneredRes.rows.map((r: any) => String(r.guild_id));
+  const partneredIds = new Set(partneredRes.rows.map((r: any) => String(r.guild_id)));
 
   // 2. Get manageable guilds from session to see which ones the user is actually in
-  const sessionGuilds = (session?.user as any)?.manageableGuilds || [];
-  const sessionGuildMap = new Map(sessionGuilds.map((g: any) => [String(g.id), g]));
+  const rawGuilds = (session?.user as any)?.manageableGuilds || [];
+  // Filter guilds where user has Administrator (0x8) OR Manage Server (0x20)
+  const sessionGuilds = rawGuilds.filter((g: any) => {
+    const p = BigInt(g.permissions);
+    return (p & BigInt(0x8)) === BigInt(0x8) || (p & BigInt(0x20)) === BigInt(0x20);
+  });
 
   const finalGuilds: any[] = [];
 
-  // 3. Process Partnered Guilds from DB first
-  partneredIds.forEach(pid => {
-    const sg = sessionGuildMap.get(pid) as any;
-    finalGuilds.push({
-      id: pid,
-      name: sg?.name || `Server Placeholder (${pid})`,
-      icon: sg?.icon || null,
-      hasBot: true,
-      isMember: !!sg
-    });
+  // 3. Only process guilds that are in the user's session AND in the database
+  sessionGuilds.forEach((sg: any) => {
+    if (partneredIds.has(String(sg.id))) {
+      finalGuilds.push({
+        id: sg.id,
+        name: sg.name,
+        icon: sg.icon,
+        hasBot: true,
+        isMember: true
+      });
+    }
   });
 
-  // 4. Add any other manageable guilds that AREN'T in the DB yet
+  // 4. Optionally add other manageable guilds that DON'T have the bot yet
   sessionGuilds.forEach((sg: any) => {
     if (!finalGuilds.find(fg => fg.id === String(sg.id))) {
       finalGuilds.push({
@@ -47,6 +52,7 @@ export default async function AdminSelectorPage() {
       });
     }
   });
+
 
   return (
     <div className="py-10">
