@@ -112,7 +112,16 @@ async function getChoices() {
       Routes.applicationCommands(process.env.BATCH_CLIENT_ID),
       { body: commands }
     );
-    console.log('✅ Commands Registered Globally (Note: May take up to 1 hour to appear on all servers).');
+    
+    const targetGuild = "1388628647446843429";
+    console.log('⚡ Registering to Target Guild for INSTANT update: ' + targetGuild);
+    await rest.put(
+      Routes.applicationGuildCommands(process.env.BATCH_CLIENT_ID, targetGuild),
+      { body: commands }
+    );
+
+    console.log('✅ Commands Registered Successfully.');
+
 
   } catch (e) {
     console.error('❌ Registration Failed:', e);
