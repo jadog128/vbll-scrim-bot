@@ -1086,12 +1086,15 @@ async function endGiveaway(gwId) {
            ? `Congratulations to ${winners.join(', ')}! You won the **${gw.prize}**!`
            : "No entries were found for this giveaway.";
            
+        const brand = await getBranding(gw.guild_id);
         const embed = (await createBrandedEmbed(gw.guild_id))
-          .setTitle(`🎉 Giveaway Ended: ${gw.prize}`)
+          .setTitle(`🎊 Giveaway Concluded: ${gw.prize}`)
           .setDescription(desc)
-          .setColor(winners.length > 0 ? 0x00f5a0 : 0x5865f2)
-          .setFooter({ text: "Better luck next time!" })
+          .setColor(winners.length > 0 ? 0x9d55ff : 0x5865f2)
+          .setThumbnail(brand.icon || null)
+          .setFooter({ text: "Thank you for participating!" })
           .setTimestamp();
+
 
         
         await msg.edit({ embeds: [embed], components: [] });
@@ -1247,12 +1250,21 @@ client.on('interactionCreate', async interaction => {
          const endTime = new Date(Date.now() + duration * 60000);
          const gwId = Math.random().toString(36).substring(2, 9).toUpperCase();
 
-         const embed = new EmbedBuilder()
-           .setTitle(`🎁 ACTIVE GIVEAWAY: ${prize}`)
-           .setDescription(`Click the button below to enter!\n\n**Winners:** ${winners}\n**Ends:** <t:${Math.floor(endTime.getTime()/1000)}:R> (<t:${Math.floor(endTime.getTime()/1000)}:f>)`)
-           .setColor(0x00f5a0)
-           .setFooter({ text: `ID: ${gwId} | Good luck!` })
+         const brand = await getBranding(interaction.guildId);
+         const embed = (await createBrandedEmbed(interaction.guildId))
+           .setTitle(`🎁 NEW GIVEAWAY: ${prize}`)
+           .setDescription(`A new giveaway has started! Click the button below to join the draw.`)
+           .addFields(
+             { name: '🏆 Prize', value: `**${prize}**`, inline: true },
+             { name: '👥 Winners', value: `${winners}`, inline: true },
+             { name: '⏰ Ends', value: `<t:${Math.floor(endTime.getTime()/1000)}:R>`, inline: true }
+           )
+           .setImage('https://lh3.googleusercontent.com/chat-attachments/AIuEzmsC8q9x0c1o_v7p3V7L7Z-yZ8q0-8Q-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-1')
+           .setColor(0x9d55ff)
+           .setThumbnail(brand.icon || null)
+           .setFooter({ text: `Giveaway ID: ${gwId} • 🍀 Good luck!` })
            .setTimestamp();
+
          
          const row = new ActionRowBuilder().addComponents(
            new ButtonBuilder().setCustomId(`gw_join_${gwId}`).setLabel('🎁 Enter Giveaway').setStyle(ButtonStyle.Primary)
