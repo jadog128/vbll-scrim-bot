@@ -87,6 +87,23 @@ async function initDB() {
     details TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
+  await run(`CREATE TABLE IF NOT EXISTS giveaways (
+    id TEXT PRIMARY KEY,
+    guild_id TEXT,
+    channel_id TEXT,
+    msg_id TEXT,
+    prize TEXT,
+    winners_count INTEGER,
+    end_time TEXT,
+    status TEXT DEFAULT 'active'
+  )`);
+  await run(`CREATE TABLE IF NOT EXISTS giveaway_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    giveaway_id TEXT,
+    user_id TEXT,
+    UNIQUE(giveaway_id, user_id)
+  )`);
+
 
   // --- 🪄 Migration Logic: Add guild_id to old data ---
   const tables = ['batch_requests', 'batches', 'batch_options', 'batch_tickets', 'staff_logs'];
@@ -1012,7 +1029,56 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
+// --- 🎁 Giveaway System Logic ---
+async function endGiveaway(gwId) {
+  const gw = await get("SELECT * FROM giveaways WHERE id = ?", [gwId]);
+  if (!gw || gw.status !== 'active') return;
+
+  const entries = await all("SELECT user_id FROM giveaway_entries WHERE giveaway_id = ?", [gwId]);
+  const winners = [];
+  
+  if (entries.length > 0) {
+    const shuffled = entries.sort(() => 0.5 - Math.random());
+    for (let i = 0; i < Math.min(gw.winners_count, shuffled.length); i++) {
+        winners.push(`<@${shuffled[i].user_id}>`);
+    }
+  }
+
+  await run("UPDATE giveaways SET status = 'ended' WHERE id = ?", [gwId]);
+  
+  try {
+    const ch = await client.channels.fetch(gw.channel_id).catch(() => null);
+    if (ch) {
+      const msg = await ch.messages.fetch(gw.msg_id).catch(() => null);
+      if (msg) {
+        const desc = winners.length > 0 
+           ? `Congratulations to ${winners.join(', ')}! You won the **${gw.prize}**!`
+           : "No entries were found for this giveaway.";
+           
+        const embed = new EmbedBuilder()
+          .setTitle(`🎉 Giveaway Ended: ${gw.prize}`)
+          .setDescription(desc)
+          .setColor(winners.length > 0 ? 0x00f5a0 : 0x5865f2)
+          .setFooter({ text: "Better luck next time!" })
+          .setTimestamp();
+        
+        await msg.edit({ embeds: [embed], components: [] });
+        await ch.send({ content: `🎊 Congratulations ${winners.join(', ')}! You won the **${gw.prize}**!` });
+      }
+    }
+  } catch(e) {}
+}
+
+async function checkGiveaways() {
+  const now = new Date().toISOString();
+  const ended = await all("SELECT id FROM giveaways WHERE status = 'active' AND end_time <= ?", [now]);
+  for (const g of ended) {
+     await endGiveaway(g.id);
+  }
+}
+
 async function handleNewRequest(interaction, type, providedUser = null) {
+
   try {
     const user = providedUser || interaction.user;
     const gid = interaction?.guildId || process.env.BATCH_GUILD_ID || "1286206719847960670";
@@ -1117,8 +1183,15 @@ async function registerCommands() {
       .addIntegerOption(o => o.setName('request_id').setDescription('The ID of the request to edit').setRequired(true))
       .addStringOption(o => o.setName('vrfs_id').setDescription('New VRFS ID to assign'))
       .addStringOption(o => o.setName('action').setDescription('Action to take').addChoices({ name: 'Remove from Batch', value: 'remove' })),
-    new SlashCommandBuilder().setName('lookup-batch-info').setDescription('Check the status and progress of a specific batch')
-      .addIntegerOption(o => o.setName('batch_id').setDescription('The Batch ID to look up').setRequired(true)),
+    new SlashCommandBuilder().setName('lookup-batch-info').setDescription('Check status and progress of a batch').addIntegerOption(o => o.setName('batch_id').setDescription('ID').setRequired(true)),
+    new SlashCommandBuilder().setName('set-admin-role').setDescription('Set bot admin role [Admin Only]').addRoleOption(o => o.setName('role').setDescription('Role').setRequired(true)),
+    new SlashCommandBuilder().setName('giveaway-start').setDescription('Start a beautiful giveaway [Staff Only]')
+      .addStringOption(o => o.setName('prize').setDescription('What are you giving away?').setRequired(true))
+      .addIntegerOption(o => o.setName('duration').setDescription('Minutes until it ends').setRequired(true))
+      .addIntegerOption(o => o.setName('winners').setDescription('How many winners?').setRequired(false)),
+    new SlashCommandBuilder().setName('giveaway-reroll').setDescription('Pick a new winner for a giveaway [Staff Only]')
+      .addStringOption(o => o.setName('id').setDescription('Giveaway ID').setRequired(true)),
+
   ].map(c => c.toJSON());
 
   const rest = new REST({ version: '10' }).setToken(process.env.BATCH_DISCORD_TOKEN);
@@ -1128,9 +1201,81 @@ async function registerCommands() {
   } catch (e) { console.error(e); }
 }
 
+client.on('interactionCreate', async interaction => {
+  try {
+    // --- 🎁 Giveaway Command Handlers ---
+    if (interaction.isChatInputCommand()) {
+      const { commandName } = interaction;
+      if (commandName === 'giveaway-start') {
+         if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+         const prize = interaction.options.getString('prize');
+         const winners = interaction.options.getInteger('winners') || 1;
+         const duration = interaction.options.getInteger('duration');
+         
+         const endTime = new Date(Date.now() + duration * 60000);
+         const gwId = Math.random().toString(36).substring(2, 9).toUpperCase();
+
+         const embed = new EmbedBuilder()
+           .setTitle(`🎁 ACTIVE GIVEAWAY: ${prize}`)
+           .setDescription(`Click the button below to enter!\n\n**Winners:** ${winners}\n**Ends:** <t:${Math.floor(endTime.getTime()/1000)}:R> (<t:${Math.floor(endTime.getTime()/1000)}:f>)`)
+           .setColor(0x00f5a0)
+           .setFooter({ text: `ID: ${gwId} | Good luck!` })
+           .setTimestamp();
+         
+         const row = new ActionRowBuilder().addComponents(
+           new ButtonBuilder().setCustomId(`gw_join_${gwId}`).setLabel('🎁 Enter Giveaway').setStyle(ButtonStyle.Primary)
+         );
+
+         const msg = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+         await run("INSERT INTO giveaways (id, guild_id, channel_id, msg_id, prize, winners_count, end_time) VALUES (?,?,?,?,?,?,?)",
+           [gwId, interaction.guildId, interaction.channelId, msg.id, prize, winners, endTime.toISOString()]);
+         return;
+      }
+
+      if (commandName === 'giveaway-reroll') {
+         if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+         const id = interaction.options.getString('id');
+         const gw = await get("SELECT * FROM giveaways WHERE id = ?", [id]);
+         if (!gw) return interaction.reply({ content: '❌ Giveaway not found.', ephemeral: true });
+         
+         const entries = await all("SELECT user_id FROM giveaway_entries WHERE giveaway_id = ?", [id]);
+         if (entries.length === 0) return interaction.reply({ content: '❌ No entries to reroll from.', ephemeral: true });
+         
+         const winner = entries[Math.floor(Math.random() * entries.length)];
+         return interaction.reply({ content: `🎊 **Reroll Complete!** The new winner is <@${winner.user_id}>!` });
+      }
+    }
+
+    // --- 🖱️ Giveaway Button Handler ---
+    if (interaction.isButton()) {
+      if (interaction.customId.startsWith('gw_join_')) {
+         const gwId = interaction.customId.replace('gw_join_', '');
+         const gw = await get("SELECT status FROM giveaways WHERE id = ?", [gwId]);
+         if (!gw || gw.status !== 'active') return interaction.reply({ content: '⚠️ This giveaway has already ended.', ephemeral: true });
+         
+         try {
+           await run("INSERT INTO giveaway_entries (giveaway_id, user_id) VALUES (?, ?)", [gwId, interaction.user.id]);
+           return interaction.reply({ content: '✅ You have successfully entered the giveaway!', ephemeral: true });
+         } catch (e) {
+           return interaction.reply({ content: '⚠️ You are already in this giveaway.', ephemeral: true });
+         }
+      }
+    }
+  } catch (err) {
+    console.error('[Interaction Error]', err.message);
+    try {
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ An internal error occurred.', ephemeral: true });
+    } catch (_) {}
+  }
+});
+
 client.once('ready', () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
   registerCommands();
+  
+  // Giveaway Checker (Every minute)
+  setInterval(() => checkGiveaways(), 60000);
+
   
   // Heartbeat to keep Turso connection alive
   setInterval(async () => {
