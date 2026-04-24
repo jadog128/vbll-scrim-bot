@@ -3,7 +3,8 @@ require('dotenv').config({ path: '.env.mod' });
 
 const commands = [
   new SlashCommandBuilder().setName('warn').setDescription('Warn a user').addUserOption(o => o.setName('user').setDescription('Target user').setRequired(true)).addStringOption(o => o.setName('reason').setDescription('Reason').setRequired(true)),
-  new SlashCommandBuilder().setName('timeout').setDescription('Timeout a user').addMemberOption(o => o.setName('user').setDescription('Target member').setRequired(true)).addIntegerOption(o => o.setName('minutes').setDescription('Duration').setRequired(true)).addStringOption(o => o.setName('reason').setDescription('Reason').setRequired(true)),
+  new SlashCommandBuilder().setName('timeout').setDescription('Timeout a user').addUserOption(o => o.setName('user').setDescription('Target member').setRequired(true)).addIntegerOption(o => o.setName('minutes').setDescription('Duration').setRequired(true)).addStringOption(o => o.setName('reason').setDescription('Reason').setRequired(true)),
+
   new SlashCommandBuilder().setName('purge').setDescription('Purge messages').addIntegerOption(o => o.setName('count').setDescription('Number of messages').setRequired(true).setMinValue(1).setMaxValue(100)),
   new SlashCommandBuilder().setName('set-log-channel').setDescription('Set mod log channel').addChannelOption(o => o.setName('channel').setDescription('Select channel').setRequired(true)),
   new SlashCommandBuilder().setName('global-ban').setDescription('Apply global blacklist').addStringOption(o => o.setName('user_id').setDescription('Target user ID').setRequired(true)).addStringOption(o => o.setName('reason').setDescription('Reason').setRequired(true)),

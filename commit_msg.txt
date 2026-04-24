@@ -1,0 +1,1 @@
+feat: Finalize global command registration and multi-server batch bot architecture  

@@ -69,9 +69,10 @@ const rest = new REST({ version: '10' }).setToken(process.env.MOD_DISCORD_TOKEN)
   try {
     console.log('🚀 Sentinal: Deploying slash commands...');
     await rest.put(
-      Routes.applicationGuildCommands(process.env.MOD_CLIENT_ID || 'MOD_CLIENT_ID', process.env.MOD_GUILD_ID),
+      Routes.applicationCommands(process.env.MOD_CLIENT_ID),
       { body: commands }
     );
+
     console.log('✅ Sentinal: Commands deployed successfully.');
   } catch (error) {
     console.error('❌ Sentinal Deployment Failed:', error);

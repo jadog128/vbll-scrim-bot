@@ -1,104 +1,115 @@
 require('dotenv').config({ path: '.env.batch' });
-const { REST, Routes, SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { REST, Routes, SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
+const { createClient } = require('@libsql/client');
 
-
-const commands = [
-  // ── User Commands ──────────────────────────────────────────────────────────
-  new SlashCommandBuilder()
-    .setName('setup')
-    .setDescription('Show configuration status and guided setup for the Batch system [Admin Only]')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-
-  new SlashCommandBuilder()
-    .setName('batch_request')
-    .setDescription('Submit a request for a custom VRDL item')
-    .addStringOption(o => 
-      o.setName('type')
-        .setDescription('What kind of custom are you requesting?')
-        .setRequired(true)
-        .addChoices(
-          { name: '👕 Custom Jersey', value: 'jersey' },
-          { name: '👟 Custom Shoes', value: 'shoes' },
-          { name: '🧢 Custom Hat', value: 'hat' },
-          { name: '✨ Other Custom', value: 'other' }
-        )
-    )
-    .addStringOption(o => o.setName('details').setDescription('Provide any specific details (color, name, etc.)').setRequired(true)),
-
-  // ── Management Commands ────────────────────────────────────────────────────
-  new SlashCommandBuilder()
-    .setName('post-batch-request')
-    .setDescription('Post an interactive button message for users to request customs [Staff Only]'),
-
-  new SlashCommandBuilder()
-    .setName('batch_check')
-    .setDescription('View the current batch request queue [Staff Only]'),
-
-  new SlashCommandBuilder()
-    .setName('batch_add')
-    .setDescription('Manually add a player to the batch queue [Staff Only]')
-    .addUserOption(o => o.setName('player').setDescription('Player to add').setRequired(true))
-    .addStringOption(o => 
-      o.setName('type')
-        .setDescription('Custom type')
-        .setRequired(true)
-        .addChoices(
-          { name: 'Jersey', value: 'jersey' },
-          { name: 'Shoes', value: 'shoes' },
-          { name: 'Hat', value: 'hat' },
-          { name: 'Other', value: 'other' }
-        )
-    )
-    .addStringOption(o => o.setName('details').setDescription('Order details').setRequired(true)),
-
-  new SlashCommandBuilder()
-    .setName('batch_remove')
-    .setDescription('Remove a specific entry from the queue by ID [Staff Only]')
-    .addIntegerOption(o => o.setName('id').setDescription('The Request ID to remove').setRequired(true)),
-
-  new SlashCommandBuilder()
-    .setName('batch_clear')
-    .setDescription('Wipe the entire pending batch queue [Staff Only]'),
-
-  new SlashCommandBuilder()
-    .setName('set-batch-review-channel')
-    .setDescription('Set the channel where batch requests are reviewed [Staff Only]')
-    .addChannelOption(o => o.setName('channel').setDescription('Select the staff review channel').setRequired(true)),
+async function getChoices() {
+  const url = process.env.TURSO_URL || process.env.SCRIM_TURSO_URL;
+  const token = process.env.TURSO_TOKEN || process.env.SCRIM_TURSO_TOKEN;
+  if (!url) return [{ name: 'Other', value: 'other' }];
   
-  new SlashCommandBuilder()
-    .setName('batch_mass_decline')
-    .setDescription('Mass decline all pending requests from a specific ID downwards [Staff Only]')
-    .addIntegerOption(o => o.setName('start_id').setDescription('The Request ID to start from (will decline from this to #1)').setRequired(true))
-    .addStringOption(o => o.setName('reason').setDescription('Optional reason for declining').setRequired(false)),
-
-  new SlashCommandBuilder()
-    .setName('batch_mass_delete_messages')
-    .setDescription('Permanently delete review messages from a specific ID downwards [Staff Only]')
-    .addIntegerOption(o => o.setName('start_id').setDescription('The Request ID to start from').setRequired(true)),
-
-  new SlashCommandBuilder()
-    .setName('batch_slowdown')
-    .setDescription('Set a delay (in seconds) between each request being sent to the staff channel [Staff Only]')
-    .addIntegerOption(o => o.setName('seconds').setDescription('Seconds to wait between each post (0 to disable)').setRequired(true)),
-
-].map(c => c.toJSON());
-
-const rest = new REST({ version: '10' }).setToken(process.env.BATCH_DISCORD_TOKEN);
+  try {
+    const db = createClient({ url, authToken: token || "" });
+    const res = await db.execute("SELECT name FROM batch_options LIMIT 25");
+    if (res.rows.length === 0) return [{ name: 'Other', value: 'other' }];
+    return res.rows.map(r => ({ name: r.name, value: r.name }));
+  } catch (e) {
+    return [{ name: 'Other', value: 'other' }];
+  }
+}
 
 (async () => {
-  try {
-    if (!process.env.BATCH_DISCORD_TOKEN || !process.env.BATCH_CLIENT_ID) {
-      console.error('❌ Missing BATCH_DISCORD_TOKEN or BATCH_CLIENT_ID in .env.batch');
-      process.exit(1);
-    }
+  const choices = await getChoices();
+  
+  const commands = [
+    new SlashCommandBuilder().setName('setup').setDescription('Show configuration status and guide [Admin Only]'),
+    
+    new SlashCommandBuilder().setName('batch_request').setDescription('Submit a request for a custom item')
+      .addStringOption(o => o.setName('type').setDescription('Type of item').setRequired(true).addChoices(...choices)),
+    
+    new SlashCommandBuilder().setName('post-batch-request').setDescription('Post the interactive request button [Staff Only]'),
+    
+    new SlashCommandBuilder().setName('set-batch-review-channel').setDescription('Set channel for staff audit [Admin Only]')
+      .addChannelOption(o => o.setName('channel').setDescription('Select channel').setRequired(true)),
+    
+    new SlashCommandBuilder().setName('set-batch-pre-review-channel').setDescription('Set channel for initial verification [Admin Only]')
+      .addChannelOption(o => o.setName('channel').setDescription('Select channel').setRequired(true)),
+    
+    new SlashCommandBuilder().setName('set-batch-release-channel').setDescription('Set channel where released batches are posted [Admin Only]')
+      .addChannelOption(o => o.setName('channel').setDescription('Select channel').setRequired(true)),
+    
+    new SlashCommandBuilder().setName('batch_option').setDescription('Manage requestable item types [Admin Only]')
+      .addSubcommand(s => s.setName('add').setDescription('Add an item').addStringOption(o => o.setName('name').setDescription('Item Name').setRequired(true)))
+      .addSubcommand(s => s.setName('remove').setDescription('Remove an item').addStringOption(o => o.setName('name').setDescription('Item Name').setRequired(true)))
+      .addSubcommand(s => s.setName('list').setDescription('List all items')),
+    
+    new SlashCommandBuilder().setName('batch_check').setDescription('View the current pending queue [Staff Only]'),
+    
+    new SlashCommandBuilder().setName('view-batches').setDescription('View contents of recent batches [Staff Only]'),
+    
+    new SlashCommandBuilder().setName('view-logs').setDescription('View recent staff activity logs [Staff Only]'),
+    
+    new SlashCommandBuilder().setName('set-ticket-channel').setDescription('Set channel for support alerts [Admin Only]')
+      .addChannelOption(o => o.setName('channel').setDescription('Select channel').setRequired(true)),
+    
+    new SlashCommandBuilder().setName('set-web-support-channel').setDescription('Set channel for web chat alerts [Admin Only]')
+      .addChannelOption(o => o.setName('channel').setDescription('Select channel').setRequired(true)),
+    
+    new SlashCommandBuilder().setName('set-ticket-role').setDescription('Set role that manages tickets [Admin Only]')
+      .addRoleOption(o => o.setName('role').setDescription('Select role').setRequired(true)),
+    
+    new SlashCommandBuilder().setName('set-ticket-category').setDescription('Set category for ticket channels [Admin Only]')
+      .addChannelOption(o => o.setName('category').setDescription('Select category').setRequired(true).addChannelTypes(ChannelType.GuildCategory)),
+    
+    new SlashCommandBuilder().setName('close-ticket').setDescription('Close and archive the current ticket channel [Staff Only]'),
+    
+    new SlashCommandBuilder().setName('batch_add').setDescription('Manually add a player to the queue [Staff Only]')
+      .addUserOption(o => o.setName('player').setDescription('Target player').setRequired(true))
+      .addStringOption(o => o.setName('vrfs_id').setDescription('Player VRFS ID').setRequired(true))
+      .addStringOption(o => o.setName('type').setDescription('Item type').setRequired(true).addChoices(...choices)),
+    
+    new SlashCommandBuilder().setName('batch_remove').setDescription('Remove a request by ID [Staff Only]')
+      .addIntegerOption(o => o.setName('id').setDescription('Request ID').setRequired(true)),
+    
+    new SlashCommandBuilder().setName('batch_clear').setDescription('Wipe the pending queue [Admin Only]'),
+    
+    new SlashCommandBuilder().setName('release_batch').setDescription('Manually push the current batch to the release channel [Admin Only]'),
+    
+    new SlashCommandBuilder().setName('export_batches').setDescription('Export all batch data (DM) [Owner Only]'),
+    
+    new SlashCommandBuilder().setName('my_request').setDescription('Check status of your own request'),
+    
+    new SlashCommandBuilder().setName('batch_halt').setDescription('Pause or resume all batch submissions [Admin Only]')
+      .addBooleanOption(o => o.setName('active').setDescription('True to lock, False to open').setRequired(true))
+      .addStringOption(o => o.setName('reason').setDescription('Optional notification reason').setRequired(false)),
+    
+    new SlashCommandBuilder().setName('batch_sent').setDescription('Notify users that their batch has been sent in-game [Admin Only]')
+      .addIntegerOption(o => o.setName('batch_id').setDescription('Target Batch ID').setRequired(true)),
+    
+    new SlashCommandBuilder().setName('post-admin-batch-add').setDescription('Post admin buttons for manual adds [Admin Only]'),
+    
+    new SlashCommandBuilder().setName('profile').setDescription('View player stats/profile')
+      .addUserOption(o => o.setName('user').setDescription('Target user')),
+    
+    new SlashCommandBuilder().setName('batch-edit').setDescription('Modify existing request data [Staff Only]')
+      .addIntegerOption(o => o.setName('request_id').setDescription('Request ID').setRequired(true))
+      .addStringOption(o => o.setName('vrfs_id').setDescription('New VRFS ID'))
+      .addStringOption(o => o.setName('action').setDescription('Action to take').addChoices({ name: 'Remove from Batch', value: 'remove' })),
+    
+    new SlashCommandBuilder().setName('lookup-batch-info').setDescription('Check batch status and progress')
+      .addIntegerOption(o => o.setName('batch_id').setDescription('Target Batch ID').setRequired(true)),
 
-    console.log('🔄 Registering Batch Bot commands (GUILD: ' + process.env.BATCH_GUILD_ID + ')…');
+  ].map(c => c.toJSON());
+
+  const rest = new REST({ version: '10' }).setToken(process.env.BATCH_DISCORD_TOKEN);
+  try {
+    console.log('🔄 Registering ' + commands.length + ' Batch commands GLOBALLY…');
     await rest.put(
-      Routes.applicationGuildCommands(process.env.BATCH_CLIENT_ID, process.env.BATCH_GUILD_ID),
+      Routes.applicationCommands(process.env.BATCH_CLIENT_ID),
       { body: commands }
     );
-    console.log('✅ Registered ' + commands.length + ' batch commands globally!');
+    console.log('✅ Commands Registered Globally (Note: May take up to 1 hour to appear on all servers).');
+
   } catch (e) {
-    console.error('❌', e);
+    console.error('❌ Registration Failed:', e);
   }
 })();
