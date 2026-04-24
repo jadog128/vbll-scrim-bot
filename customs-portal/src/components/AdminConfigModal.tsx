@@ -7,14 +7,17 @@ export default function AdminConfigModal({ guildId }: { guildId: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [presets, setPresets] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [displayIcon, setDisplayIcon] = useState("");
 
   useEffect(() => {
     if (isOpen) {
         fetch(`/api/admin/config?guild=${guildId}`)
         .then(res => res.json())
         .then(data => {
-            const val = data.find((s: any) => s.key === 'reject_presets')?.value || "";
-            setPresets(val);
+            setPresets(data.find((s: any) => s.key === 'reject_presets')?.value || "");
+            setDisplayName(data.find((s: any) => s.key === 'league_display_name')?.value || "");
+            setDisplayIcon(data.find((s: any) => s.key === 'league_display_icon')?.value || "");
         });
     }
   }, [isOpen, guildId]);
@@ -22,11 +25,20 @@ export default function AdminConfigModal({ guildId }: { guildId: string }) {
   async function handleSave() {
     setLoading(true);
     try {
-        await fetch(`/api/admin/config?guild=${guildId}`, { 
-            method: "POST", 
-            body: JSON.stringify({ key: 'reject_presets', value: presets }),
-            headers: { 'Content-Type': 'application/json' }
-        });
+        const settings = [
+            { key: 'reject_presets', value: presets },
+            { key: 'league_display_name', value: displayName },
+            { key: 'league_display_icon', value: displayIcon }
+        ];
+
+        for (const s of settings) {
+             await fetch(`/api/admin/config?guild=${guildId}`, { 
+                method: "POST", 
+                body: JSON.stringify(s),
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
         setIsOpen(false);
         window.location.reload();
     } catch (e) {
@@ -49,7 +61,7 @@ export default function AdminConfigModal({ guildId }: { guildId: string }) {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
            <div className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
            
-           <div className="relative bg-white w-full max-w-lg rounded-[3rem] p-10 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
+           <div className="relative bg-white w-full max-w-lg rounded-[3rem] p-10 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-10 duration-500 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-8">
                  <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
@@ -65,7 +77,31 @@ export default function AdminConfigModal({ guildId }: { guildId: string }) {
                  </button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-8">
+                 <div className="space-y-4 pt-4 border-t border-outline-variant/10">
+                    <h4 className="text-[10px] font-black uppercase text-on-surface-variant tracking-[0.2em]">Visual Branding</h4>
+                    
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-on-surface-variant">Custom League Name</label>
+                        <input 
+                          value={displayName}
+                          onChange={(e) => setDisplayName(e.target.value)}
+                          placeholder="e.g. VBLL Official"
+                          className="w-full p-4 bg-surface-container-low rounded-2xl text-sm border border-outline-variant/10 outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-on-surface-variant">Logo URL (Icon)</label>
+                        <input 
+                          value={displayIcon}
+                          onChange={(e) => setDisplayIcon(e.target.value)}
+                          placeholder="https://..."
+                          className="w-full p-4 bg-surface-container-low rounded-2xl text-sm border border-outline-variant/10 outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                    </div>
+                 </div>
+
                  <div className="space-y-3">
                     <label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
                        Rejection Presets
@@ -96,6 +132,7 @@ export default function AdminConfigModal({ guildId }: { guildId: string }) {
            </div>
         </div>
       )}
+
     </>
   );
 }

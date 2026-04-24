@@ -22,19 +22,28 @@ export default async function AdminSelectorPage() {
 
 
   const sessionGuildMap = new Map(sessionGuilds.map((g: any) => [String(g.id), g]));
-  const finalGuilds: any[] = [];
 
   // 3. Process all guilds from DB (ensures they show up even if session sync is slow)
-  partneredIds.forEach(pid => {
+
+  const finalGuilds = await Promise.all([...partneredIds].map(async (pid) => {
     const sg = sessionGuildMap.get(pid) as any;
-    finalGuilds.push({
+    
+    // Fetch custom branding from DB
+    const nameRes = await execute("SELECT value FROM guild_settings WHERE guild_id = ? AND key = 'league_display_name'", [pid]);
+    const iconRes = await execute("SELECT value FROM guild_settings WHERE guild_id = ? AND key = 'league_display_icon'", [pid]);
+    
+    const customName = nameRes.rows[0]?.value as string;
+    const customIcon = iconRes.rows[0]?.value as string;
+
+    return {
       id: pid,
-      name: sg?.name || `League Instance: ${pid.substring(0, 5)}...`,
-      icon: sg?.icon || null,
+      name: customName || sg?.name || `League Instance: ${pid.substring(0, 5)}...`,
+      icon: customIcon || sg?.icon || null,
       hasBot: true,
       isMember: !!sg
-    });
-  });
+    };
+  }));
+
 
   // 4. Add manageable guilds that DON'T have the bot yet
   sessionGuilds.forEach((sg: any) => {
