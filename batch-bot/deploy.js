@@ -51,6 +51,11 @@ async function getChoices() {
     new SlashCommandBuilder().setName('set-ticket-channel').setDescription('Set channel for support alerts [Admin Only]')
       .addChannelOption(o => o.setName('channel').setDescription('Select channel').setRequired(true)),
     
+    new SlashCommandBuilder().setName('set-admin-role')
+      .setDescription('Set the role that has full management access to the Batch bot [Admin Only]')
+      .addRoleOption(o => o.setName('role').setDescription('Select the Admin role').setRequired(true))
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    
     new SlashCommandBuilder().setName('set-web-support-channel').setDescription('Set channel for web chat alerts [Admin Only]')
       .addChannelOption(o => o.setName('channel').setDescription('Select channel').setRequired(true)),
     

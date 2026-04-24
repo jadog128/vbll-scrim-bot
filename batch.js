@@ -350,16 +350,25 @@ const client = new Client({
 });
 
 // Permissions Check
-const ADMIN_ROLE_ID = '1145402830786678884'; // Example Owner/Admin Role
 function hasBatchAdmin(member) {
   if (!member) return false;
-  if (member.id === '1145402830786678884') return true;
+  // Super-Owner bypass
+  if (member.id === '1145402830786678884' || member.id === '1139955783384187031') return true;
+  
   try {
-    return member.permissions && typeof member.permissions.has === 'function' && member.permissions.has(PermissionFlagsBits.Administrator);
+    // Check for hard Discord Admin permission
+    if (member.permissions && typeof member.permissions.has === 'function' && member.permissions.has(PermissionFlagsBits.Administrator)) return true;
+    
+    // Check for custom Configured role
+    const configuredRole = getSetting(member.guild.id, 'batch_admin_role');
+    if (configuredRole && member.roles.cache.has(configuredRole)) return true;
+    
+    return false;
   } catch (e) {
     return false;
   }
 }
+
 
 client.on('interactionCreate', async interaction => {
   try {
@@ -382,8 +391,10 @@ client.on('interactionCreate', async interaction => {
         { key: 'pre_review_channel', label: 'Pre-Review Channel', cmd: '/set-batch-pre-review-channel', emoji: '🔍' },
         { key: 'review_channel', label: 'Primary Queue Channel', cmd: '/set-batch-review-channel', emoji: '📋' },
         { key: 'release_channel', label: 'Release Channel', cmd: '/set-batch-release-channel', emoji: '🚀' },
+        { key: 'batch_admin_role', label: 'Admin Role (Staff)', cmd: '/set-admin-role', emoji: '👑' },
         { key: 'ticket_category', label: 'Ticket Category', cmd: '/set-ticket-category', emoji: '🎫' },
-        { key: 'ticket_role', label: 'Staff/Ticket Role', cmd: '/set-ticket-role', emoji: '🛡️' }
+        { key: 'ticket_role', label: 'Ticket Staff Role', cmd: '/set-ticket-role', emoji: '🛡️' }
+
       ];
 
       const fields = checklist.map(item => {
@@ -445,7 +456,15 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply({ content: `✅ Ticket staff role set to <@&${role.id}>`, ephemeral: true });
     }
 
+    if (commandName === 'set-admin-role') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return interaction.reply({ content: '❌ Administrator Only.', ephemeral: true });
+      const role = interaction.options.getRole('role');
+      await setSetting(interaction.guildId, 'batch_admin_role', role.id);
+      return interaction.reply({ content: `✅ Batch Admin role set to <@&${role.id}>`, ephemeral: true });
+    }
+
     if (commandName === 'set-ticket-category') {
+
       const cat = interaction.options.getChannel('category');
       if (cat.type !== 4) return interaction.reply({ content: '❌ Please select a Category channel.', ephemeral: true });
       await setSetting(interaction.guildId, 'ticket_category', cat.id);
