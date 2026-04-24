@@ -408,7 +408,16 @@ function hasBatchAdmin(member) {
 
 
 client.on('interactionCreate', async interaction => {
+  if (interaction.isAutocomplete()) {
+    const gid = interaction.guildId;
+    const choices = await all("SELECT name FROM batch_options WHERE guild_id = ? LIMIT 25", [gid]);
+    const focused = interaction.options.getFocused().toLowerCase();
+    const filtered = choices.filter(c => c.name.toLowerCase().includes(focused));
+    await interaction.respond(filtered.map(c => ({ name: c.name, value: c.name }))).catch(() => {});
+    return;
+  }
   try {
+
     if (interaction.isChatInputCommand()) {
       const { commandName } = interaction;
 

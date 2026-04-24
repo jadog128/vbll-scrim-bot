@@ -18,13 +18,12 @@ async function getChoices() {
 }
 
 (async () => {
-  const choices = await getChoices();
   
   const commands = [
     new SlashCommandBuilder().setName('setup').setDescription('Show configuration status and guide [Admin Only]'),
     
     new SlashCommandBuilder().setName('batch_request').setDescription('Submit a request for a custom item')
-      .addStringOption(o => o.setName('type').setDescription('Type of item').setRequired(true).addChoices(...choices)),
+      .addStringOption(o => o.setName('type').setDescription('Type of item').setRequired(true).setAutocomplete(true)),
     
     new SlashCommandBuilder().setName('post-batch-request').setDescription('Post the interactive request button [Staff Only]'),
     
@@ -70,7 +69,7 @@ async function getChoices() {
     new SlashCommandBuilder().setName('batch_add').setDescription('Manually add a player to the queue [Staff Only]')
       .addUserOption(o => o.setName('player').setDescription('Target player').setRequired(true))
       .addStringOption(o => o.setName('vrfs_id').setDescription('Player VRFS ID').setRequired(true))
-      .addStringOption(o => o.setName('type').setDescription('Item type').setRequired(true).addChoices(...choices)),
+      .addStringOption(o => o.setName('type').setDescription('Item type').setRequired(true).setAutocomplete(true)),
     
     new SlashCommandBuilder().setName('batch_remove').setDescription('Remove a request by ID [Staff Only]')
       .addIntegerOption(o => o.setName('id').setDescription('Request ID').setRequired(true)),
