@@ -103,6 +103,15 @@ async function getChoices() {
     new SlashCommandBuilder().setName('lookup-batch-info').setDescription('Check batch status and progress')
       .addIntegerOption(o => o.setName('batch_id').setDescription('Target Batch ID').setRequired(true)),
 
+    new SlashCommandBuilder().setName('giveaway-start').setDescription('Start a new giveaway [Admin Only]')
+      .addStringOption(o => o.setName('prize').setDescription('What are you giving away?').setRequired(true))
+      .addStringOption(o => o.setName('duration').setDescription('Time (e.g. 1h, 1d, 30m)').setRequired(true))
+      .addIntegerOption(o => o.setName('winners').setDescription('Number of winners').setRequired(false)),
+
+    new SlashCommandBuilder().setName('giveaway-reroll').setDescription('Pick a new winner for a giveaway [Admin Only]')
+      .addStringOption(o => o.setName('id').setDescription('Giveaway ID (get from dashboard)').setRequired(true)),
+
+
   ].map(c => c.toJSON());
 
   const rest = new REST({ version: '10' }).setToken(process.env.BATCH_DISCORD_TOKEN);

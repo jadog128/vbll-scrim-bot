@@ -152,6 +152,24 @@ async function setSetting(guildId, key, value) {
   settingsCache[guildId][key] = value;
 }
 
+async function getBranding(guildId) {
+  if (!settingsCache[guildId]) await loadSettings(guildId);
+  return {
+    name: getSetting(guildId, 'league_display_name'),
+    icon: getSetting(guildId, 'league_display_icon')
+  };
+}
+
+async function createBrandedEmbed(guildId) {
+  const brand = await getBranding(guildId);
+  const embed = new EmbedBuilder();
+  if (brand.name) {
+    embed.setAuthor({ name: brand.name, iconURL: brand.icon || null });
+  }
+  return embed;
+}
+
+
 let preReviewQueue = [];
 let isProcessingQueue = false;
 
@@ -181,10 +199,11 @@ async function sendToPreReview(req) {
     const ch = await client.channels.fetch(preId).catch(() => null);
     if (!ch) return;
 
-    const embed = new EmbedBuilder()
+    const embed = (await createBrandedEmbed(gid))
       .setTitle(`🔍 Pre-Review: ${req.type.toUpperCase()} (#${req.id})`)
       .setDescription(`**Player:** <@${req.discord_id}> \n**Username:** ${req.username}\n**VRFS ID:** ${req.vrfs_id} \n\n**Proof Link:** ${req.proof_url || 'No link provided'}`)
       .setColor(0xFFA500);
+
     const btns = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId(`batch_pr_approve_${req.id}`).setLabel('Send to Batches').setStyle(ButtonStyle.Success),
       new ButtonBuilder().setCustomId(`batch_pr_reject_${req.id}`).setLabel('Decline').setStyle(ButtonStyle.Danger)
@@ -249,9 +268,10 @@ async function syncRequestMessage(requestId) {
     const msg = await ch.messages.fetch(req.msg_id).catch(() => null);
     if (!msg) return;
 
-    const embed = new EmbedBuilder().setTitle(`📥 Queue: ${req.type} (#${req.id})`)
+    const embed = (await createBrandedEmbed(req.guild_id)).setTitle(`📥 Queue: ${req.type} (#${req.id})`)
       .setDescription(`**Player:** <@${req.discord_id}> \n**Username:** ${req.username}\n**VRFS ID:** ${req.vrfs_id}\n**Proof:** [Message Link](${req.proof_url})`)
       .setColor(0x5865f2).setTimestamp();
+
     
     if (req.batch_id) {
        embed.addFields({ name: 'Current Batch', value: `#${req.batch_id}`, inline: true });
@@ -664,7 +684,8 @@ client.on('interactionCreate', async interaction => {
 
       await run("UPDATE batches SET status = 'released', released_at = CURRENT_TIMESTAMP WHERE id = ?", [batch.id]);
       const list = reqs.map((r, i) => `**${i+1}.** ${r.username} — ID: \`${r.vrfs_id}\` (${r.type}) [Proof](${r.proof_url})`).join('\n');
-      const embed = new EmbedBuilder().setTitle(`🚀 Batch #${batch.id} RELEASED`).setDescription(list).setColor(0x00f5a0).setTimestamp();
+      const embed = (await createBrandedEmbed(gid)).setTitle(`🚀 Batch #${batch.id} RELEASED`).setDescription(list).setColor(0x00f5a0).setTimestamp();
+
       await relCh.send({ embeds: [embed] });
       return interaction.reply({ content: `✅ Batch #${batch.id} released.`, ephemeral: true });
     }
@@ -705,7 +726,8 @@ client.on('interactionCreate', async interaction => {
       for (const r of reqs) {
         try {
           const user = await client.users.fetch(r.discord_id);
-          const embed = new EmbedBuilder().setTitle('🚚 Batch Sent!').setDescription(`Your **${r.type}** (Batch #${batchId} in ${interaction.guild.name}) is sent!`).setColor(0x00f5a0);
+          const embed = (await createBrandedEmbed(gid)).setTitle('🚚 Batch Sent!').setDescription(`Your **${r.type}** (Batch #${batchId} in ${interaction.guild.name}) is sent!`).setColor(0x00f5a0);
+
           await user.send({ embeds: [embed] });
           sentCount++;
         } catch (e) {}
@@ -1055,12 +1077,13 @@ async function endGiveaway(gwId) {
            ? `Congratulations to ${winners.join(', ')}! You won the **${gw.prize}**!`
            : "No entries were found for this giveaway.";
            
-        const embed = new EmbedBuilder()
+        const embed = (await createBrandedEmbed(gw.guild_id))
           .setTitle(`🎉 Giveaway Ended: ${gw.prize}`)
           .setDescription(desc)
           .setColor(winners.length > 0 ? 0x00f5a0 : 0x5865f2)
           .setFooter({ text: "Better luck next time!" })
           .setTimestamp();
+
         
         await msg.edit({ embeds: [embed], components: [] });
         await ch.send({ content: `🎊 Congratulations ${winners.join(', ')}! You won the **${gw.prize}**!` });
