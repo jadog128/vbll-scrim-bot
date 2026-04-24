@@ -73,8 +73,19 @@ const BOT_TEMPLATES = {
         footerText: "VRFS Statistics",
         timestamp: false,
         fields: []
+    },
+    giveaway: {
+        id: "giveaway",
+        label: "Giveaway Msg",
+        title: "🎁 ACTIVE GIVEAWAY: {prize}",
+        description: "Click the button below to enter!\n\n**Winners:** {winners}\n**Ends:** {end_time}",
+        color: "#00f5a0",
+        footerText: "Good luck!",
+        timestamp: true,
+        fields: []
     }
 };
+
 
 const CORE_SETTINGS = {
     bot_nickname: "Lucid Batch Bot",
