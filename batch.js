@@ -97,7 +97,6 @@ async function initDB() {
     end_time TEXT,
     status TEXT DEFAULT 'active',
     instructions TEXT
-    instructions TEXT
   )`);
   await run(`CREATE TABLE IF NOT EXISTS giveaway_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -332,7 +331,6 @@ http.createServer(async (req, res) => {
             .setDescription(`Your request for a **${type.toUpperCase()}** has been **${status.toUpperCase()}**.`)
             .setColor(status === 'completed' ? 0x00f5a0 : status === 'approved' ? 0x5865f2 : 0xff4d4d)
             .setTimestamp();
-               const instrSnippet = gw.instructions ? `\n\n**Winner Instructions:**\n${gw.instructions}` : "";
           await user.send({ embeds: [embed] }).catch(() => {});
         }
         res.writeHead(200); res.end('OK');
@@ -457,12 +455,11 @@ client.on('interactionCreate', async interaction => {
 
       const embed = new EmbedBuilder()
         .setTitle('⚙️ Batch-Bot System Status & Guide')
-                    .setDescription(`Congratulations! You are a winner of the **${gw.prize}** giveaway in **${brand.name || 'our server'}**!${instrSnippet}`)
+        .setDescription(allSet 
             ? '🎉 **Your league is fully configured and operational!** All channels and roles are correctly mapped.' 
             : '⚠️ **Configuration incomplete.** Some systems (requests, tickets, or releases) might not function. Please use the commands listed below to fix the missing items.')
         .addFields(fields)
         .setColor(allSet ? 0x00f5a0 : 0xFFA500)
-                    .setFooter({ text: `Giveaway ID: ${gwId}` })
         .setThumbnail(interaction.guild.iconURL())
         .setFooter({ text: 'Batch Management System Wizard' })
         .setTimestamp();
@@ -1076,17 +1073,6 @@ function parseDuration(str) {
   return null;
 }
 
-function parseDuration(str) {
-  const match = str.match(/^(\d+)([mhd])$/);
-  if (!match) return null;
-  const val = parseInt(match[1]);
-  const unit = match[2];
-  if (unit === 'm') return val * 60000;
-  if (unit === 'h') return val * 3600000;
-  if (unit === 'd') return val * 86400000;
-  return null;
-}
-
 async function endGiveaway(gwId) {
   const gw = await get("SELECT * FROM giveaways WHERE id = ?", [gwId]);
   if (!gw || gw.status !== 'active') return;
@@ -1118,31 +1104,29 @@ async function endGiveaway(gwId) {
           .setDescription(desc)
           .setColor(winners.length > 0 ? 0x9d55ff : 0x5865f2)
           .setThumbnail(brand.icon || null)
-          .setFooter({ text: "Thank you for participating!" })
+          .setFooter({ text: `Giveaway ID: ${gwId} • Thank you for participating!` })
           .setTimestamp();
 
-
-        
         await msg.edit({ embeds: [embed], components: [] });
-        await ch.send({ content: `🎊 Congratulations ${winners.join(', ')}! You won the **${gw.prize}**!` (Giveaway ID: **${gwId}**) ` });
-
+        await ch.send({ content: `🎊 Congratulations ${winners.join(', ')}! You won the **${gw.prize}**! (Giveaway ID: **${gwId}**)` });
 
         // --- 📬 DM Winners ---
         for (const userId of winners) {
            try {
              const user = await client.users.fetch(userId.replace(/[<@!>]/g, ''));
              if (user) {
+               const instrSnippet = gw.instructions ? `\n\n**Winner Instructions:**\n${gw.instructions}` : "";
                await user.send({ embeds: [
                  (await createBrandedEmbed(gw.guild_id))
                    .setTitle('🎊 You Won!')
-                   .setDescription(`Congratulations! You are a winner of the **${gw.prize}** giveaway in **${brand.name || 'our server'}**!`)
+                   .setDescription(`Congratulations! You are a winner of the **${gw.prize}** giveaway in **${brand.name || 'our server'}**!${instrSnippet}`)
                    .setColor(0x9d55ff)
+                   .setFooter({ text: `Giveaway ID: ${gwId}` })
                    .setTimestamp()
                ]});
              }
            } catch(e) {}
         }
-
       }
     }
   } catch(e) {}
