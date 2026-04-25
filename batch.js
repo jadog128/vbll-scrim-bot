@@ -104,6 +104,23 @@ async function initDB() {
     user_id TEXT,
     UNIQUE(giveaway_id, user_id)
   )`);
+  await run(`CREATE TABLE IF NOT EXISTS global_bans (
+    discord_id TEXT,
+    guild_id TEXT,
+    reason TEXT,
+    staff_id TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (discord_id, guild_id)
+  )`);
+  await run(`CREATE TABLE IF NOT EXISTS global_timeouts (
+    discord_id TEXT,
+    guild_id TEXT,
+    reason TEXT,
+    staff_id TEXT,
+    ends_at TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (discord_id, guild_id)
+  )`);
   await run(`CREATE TABLE IF NOT EXISTS custom_commands (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE,
@@ -1261,6 +1278,16 @@ async function registerCommands() {
       .addStringOption(o => o.setName('duration').setDescription('1m, 1h, or 1d').setRequired(true))
       .addIntegerOption(o => o.setName('winners').setDescription('How many winners?').setRequired(false))
       .addStringOption(o => o.setName('instructions').setDescription('Instructions for the winner').setRequired(false)),
+    new SlashCommandBuilder().setName('ban').setDescription('Ban a user and notify them [Staff]')
+      .addUserOption(o => o.setName('user').setDescription('User to ban').setRequired(true))
+      .addStringOption(o => o.setName('reason').setDescription('Reason for the ban').setRequired(true)),
+    new SlashCommandBuilder().setName('timeout').setDescription('Timeout a user and notify them [Staff]')
+      .addUserOption(o => o.setName('user').setDescription('User to timeout').setRequired(true))
+      .addStringOption(o => o.setName('duration').setDescription('1m, 1h, 1d...').setRequired(true))
+      .addStringOption(o => o.setName('reason').setDescription('Reason for the timeout').setRequired(true)),
+    new SlashCommandBuilder().setName('crosscheck').setDescription('Check if a user is banned in any partnered league [Staff]')
+      .addUserOption(o => o.setName('user').setDescription('User to check').setRequired(true)),
+    new SlashCommandBuilder().setName('scan-bans').setDescription('Scan all server members for global bans [Staff]'),
     new SlashCommandBuilder().setName('giveaway-cancel').setDescription('Cancel an active giveaway [Staff Only]').addStringOption(o => o.setName('id').setDescription('Giveaway ID').setRequired(true)),
     new SlashCommandBuilder().setName('giveaway-reroll').setDescription('Pick a new winner for a giveaway [Staff Only]')
       .addStringOption(o => o.setName('id').setDescription('Giveaway ID').setRequired(true)),
@@ -1371,6 +1398,129 @@ client.on('interactionCreate', async interaction => {
       const cc = await get("SELECT content FROM custom_commands WHERE name = ?", [commandName]);
       if (cc) {
           return interaction.reply({ content: cc.content });
+      }
+
+      if (commandName === 'ban') {
+          if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+          const user = interaction.options.getUser('user');
+          const reason = interaction.options.getString('reason');
+          const targetMember = await interaction.guild.members.fetch(user.id).catch(() => null);
+
+          if (targetMember && !targetMember.bannable) return interaction.reply({ content: '❌ I cannot ban this user (Hierarchy error).', ephemeral: true });
+
+          try {
+            const embed = (await createBrandedEmbed(interaction.guildId))
+              .setTitle('🚫 You have been Banned')
+              .setDescription(`You have been banned from **${interaction.guild.name}**.`)
+              .addFields({ name: '📝 Reason', value: reason })
+              .setColor(0xff0000);
+            
+            await user.send({ embeds: [embed] }).catch(() => console.log('Could not DM user.'));
+            
+            if (targetMember) await targetMember.ban({ reason });
+            else await interaction.guild.bans.create(user.id, { reason });
+
+            await run("INSERT OR REPLACE INTO global_bans (discord_id, guild_id, reason, staff_id) VALUES (?, ?, ?, ?)", 
+              [user.id, interaction.guildId, reason, interaction.user.id]);
+
+            return interaction.reply({ content: `✅ **${user.tag}** has been banned and notified.` });
+          } catch (e) {
+            return interaction.reply({ content: `❌ Failed to ban user: ${e.message}`, ephemeral: true });
+          }
+      }
+
+      if (commandName === 'timeout') {
+          if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+          const user = interaction.options.getUser('user');
+          const reason = interaction.options.getString('reason');
+          const durStr = interaction.options.getString('duration');
+          const ms = parseDuration(durStr);
+          
+          if (!ms) return interaction.reply({ content: '❌ Invalid duration (e.g. 1h, 1d).', ephemeral: true });
+          const targetMember = await interaction.guild.members.fetch(user.id).catch(() => null);
+          if (!targetMember) return interaction.reply({ content: '❌ User not in server.', ephemeral: true });
+
+          try {
+            const embed = (await createBrandedEmbed(interaction.guildId))
+              .setTitle('⏳ You have been Timed Out')
+              .setDescription(`You have been timed out in **${interaction.guild.name}**.`)
+              .addFields(
+                { name: '📝 Reason', value: reason },
+                { name: '⏰ Duration', value: durStr }
+              )
+              .setColor(0xffaa00);
+            
+            await user.send({ embeds: [embed] }).catch(() => {});
+            await targetMember.timeout(ms, reason);
+
+            await run("INSERT OR REPLACE INTO global_timeouts (discord_id, guild_id, reason, staff_id, ends_at) VALUES (?, ?, ?, ?, ?)", 
+              [user.id, interaction.guildId, reason, interaction.user.id, new Date(Date.now() + ms).toISOString()]);
+
+            return interaction.reply({ content: `✅ **${user.tag}** timed out for ${durStr}.` });
+          } catch (e) {
+            return interaction.reply({ content: `❌ Error: ${e.message}`, ephemeral: true });
+          }
+      }
+
+      if (commandName === 'crosscheck') {
+          if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+          const user = interaction.options.getUser('user');
+          const bans = await all("SELECT * FROM global_bans WHERE discord_id = ?", [user.id]);
+
+          if (bans.length === 0) return interaction.reply({ content: `✅ **${user.tag}** has no active bans in partnered leagues.` });
+
+          const embed = (await createBrandedEmbed(interaction.guildId))
+            .setTitle(`🔍 Crosscheck: ${user.username}`)
+            .setColor(0xff0000)
+            .setDescription(`User was found in **${bans.length}** partnered league databases.`);
+
+          bans.forEach((b, i) => {
+            embed.addFields({ name: `League ${i+1}`, value: `**Guild ID:** ${b.guild_id}\n**Reason:** ${b.reason}\n**Date:** ${new Date(b.created_at).toLocaleDateString()}` });
+          });
+
+          return interaction.reply({ embeds: [embed] });
+      }
+
+      if (commandName === 'scan-bans') {
+          if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+          await interaction.deferReply();
+
+          const members = await interaction.guild.members.fetch().catch(() => new Map());
+          const memberIds = Array.from(members.keys());
+          
+          if (memberIds.length === 0) return interaction.editReply({ content: '❌ Failed to fetch members or server is empty.' });
+
+          // Chunk the query if too many members
+          const chunks = [];
+          for (let i = 0; i < memberIds.length; i += 500) {
+              chunks.push(memberIds.slice(i, i + 500));
+          }
+
+          let allGlobalBans = [];
+          for (const chunk of chunks) {
+              const placeholders = chunk.map(() => '?').join(',');
+              const result = await all(`SELECT discord_id, guild_id, reason FROM global_bans WHERE discord_id IN (${placeholders})`, chunk);
+              allGlobalBans = allGlobalBans.concat(result);
+          }
+
+          if (allGlobalBans.length === 0) return interaction.editReply({ content: '✅ No members found in the global ban list.' });
+
+          const externalBans = allGlobalBans.filter(b => b.guild_id !== interaction.guildId);
+
+          if (externalBans.length === 0) return interaction.editReply({ content: '✅ No members found in the global ban list (excluding this guild).' });
+
+          const embed = (await createBrandedEmbed(interaction.guildId))
+            .setTitle('🛡️ Server Scan Results')
+            .setColor(0xff0000)
+            .setDescription(`Found **${externalBans.length}** members with active bans in other partnered leagues.`);
+
+          externalBans.slice(0, 10).forEach(b => {
+             embed.addFields({ name: `⚠️ User: <@${b.discord_id}>`, value: `**Source Guild:** ${b.guild_id}\n**Reason:** ${b.reason}`, inline: true });
+          });
+
+          if (externalBans.length > 10) embed.setFooter({ text: `...and ${externalBans.length - 10} more.` });
+
+          return interaction.editReply({ embeds: [embed] });
       }
     }
 
