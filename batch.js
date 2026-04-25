@@ -1293,7 +1293,7 @@ client.on('interactionCreate', async interaction => {
               { name: '👥 Winners', value: `${winners}`, inline: true },
               { name: '⏰ Ends', value: `<t:${Math.floor(endTime.getTime()/1000)}:R>`, inline: true }
             )
-            .setImage('https://lh3.googleusercontent.com/chat-attachments/AIuEzmsC8q9x0c1o_v7p3V7L7Z-yZ8q0-8Q-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-1')
+            .setImage('https://vcc-dashboard-orpin.vercel.app/giveaway-banner.jpg')
             .setColor(0x9d55ff)
             .setThumbnail(brand.icon || null)
             .setFooter({ text: `Giveaway ID: ${gwId} • 🍀 Good luck!` })
