@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { execute } from "@/lib/db";
-import { ShieldCheck, Package, Layers, Users, ExternalLink, Settings, BarChart3, Radio, ShieldAlert, Gift } from "lucide-react";
+import { ShieldCheck, Package, Layers, Users, ExternalLink, Settings, BarChart3, Radio, ShieldAlert, Gift, Zap } from "lucide-react";
 
 import AdminActions from "@/components/AdminActions";
 import Link from "next/link";
@@ -214,6 +214,21 @@ export default async function AdminPanel(props: { searchParams: Promise<{ guild?
                       <div className="">
                          <div className="text-sm font-bold">Support Tickets</div>
                          <div className="text-[10px] text-on-surface-variant font-medium">Handle batch issues reported by users</div>
+                      </div>
+                   </div>
+                   <span className="material-symbols-outlined text-on-surface-variant opacity-20 group-hover:opacity-100 transition-opacity">arrow_forward_ios</span>
+                </button>
+             </Link>
+
+             <Link href={`/admin/bot-editor?guild=${finalGuildId}`}>
+                <button className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-surface-container-high transition-colors group text-left">
+                   <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 relative">
+                         <Zap className="w-5 h-5" />
+                      </div>
+                      <div className="">
+                         <div className="text-sm font-bold">Bot Designer</div>
+                         <div className="text-[10px] text-on-surface-variant font-medium">Configure personality & slash commands</div>
                       </div>
                    </div>
                    <span className="material-symbols-outlined text-on-surface-variant opacity-20 group-hover:opacity-100 transition-opacity">arrow_forward_ios</span>

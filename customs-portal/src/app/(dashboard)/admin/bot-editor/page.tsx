@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSession } from "next-auth/react";
-import { MessageSquare, Save, RotateCcw, Variable, Smartphone, Monitor, Info, CheckCircle2, AlertTriangle, Code, Palette, Zap, Settings2, Globe } from "lucide-react";
+import { MessageSquare, Save, RotateCcw, Variable, Smartphone, Monitor, Info, CheckCircle2, AlertTriangle, Code, Palette, Zap, Settings2, Globe, Plus, Trash2, Edit2, X, Terminal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import DiscordEmbedPreview from "@/components/DiscordEmbedPreview";
@@ -112,13 +112,19 @@ function BotEditorContent() {
 
     const activeGuild = (session?.user as any)?.manageableGuilds?.find((g: any) => g.id === guildId);
 
-    const [viewMode, setViewMode] = useState<"embeds" | "core">("embeds");
+    const [viewMode, setViewMode] = useState<"embeds" | "core" | "commands">("embeds");
     const [activeTab, setActiveTab] = useState<keyof typeof BOT_TEMPLATES>("approval");
     const [config, setConfig] = useState(BOT_TEMPLATES[activeTab]);
     const [coreConfigs, setCoreConfigs] = useState(CORE_SETTINGS);
     const [isSaving, setIsSaving] = useState(false);
 
-    // Fetch correctly scoped settings when tab or guild changes
+    // Commands State
+    const [commands, setCommands] = useState<any[]>([]);
+    const [cmdModalOpen, setCmdModalOpen] = useState(false);
+    const [editingCmd, setEditingCmd] = useState<any>(null);
+    const [cmdName, setCmdName] = useState('');
+    const [cmdContent, setCmdContent] = useState('');
+
     useEffect(() => {
         if (viewMode === "embeds") {
             const saved = savedTemplates?.[activeTab];
@@ -127,7 +133,51 @@ function BotEditorContent() {
         if (savedTemplates?.bot_core_config) {
             setCoreConfigs(savedTemplates.bot_core_config);
         }
+        if (viewMode === "commands") {
+            fetchCommands();
+        }
     }, [activeTab, savedTemplates, viewMode]);
+
+    const fetchCommands = async () => {
+        try {
+            const res = await fetch('/api/admin/commands');
+            const data = await res.json();
+            setCommands(data);
+        } catch (e) {
+            toast.error("Failed to fetch commands");
+        }
+    };
+
+    const handleSaveCommand = async () => {
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/admin/commands', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: editingCmd?.id, name: cmdName, content: cmdContent })
+            });
+            if (res.ok) {
+                toast.success("Command successfully deployed!");
+                fetchCommands();
+                setCmdModalOpen(false);
+            }
+        } catch (e) {
+            toast.error("Error saving command");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDeleteCommand = async (id: number) => {
+        if (!confirm('Are you sure? This command will stop working immediately.')) return;
+        try {
+            const res = await fetch(`/api/admin/commands?id=${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                toast.success("Command deleted");
+                fetchCommands();
+            }
+        } catch (e) {}
+    };
 
     const handleSave = async () => {
         if (!guildId) return;
@@ -215,13 +265,22 @@ function BotEditorContent() {
                     }`}
                 >
                     <Settings2 className="w-4 h-4" />
-                    Core System Config
+                    Core Config
+                </button>
+                <button 
+                    onClick={() => setViewMode("commands")}
+                    className={`py-3 px-8 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+                        viewMode === "commands" ? "bg-black text-white shadow-lg" : "text-on-surface-variant/40 hover:bg-white/50"
+                    }`}
+                >
+                    <Terminal className="w-4 h-4" />
+                    Slash Commands
                 </button>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
                 <div className="xl:col-span-7 space-y-8">
-                    {viewMode === "embeds" ? (
+                    {viewMode === "embeds" && (
                         <>
                             <div className="bg-white rounded-[2rem] p-3 border border-outline-variant/10 shadow-sm flex flex-wrap gap-2">
                                 {Object.values(BOT_TEMPLATES).map((cat) => (
@@ -309,7 +368,9 @@ function BotEditorContent() {
                                 </div>
                             </div>
                         </>
-                    ) : (
+                    )}
+
+                    {viewMode === "core" && (
                         <div className="bg-white rounded-[3rem] border border-outline-variant/10 shadow-massive p-10 space-y-10">
                             <div className="space-y-6">
                                 <h3 className="text-xl font-black text-on-surface tracking-tighter">Bot Identity & Hub</h3>
@@ -367,6 +428,61 @@ function BotEditorContent() {
                             </div>
                         </div>
                     )}
+
+                    {viewMode === "commands" && (
+                        <div className="space-y-6">
+                            <div className="bg-gradient-to-br from-primary to-primary-container rounded-[2.5rem] p-8 text-on-primary shadow-glow flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-xl font-black uppercase tracking-tight">Instant Commands</h3>
+                                    <p className="text-sm opacity-80 font-medium">Inject logic directly into the bot interaction loop.</p>
+                                </div>
+                                <button 
+                                    onClick={() => { setEditingCmd(null); setCmdName(''); setCmdContent(''); setCmdModalOpen(true); }}
+                                    className="p-4 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-2xl border border-white/20 transition-all active:scale-95"
+                                >
+                                    <Plus className="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-4">
+                                {commands.map(cmd => (
+                                    <div key={cmd.id} className="bg-white rounded-[2rem] border border-outline-variant/10 p-6 flex justify-between items-center hover:border-primary/20 transition-all group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-surface-container rounded-2xl flex items-center justify-center text-primary">
+                                                <Terminal className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-black text-on-surface">/{cmd.name}</div>
+                                                <div className="text-[10px] text-on-surface-variant font-medium opacity-60">Custom Text Interaction</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button 
+                                                onClick={() => { setEditingCmd(cmd); setCmdName(cmd.name); setCmdContent(cmd.content); setCmdModalOpen(true); }}
+                                                className="p-3 bg-surface-container rounded-xl text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-all"
+                                            >
+                                                <Edit2 className="w-4 h-4" />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeleteCommand(cmd.id)}
+                                                className="p-3 bg-surface-container rounded-xl text-on-surface-variant hover:bg-error/10 hover:text-error transition-all"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {commands.length === 0 && (
+                                    <div className="text-center py-20 bg-surface-container-low rounded-[3rem] border border-dashed border-outline-variant/40">
+                                        <div className="p-4 bg-surface-container rounded-3xl w-fit mx-auto mb-4 opacity-40">
+                                            <Terminal className="w-8 h-8" />
+                                        </div>
+                                        <p className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant/40">No Custom Commands</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="xl:col-span-5 relative">
@@ -400,6 +516,66 @@ function BotEditorContent() {
                     </div>
                 </div>
             </div>
+
+            <AnimatePresence>
+                {cmdModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 sm:p-0">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setCmdModalOpen(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                        />
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative bg-white w-full max-w-lg rounded-[3rem] shadow-massive p-10 overflow-hidden"
+                        >
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="text-2xl font-black tracking-tight">{editingCmd ? 'Edit' : 'Create'} Command</h3>
+                                <button onClick={() => setCmdModalOpen(false)} className="p-2 hover:bg-surface-container rounded-full transition-colors">
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Trigger Name</label>
+                                    <div className="relative">
+                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-bold opacity-30 text-lg">/</span>
+                                        <input 
+                                            className="w-full bg-surface-container rounded-2xl p-5 pl-10 text-sm font-bold text-on-surface border border-outline-variant/10" 
+                                            placeholder="e.g. rules"
+                                            value={cmdName}
+                                            onChange={(e) => setCmdName(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Bot Response</label>
+                                    <textarea 
+                                        className="w-full bg-surface-container rounded-[2rem] p-6 text-sm font-bold text-on-surface border border-outline-variant/10 min-h-[160px]" 
+                                        placeholder="The message the bot will send..."
+                                        value={cmdContent}
+                                        onChange={(e) => setCmdContent(e.target.value)}
+                                    />
+                                </div>
+
+                                <button 
+                                    onClick={handleSaveCommand}
+                                    disabled={isSaving}
+                                    className="w-full py-5 bg-primary text-black rounded-[2rem] text-xs font-black uppercase tracking-widest hover:shadow-glow transition-all disabled:opacity-50"
+                                >
+                                    {isSaving ? "Processing..." : editingCmd ? "Update Command" : "Register Command"}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
