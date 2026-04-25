@@ -104,11 +104,16 @@ async function getChoices() {
 
     new SlashCommandBuilder().setName('giveaway-start').setDescription('Start a new giveaway [Admin Only]')
       .addStringOption(o => o.setName('prize').setDescription('What are you giving away?').setRequired(true))
-      .addStringOption(o => o.setName('duration').setDescription('Time (e.g. 1h, 1d, 30m)').setRequired(true))
-      .addIntegerOption(o => o.setName('winners').setDescription('Number of winners').setRequired(false)),
+      .addStringOption(o => o.setName('duration').setDescription('Time (e.g. 1m, 1h, 1d)').setRequired(true))
+      .addIntegerOption(o => o.setName('winners').setDescription('Number of winners').setRequired(false))
+      .addStringOption(o => o.setName('instructions').setDescription('Instructions sent to winners via DM').setRequired(false)),
+
+    new SlashCommandBuilder().setName('giveaway-cancel').setDescription('Cancel an active giveaway [Admin Only]')
+      .addStringOption(o => o.setName('id').setDescription('Giveaway ID').setRequired(true)),
 
     new SlashCommandBuilder().setName('giveaway-reroll').setDescription('Pick a new winner for a giveaway [Admin Only]')
-      .addStringOption(o => o.setName('id').setDescription('Giveaway ID (get from dashboard)').setRequired(true)),
+      .addStringOption(o => o.setName('id').setDescription('Giveaway ID').setRequired(true)),
+
 
 
   ].map(c => c.toJSON());

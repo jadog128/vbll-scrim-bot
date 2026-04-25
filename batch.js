@@ -95,7 +95,9 @@ async function initDB() {
     prize TEXT,
     winners_count INTEGER,
     end_time TEXT,
-    status TEXT DEFAULT 'active'
+    status TEXT DEFAULT 'active',
+    instructions TEXT
+    instructions TEXT
   )`);
   await run(`CREATE TABLE IF NOT EXISTS giveaway_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -330,6 +332,7 @@ http.createServer(async (req, res) => {
             .setDescription(`Your request for a **${type.toUpperCase()}** has been **${status.toUpperCase()}**.`)
             .setColor(status === 'completed' ? 0x00f5a0 : status === 'approved' ? 0x5865f2 : 0xff4d4d)
             .setTimestamp();
+               const instrSnippet = gw.instructions ? `\n\n**Winner Instructions:**\n${gw.instructions}` : "";
           await user.send({ embeds: [embed] }).catch(() => {});
         }
         res.writeHead(200); res.end('OK');
@@ -454,11 +457,12 @@ client.on('interactionCreate', async interaction => {
 
       const embed = new EmbedBuilder()
         .setTitle('⚙️ Batch-Bot System Status & Guide')
-        .setDescription(allSet 
+                    .setDescription(`Congratulations! You are a winner of the **${gw.prize}** giveaway in **${brand.name || 'our server'}**!${instrSnippet}`)
             ? '🎉 **Your league is fully configured and operational!** All channels and roles are correctly mapped.' 
             : '⚠️ **Configuration incomplete.** Some systems (requests, tickets, or releases) might not function. Please use the commands listed below to fix the missing items.')
         .addFields(fields)
         .setColor(allSet ? 0x00f5a0 : 0xFFA500)
+                    .setFooter({ text: `Giveaway ID: ${gwId}` })
         .setThumbnail(interaction.guild.iconURL())
         .setFooter({ text: 'Batch Management System Wizard' })
         .setTimestamp();
@@ -1061,6 +1065,28 @@ client.on('interactionCreate', async interaction => {
 });
 
 // --- 🎁 Giveaway System Logic ---
+function parseDuration(str) {
+  const match = str.match(/^(\d+)([mhd])$/);
+  if (!match) return null;
+  const val = parseInt(match[1]);
+  const unit = match[2];
+  if (unit === 'm') return val * 60000;
+  if (unit === 'h') return val * 3600000;
+  if (unit === 'd') return val * 86400000;
+  return null;
+}
+
+function parseDuration(str) {
+  const match = str.match(/^(\d+)([mhd])$/);
+  if (!match) return null;
+  const val = parseInt(match[1]);
+  const unit = match[2];
+  if (unit === 'm') return val * 60000;
+  if (unit === 'h') return val * 3600000;
+  if (unit === 'd') return val * 86400000;
+  return null;
+}
+
 async function endGiveaway(gwId) {
   const gw = await get("SELECT * FROM giveaways WHERE id = ?", [gwId]);
   if (!gw || gw.status !== 'active') return;
@@ -1098,7 +1124,8 @@ async function endGiveaway(gwId) {
 
         
         await msg.edit({ embeds: [embed], components: [] });
-        await ch.send({ content: `🎊 Congratulations ${winners.join(', ')}! You won the **${gw.prize}**!` });
+        await ch.send({ content: `🎊 Congratulations ${winners.join(', ')}! You won the **${gw.prize}**!` (Giveaway ID: **${gwId}**) ` });
+
 
         // --- 📬 DM Winners ---
         for (const userId of winners) {
@@ -1237,10 +1264,12 @@ async function registerCommands() {
       .addStringOption(o => o.setName('action').setDescription('Action to take').addChoices({ name: 'Remove from Batch', value: 'remove' })),
     new SlashCommandBuilder().setName('lookup-batch-info').setDescription('Check status and progress of a batch').addIntegerOption(o => o.setName('batch_id').setDescription('ID').setRequired(true)),
     new SlashCommandBuilder().setName('set-admin-role').setDescription('Set bot admin role [Admin Only]').addRoleOption(o => o.setName('role').setDescription('Role').setRequired(true)),
-    new SlashCommandBuilder().setName('giveaway-start').setDescription('Start a beautiful giveaway [Staff Only]')
+    new SlashCommandBuilder().setName( 'giveaway-start').setDescription('Start a beautiful giveaway [Staff Only]')
       .addStringOption(o => o.setName('prize').setDescription('What are you giving away?').setRequired(true))
-      .addIntegerOption(o => o.setName('duration').setDescription('Minutes until it ends').setRequired(true))
-      .addIntegerOption(o => o.setName('winners').setDescription('How many winners?').setRequired(false)),
+      .addStringOption(o => o.setName('duration').setDescription('1m, 1h, or 1d').setRequired(true))
+      .addIntegerOption(o => o.setName('winners').setDescription('How many winners?').setRequired(false))
+      .addStringOption(o => o.setName('instructions').setDescription('Instructions for the winner').setRequired(false)),
+    new SlashCommandBuilder().setName('giveaway-cancel').setDescription('Cancel an active giveaway [Staff Only]').addStringOption(o => o.setName('id').setDescription('Giveaway ID').setRequired(true)),
     new SlashCommandBuilder().setName('giveaway-reroll').setDescription('Pick a new winner for a giveaway [Staff Only]')
       .addStringOption(o => o.setName('id').setDescription('Giveaway ID').setRequired(true)),
 
@@ -1259,39 +1288,67 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
       const { commandName } = interaction;
       if (commandName === 'giveaway-start') {
-         if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
-         const prize = interaction.options.getString('prize');
-         const winners = interaction.options.getInteger('winners') || 1;
-         const duration = interaction.options.getInteger('duration');
-         
-         const endTime = new Date(Date.now() + duration * 60000);
-         const gwId = Math.random().toString(36).substring(2, 9).toUpperCase();
+          if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+          const prize = interaction.options.getString('prize');
+          const winners = interaction.options.getInteger('winners') || 1;
+          const durStr = interaction.options.getString('duration');
+          const instructions = interaction.options.getString('instructions');
+          
+          const ms = parseDuration(durStr);
+          if (!ms) return interaction.reply({ content: '❌ Invalid duration. Use formats like `1m`, `2h`, or `1d`.', ephemeral: true });
 
-         const brand = await getBranding(interaction.guildId);
-         const embed = (await createBrandedEmbed(interaction.guildId))
-           .setTitle(`🎁 NEW GIVEAWAY: ${prize}`)
-           .setDescription(`A new giveaway has started! Click the button below to join the draw.`)
-           .addFields(
-             { name: '🏆 Prize', value: `**${prize}**`, inline: true },
-             { name: '👥 Winners', value: `${winners}`, inline: true },
-             { name: '⏰ Ends', value: `<t:${Math.floor(endTime.getTime()/1000)}:R>`, inline: true }
-           )
-           .setImage('https://lh3.googleusercontent.com/chat-attachments/AIuEzmsC8q9x0c1o_v7p3V7L7Z-yZ8q0-8Q-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-1')
-           .setColor(0x9d55ff)
-           .setThumbnail(brand.icon || null)
-           .setFooter({ text: `Giveaway ID: ${gwId} • 🍀 Good luck!` })
-           .setTimestamp();
+          const endTime = new Date(Date.now() + ms);
+          const gwId = Math.random().toString(36).substring(2, 9).toUpperCase();
 
-         
-         const row = new ActionRowBuilder().addComponents(
-           new ButtonBuilder().setCustomId(`gw_join_${gwId}`).setLabel('🎁 Enter Giveaway').setStyle(ButtonStyle.Primary)
-         );
+          const brand = await getBranding(interaction.guildId);
+          const embed = (await createBrandedEmbed(interaction.guildId))
+            .setTitle(`🎁 NEW GIVEAWAY: ${prize}`)
+            .setDescription(`A new giveaway has started! Click the button below to join the draw.`)
+            .addFields(
+              { name: '🏆 Prize', value: `**${prize}**`, inline: true },
+              { name: '👥 Winners', value: `${winners}`, inline: true },
+              { name: '⏰ Ends', value: `<t:${Math.floor(endTime.getTime()/1000)}:R>`, inline: true }
+            )
+            .setImage('https://lh3.googleusercontent.com/chat-attachments/AIuEzmsC8q9x0c1o_v7p3V7L7Z-yZ8q0-8Q-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-4-X-1')
+            .setColor(0x9d55ff)
+            .setThumbnail(brand.icon || null)
+            .setFooter({ text: `Giveaway ID: ${gwId} • 🍀 Good luck!` })
+            .setTimestamp();
+          
+          const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`gw_join_${gwId}`).setLabel('🎁 Enter Giveaway').setStyle(ButtonStyle.Primary)
+          );
 
-         const msg = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
-         await run("INSERT INTO giveaways (id, guild_id, channel_id, msg_id, prize, winners_count, end_time) VALUES (?,?,?,?,?,?,?)",
-           [gwId, interaction.guildId, interaction.channelId, msg.id, prize, winners, endTime.toISOString()]);
-         return;
-      }
+          const msg = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+          await run("INSERT INTO giveaways (id, guild_id, channel_id, msg_id, prize, winners_count, end_time, instructions) VALUES (?,?,?,?,?,?,?,?)",
+            [gwId, interaction.guildId, interaction.channelId, msg.id, prize, winners, endTime.toISOString(), instructions]);
+          return;
+       }
+
+       if (commandName === 'giveaway-cancel') {
+          if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+          const id = interaction.options.getString('id').toUpperCase();
+          const gw = await get("SELECT * FROM giveaways WHERE id = ?", [id]);
+          if (!gw || gw.status !== 'active') return interaction.reply({ content: '❌ Active giveaway not found.', ephemeral: true });
+
+          await run("UPDATE giveaways SET status = 'cancelled' WHERE id = ?", [id]);
+          const entries = await all("SELECT user_id FROM giveaway_entries WHERE giveaway_id = ?", [id]);
+          
+          for (const entry of entries) {
+            try {
+              const user = await client.users.fetch(entry.user_id);
+              if (user) await user.send(`⚠️ The giveaway for **${gw.prize}** in **${interaction.guild.name}** has been cancelled.`);
+            } catch(e) {}
+          }
+
+          const ch = await client.channels.fetch(gw.channel_id).catch(() => null);
+          if (ch) {
+            const msg = await ch.messages.fetch(gw.msg_id).catch(() => null);
+            if (msg) await msg.edit({ content: `🚫 Giveaway **${id}** cancelled.`, embeds: [], components: [] });
+          }
+
+          return interaction.reply({ content: `✅ Giveaway **${id}** cancelled. Participants notified.`, ephemeral: true });
+       }
 
       if (commandName === 'giveaway-reroll') {
          if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
