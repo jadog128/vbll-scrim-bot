@@ -1099,6 +1099,23 @@ async function endGiveaway(gwId) {
         
         await msg.edit({ embeds: [embed], components: [] });
         await ch.send({ content: `🎊 Congratulations ${winners.join(', ')}! You won the **${gw.prize}**!` });
+
+        // --- 📬 DM Winners ---
+        for (const userId of winners) {
+           try {
+             const user = await client.users.fetch(userId.replace(/[<@!>]/g, ''));
+             if (user) {
+               await user.send({ embeds: [
+                 (await createBrandedEmbed(gw.guild_id))
+                   .setTitle('🎊 You Won!')
+                   .setDescription(`Congratulations! You are a winner of the **${gw.prize}** giveaway in **${brand.name || 'our server'}**!`)
+                   .setColor(0x9d55ff)
+                   .setTimestamp()
+               ]});
+             }
+           } catch(e) {}
+        }
+
       }
     }
   } catch(e) {}
@@ -1299,12 +1316,23 @@ client.on('interactionCreate', async interaction => {
          
          try {
            await run("INSERT INTO giveaway_entries (giveaway_id, user_id) VALUES (?, ?)", [gwId, interaction.user.id]);
-           return interaction.reply({ content: '✅ You have successfully entered the giveaway!', ephemeral: true });
+           
+           const brand = await getBranding(interaction.guildId);
+           const prizeRes = await get("SELECT prize FROM giveaways WHERE id = ?", [gwId]);
+           await interaction.user.send({ embeds: [
+             (await createBrandedEmbed(interaction.guildId))
+               .setTitle('🎟️ Entry Confirmed!')
+               .setDescription(`You have successfully entered the giveaway for **${prizeRes?.prize || 'a prize'}**!`)
+               .setColor(0x9d55ff)
+           ]}).catch(() => {});
+
+           return interaction.reply({ content: '✅ Entry confirmed! Check your DMs.', ephemeral: true });
          } catch (e) {
            return interaction.reply({ content: '⚠️ You are already in this giveaway.', ephemeral: true });
          }
       }
     }
+
   } catch (err) {
     console.error('[Interaction Error]', err.message);
     try {
