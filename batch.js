@@ -104,6 +104,12 @@ async function initDB() {
     user_id TEXT,
     UNIQUE(giveaway_id, user_id)
   )`);
+  await run(`CREATE TABLE IF NOT EXISTS custom_commands (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE,
+    content TEXT,
+    guild_id TEXT
+  )`);
 
 
   // --- 🪄 Migration Logic: Add guild_id to old data ---
@@ -1207,7 +1213,9 @@ async function registerCommands() {
   } catch (e) {}
 
   const choices = batchItems.length > 0 ? batchItems.slice(0, 25) : [{ name: 'Other', value: 'other' }];
-  const commands = [
+  const customRows = await all("SELECT name FROM custom_commands").catch(() => []);
+
+  const hardcoded = [
     new SlashCommandBuilder().setName('setup').setDescription('Show configuration status and guide [Admin Only]'),
     new SlashCommandBuilder().setName('batch_request').setDescription('Submit a request for a custom item').addStringOption(o => o.setName('type').setDescription('Type').setRequired(true).addChoices(...choices)),
     new SlashCommandBuilder().setName('post-batch-request').setDescription('Post request message [Staff]'),
@@ -1256,7 +1264,12 @@ async function registerCommands() {
     new SlashCommandBuilder().setName('giveaway-cancel').setDescription('Cancel an active giveaway [Staff Only]').addStringOption(o => o.setName('id').setDescription('Giveaway ID').setRequired(true)),
     new SlashCommandBuilder().setName('giveaway-reroll').setDescription('Pick a new winner for a giveaway [Staff Only]')
       .addStringOption(o => o.setName('id').setDescription('Giveaway ID').setRequired(true)),
+    new SlashCommandBuilder().setName('refresh-commands').setDescription('Manually refresh commands from the dashboard [Staff Only]'),
+  ];
 
+  const commands = [
+    ...hardcoded,
+    ...customRows.map(cc => new SlashCommandBuilder().setName(cc.name).setDescription('Custom administrative command'))
   ].map(c => c.toJSON());
 
   const rest = new REST({ version: '10' }).setToken(process.env.BATCH_DISCORD_TOKEN);
@@ -1346,6 +1359,19 @@ client.on('interactionCreate', async interaction => {
          const winner = entries[Math.floor(Math.random() * entries.length)];
          return interaction.reply({ content: `🎊 **Reroll Complete!** The new winner is <@${winner.user_id}>!` });
       }
+
+      if (commandName === 'refresh-commands') {
+         if (!hasBatchAdmin(interaction.member)) return interaction.reply({ content: '❌ Staff Only.', ephemeral: true });
+         await interaction.deferReply({ ephemeral: true });
+         await registerCommands();
+         return interaction.editReply({ content: '✅ Commands refreshed. Note: Autocomplete may take a few minutes to update in Discord.' });
+      }
+
+      // --- Custom Commands Runner ---
+      const cc = await get("SELECT content FROM custom_commands WHERE name = ?", [commandName]);
+      if (cc) {
+          return interaction.reply({ content: cc.content });
+      }
     }
 
     // --- 🖱️ Giveaway Button Handler ---
@@ -1382,9 +1408,9 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
-  registerCommands();
+  await registerCommands();
   
   // Giveaway Checker (Every minute)
   setInterval(() => checkGiveaways(), 60000);
